@@ -167,6 +167,32 @@ h1 {
     radial-gradient(circle at 46% 23%, #dfe8f5 0 1px, transparent 2px);
 }
 
+.tip-meteor {
+  position: absolute;
+  z-index: 8;
+  width: 100px;
+  height: 3px;
+  pointer-events: none;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(173, 220, 255, .45) 38%, #fff4c8 92%);
+  filter: drop-shadow(0 0 5px rgba(173, 220, 255, .85));
+  transform-origin: right center;
+  will-change: transform, opacity;
+}
+
+.tip-meteor::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff8df;
+  box-shadow: 0 0 7px #fff8df, 0 0 15px rgba(173, 220, 255, .95);
+  transform: translateY(-50%);
+}
+
 .tip-signal {
   position: absolute;
   top: 258px;
@@ -221,6 +247,10 @@ h1 {
 
 .tip-signal.arrived {
   animation: tip-arrive .62s cubic-bezier(.2, .85, .3, 1.25);
+}
+
+.tip-signal.awaiting-meteor {
+  visibility: hidden;
 }
 
 .room-3d {

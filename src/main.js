@@ -25,11 +25,13 @@ createIcons({ icons });
 
 const $ = (selector) => document.querySelector(selector);
 const elements = {
+  stage: $(".stage"),
   roomCode: $("#roomCode"),
   presenceDot: $("#presenceDot"),
   presenceText: $("#presenceText"),
   dollCanvas: $("#dollCanvas"),
   avatarZone: $("#avatarZone"),
+  tipMeteor: $("#tipMeteor"),
   tipSignal: $("#tipSignal"),
   tipSignalCount: $("#tipSignalCount"),
   tipPanel: $("#tipPanel"),
@@ -70,6 +72,7 @@ let lastRenderedPhoto = null;
 let lastRenderedGeneration = null;
 let lastRenderedStyle = null;
 let unreadRemoteTips = 0;
+let meteorAnimation = null;
 
 function showToast(message) {
   elements.toast.textContent = message;
@@ -78,13 +81,54 @@ function showToast(message) {
   toastTimeout = window.setTimeout(() => elements.toast.classList.remove("show"), 2600);
 }
 
+function launchTipMeteor(onArrival) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !elements.tipMeteor.animate) {
+    onArrival();
+    return;
+  }
+
+  const stageRect = elements.stage.getBoundingClientRect();
+  const signalRect = elements.tipSignal.getBoundingClientRect();
+  const targetX = signalRect.left - stageRect.left + signalRect.width / 2;
+  const targetY = signalRect.top - stageRect.top + signalRect.height / 2;
+  const startX = stageRect.width * (targetX > stageRect.width / 2 ? 0.12 : 0.84);
+  const startY = Math.max(24, stageRect.height * 0.07);
+  const offsetX = startX - targetX;
+  const offsetY = startY - targetY;
+  const angle = Math.atan2(targetY - startY, targetX - startX) * (180 / Math.PI);
+
+  meteorAnimation?.cancel();
+  elements.tipMeteor.hidden = false;
+  elements.tipMeteor.style.left = `${targetX - 100}px`;
+  elements.tipMeteor.style.top = `${targetY - 2}px`;
+  meteorAnimation = elements.tipMeteor.animate([
+    { opacity: 0, transform: `translate(${offsetX}px, ${offsetY}px) rotate(${angle}deg)` },
+    { opacity: 1, offset: 0.12, transform: `translate(${offsetX * 0.9}px, ${offsetY * 0.9}px) rotate(${angle}deg)` },
+    { opacity: 1, offset: 0.78, transform: `translate(${offsetX * 0.18}px, ${offsetY * 0.18}px) rotate(${angle}deg)` },
+    { opacity: 0, transform: `translate(0, 0) rotate(${angle}deg)` },
+  ], {
+    duration: 900,
+    easing: "cubic-bezier(.2, .72, .25, 1)",
+  });
+  meteorAnimation.addEventListener("finish", () => {
+    elements.tipMeteor.hidden = true;
+    meteorAnimation = null;
+    onArrival();
+  }, { once: true });
+}
+
 function showRemoteTipSignal() {
+  const shouldWaitForMeteor = elements.tipSignal.hidden || elements.tipSignal.classList.contains("awaiting-meteor");
   unreadRemoteTips = Math.min(99, unreadRemoteTips + 1);
   elements.tipSignalCount.textContent = String(unreadRemoteTips);
   elements.tipSignal.setAttribute("aria-label", `查看 ${unreadRemoteTips} 張新收到的 Tip`);
   elements.tipSignal.hidden = false;
-  elements.tipSignal.classList.remove("arrived");
-  requestAnimationFrame(() => elements.tipSignal.classList.add("arrived"));
+  elements.tipSignal.classList.toggle("awaiting-meteor", shouldWaitForMeteor);
+
+  launchTipMeteor(() => {
+    elements.tipSignal.classList.remove("awaiting-meteor", "arrived");
+    requestAnimationFrame(() => elements.tipSignal.classList.add("arrived"));
+  });
 }
 
 function bindTipSignal() {
