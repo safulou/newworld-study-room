@@ -5,6 +5,7 @@ A cozy online study cabin with a photo-textured 3D companion, a focus timer, and
 ## Features
 
 - Interactive Three.js companion with mouse and touch rotation.
+- Switchable 3D doll and double-sided photo standee modes with a dimensional wooden base.
 - Switchable cozy and original chibi detective doll styles with toon shading and outlines.
 - Local photo validation, center cropping, compression, and persistent texture preview.
 - Real WebRTC DataChannel Tip delivery through PeerJS.
