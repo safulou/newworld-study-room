@@ -2,19 +2,22 @@ import "./styles.css";
 import {
   Copy,
   ImagePlus,
+  Music2,
   Pause,
   Play,
   RotateCcw,
   Send,
   Shuffle,
   Trash2,
+  Volume2,
   createIcons,
 } from "lucide";
+import { BackgroundMusic } from "./services/background-music.js";
 import { FocusTimer } from "./services/focus-timer.js";
 import { prepareCompanionPhoto } from "./services/image-pipeline.js";
 import { createStore } from "./state/store.js";
 
-const icons = { Copy, ImagePlus, Pause, Play, RotateCcw, Send, Shuffle, Trash2 };
+const icons = { Copy, ImagePlus, Music2, Pause, Play, RotateCcw, Send, Shuffle, Trash2, Volume2 };
 createIcons({ icons });
 
 const $ = (selector) => document.querySelector(selector);
@@ -27,6 +30,7 @@ const elements = {
   timer: $("#timer"),
   toggleTimer: $("#toggleTimer"),
   resetTimer: $("#resetTimer"),
+  toggleMusic: $("#toggleMusic"),
   photoInput: $("#photoInput"),
   photoDrop: $("#photoDrop"),
   clearPhoto: $("#clearPhoto"),
@@ -40,6 +44,8 @@ const elements = {
   seedTip: $("#seedTip"),
   roomName: $("#roomName"),
   minutes: $("#minutes"),
+  musicVolume: $("#musicVolume"),
+  musicVolumeValue: $("#musicVolumeValue"),
   inviteLink: $("#inviteLink"),
   copyInvite: $("#copyInvite"),
   roleBadge: $("#roleBadge"),
@@ -49,6 +55,7 @@ const elements = {
 
 const store = createStore();
 const timer = new FocusTimer(store.get().minutes);
+const music = new BackgroundMusic(store.get().musicVolume);
 let viewer = null;
 let p2p = null;
 let toastTimeout = null;
@@ -107,6 +114,9 @@ function renderTips(tips) {
 function renderState(state) {
   if (document.activeElement !== elements.roomName) elements.roomName.value = state.roomName;
   if (document.activeElement !== elements.minutes) elements.minutes.value = state.minutes;
+  if (document.activeElement !== elements.musicVolume) elements.musicVolume.value = state.musicVolume;
+  elements.musicVolumeValue.value = `${state.musicVolume}%`;
+  music.setVolume(state.musicVolume);
   renderGeneration(state);
   renderTips(state.tips);
   if (viewer && state.photo !== lastRenderedPhoto) {
@@ -185,6 +195,29 @@ function bindTimer() {
   timer.addEventListener("complete", () => showToast("這輪完成了，留一張 Tip 給同房夥伴吧。 "));
   elements.toggleTimer.addEventListener("click", () => timer.toggle());
   elements.resetTimer.addEventListener("click", () => timer.reset());
+}
+
+function bindMusic() {
+  music.addEventListener("running", (event) => {
+    replaceButtonIcon(elements.toggleMusic, event.detail ? "volume-2" : "music-2", event.detail ? "暫停背景音樂" : "播放背景音樂");
+    elements.toggleMusic.classList.toggle("primary", event.detail);
+  });
+  elements.toggleMusic.addEventListener("click", async () => {
+    try {
+      await music.toggle();
+      showToast(music.running ? "正在播放《給愛麗絲》鋼琴伴讀版。 " : "背景音樂已暫停。 ");
+    } catch (error) {
+      showToast(error.message || "背景音樂無法播放。 ");
+    }
+  });
+  elements.musicVolume.addEventListener("input", () => {
+    const value = Number(elements.musicVolume.value);
+    elements.musicVolumeValue.value = `${value}%`;
+    music.setVolume(value);
+  });
+  elements.musicVolume.addEventListener("change", () => {
+    store.update({ musicVolume: Number(elements.musicVolume.value) });
+  });
 }
 
 function bindTips() {
@@ -272,6 +305,7 @@ function init() {
   store.subscribe(renderState);
   bindImageUpload();
   bindTimer();
+  bindMusic();
   bindTips();
   bindSettings();
   timer.emitTick();
@@ -280,6 +314,7 @@ function init() {
   window.addEventListener("beforeunload", () => {
     p2p?.destroy();
     viewer?.dispose();
+    music.destroy();
   });
 }
 

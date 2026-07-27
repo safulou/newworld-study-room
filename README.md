@@ -9,6 +9,7 @@ A cozy online study cabin with a photo-textured 3D companion, a focus timer, and
 - Real WebRTC DataChannel Tip delivery through PeerJS.
 - Host invitation links, room snapshots, member presence, reconnect handling, and offline fallback.
 - Drift-resistant focus timer and configurable study sessions.
+- Browser-synthesized public-domain `Für Elise` background music with volume control.
 - Responsive cabin UI with WebGL fallback and reduced-motion support.
 - Vite production build and GitHub Pages deployment workflow.
 
@@ -39,6 +40,8 @@ The default configuration uses PeerJS Cloud for signaling. Copy `.env.example` t
 ## 3D generation scope
 
 The MVP maps an uploaded image onto a procedural 3D doll. It does not reconstruct a complete GLB model from one photo. The image pipeline is isolated so a later server-side AI provider can return generated GLB assets without rewriting the room UI or state flow.
+
+The background music is synthesized at runtime from public-domain melody data. No third-party performance, recording, or sample is bundled with the application.
 
 See [docs/architecture.md](docs/architecture.md) for module boundaries, P2P topology, trust boundaries, and the AI provider integration path.
 

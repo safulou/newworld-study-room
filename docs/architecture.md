@@ -25,6 +25,7 @@ flowchart LR
 - `src/services/doll-viewer.js`: Three.js scene, photo texture, animation, resize, and pointer controls.
 - `src/services/p2p-room.js`: PeerJS lifecycle, host/guest roles, snapshots, presence, Tip relay, and reconnect handling.
 - `src/services/focus-timer.js`: drift-resistant focus timer.
+- `src/services/background-music.js`: user-initiated Web Audio synthesis, looping, and volume control.
 
 ## P2P topology
 
@@ -42,3 +43,4 @@ The current image pipeline creates an optimized square texture for the procedura
 - Uploaded images are type and size checked, decoded locally, and compressed before persistence.
 - Room links contain only a random PeerJS host ID; no image or Tip history is embedded in the URL.
 - Local storage is best-effort. If quota is exceeded, the app drops the photo rather than breaking the room.
+- Background music contains no external recording or sample; the browser synthesizes the public-domain melody after user interaction.

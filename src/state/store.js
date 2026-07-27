@@ -10,6 +10,7 @@ const starterTips = [
 const defaults = {
   roomName: "Midnight Study Room",
   minutes: 25,
+  musicVolume: 28,
   photo: "",
   generation: "empty",
   generationProgress: 0,
@@ -48,6 +49,7 @@ function sanitizeState(value = {}) {
   return {
     roomName: String(value.roomName || defaults.roomName).trim().slice(0, 24) || defaults.roomName,
     minutes,
+    musicVolume: Math.max(0, Math.min(100, Number(value.musicVolume ?? defaults.musicVolume))),
     photo: typeof value.photo === "string" ? value.photo : "",
     generation: ["empty", "processing", "ready", "error"].includes(value.generation)
       ? value.generation
