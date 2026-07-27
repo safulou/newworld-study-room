@@ -11,6 +11,7 @@ const defaults = {
   roomName: "Midnight Study Room",
   minutes: 25,
   musicVolume: 28,
+  dollStyle: "cozy",
   photo: "",
   generation: "empty",
   generationProgress: 0,
@@ -50,6 +51,7 @@ function sanitizeState(value = {}) {
     roomName: String(value.roomName || defaults.roomName).trim().slice(0, 24) || defaults.roomName,
     minutes,
     musicVolume: Math.max(0, Math.min(100, Number(value.musicVolume ?? defaults.musicVolume))),
+    dollStyle: ["cozy", "detective"].includes(value.dollStyle) ? value.dollStyle : defaults.dollStyle,
     photo: typeof value.photo === "string" ? value.photo : "",
     generation: ["empty", "processing", "ready", "error"].includes(value.generation)
       ? value.generation

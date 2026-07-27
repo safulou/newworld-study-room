@@ -5,6 +5,7 @@ A cozy online study cabin with a photo-textured 3D companion, a focus timer, and
 ## MVP features
 
 - Interactive Three.js companion with mouse and touch rotation.
+- Switchable cozy and original chibi detective doll styles with toon shading and outlines.
 - Local photo validation, center cropping, compression, and persistent texture preview.
 - Real WebRTC DataChannel Tip delivery through PeerJS.
 - Host invitation links, room snapshots, member presence, reconnect handling, and offline fallback.

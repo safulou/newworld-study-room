@@ -6,8 +6,10 @@ import {
   Pause,
   Play,
   RotateCcw,
+  Search,
   Send,
   Shuffle,
+  Sparkles,
   Trash2,
   Volume2,
   createIcons,
@@ -17,7 +19,7 @@ import { FocusTimer } from "./services/focus-timer.js";
 import { prepareCompanionPhoto } from "./services/image-pipeline.js";
 import { createStore } from "./state/store.js";
 
-const icons = { Copy, ImagePlus, Music2, Pause, Play, RotateCcw, Send, Shuffle, Trash2, Volume2 };
+const icons = { Copy, ImagePlus, Music2, Pause, Play, RotateCcw, Search, Send, Shuffle, Sparkles, Trash2, Volume2 };
 createIcons({ icons });
 
 const $ = (selector) => document.querySelector(selector);
@@ -34,6 +36,7 @@ const elements = {
   photoInput: $("#photoInput"),
   photoDrop: $("#photoDrop"),
   clearPhoto: $("#clearPhoto"),
+  styleButtons: [...document.querySelectorAll("[data-doll-style]")],
   generationLabel: $("#generationLabel"),
   generationPercent: $("#generationPercent"),
   generationBar: $("#generationBar"),
@@ -61,6 +64,7 @@ let p2p = null;
 let toastTimeout = null;
 let lastRenderedPhoto = null;
 let lastRenderedGeneration = null;
+let lastRenderedStyle = null;
 
 function showToast(message) {
   elements.toast.textContent = message;
@@ -117,6 +121,11 @@ function renderState(state) {
   if (document.activeElement !== elements.musicVolume) elements.musicVolume.value = state.musicVolume;
   elements.musicVolumeValue.value = `${state.musicVolume}%`;
   music.setVolume(state.musicVolume);
+  elements.styleButtons.forEach((button) => {
+    const active = button.dataset.dollStyle === state.dollStyle;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
   renderGeneration(state);
   renderTips(state.tips);
   if (viewer && state.photo !== lastRenderedPhoto) {
@@ -126,6 +135,10 @@ function renderState(state) {
   if (viewer && state.generation !== lastRenderedGeneration) {
     viewer.setGeneration(state.generation);
     lastRenderedGeneration = state.generation;
+  }
+  if (viewer && state.dollStyle !== lastRenderedStyle) {
+    viewer.setStyle(state.dollStyle);
+    lastRenderedStyle = state.dollStyle;
   }
 }
 
@@ -180,6 +193,16 @@ function bindImageUpload() {
   elements.clearPhoto.addEventListener("click", () => {
     store.clearPhoto();
     showToast("已換回預設伴讀娃娃。 ");
+  });
+}
+
+function bindDollStyle() {
+  elements.styleButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const dollStyle = button.dataset.dollStyle;
+      store.update({ dollStyle });
+      showToast(dollStyle === "detective" ? "已換成原創推理 Q 版公仔。 " : "已換回暖心公仔。 ");
+    });
   });
 }
 
@@ -304,6 +327,7 @@ async function startViewer() {
 function init() {
   store.subscribe(renderState);
   bindImageUpload();
+  bindDollStyle();
   bindTimer();
   bindMusic();
   bindTips();
