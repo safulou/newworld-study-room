@@ -1,37 +1,49 @@
-# newworld-study-room
+# NewWorld Study Room
 
-NewWorld Study Room is an early MVP for a cozy online study room: a small wooden cabin, a photo-to-3D companion doll flow, a local P2P-style Tip note wall, a focus timer, and a shareable room invitation.
+A cozy online study cabin with a photo-textured 3D companion, a focus timer, and peer-to-peer Tip notes.
 
-## MVP scope
+## MVP features
 
-- Small wooden cabin study room built as a static HTML/CSS scene.
-- Upload a favorite doll or character photo and map it onto an interactive Three.js companion.
-- Drag the companion with a mouse or finger to inspect the 3D model.
-- P2P Tip note wall prototype using local state.
-- Focus timer with configurable session length.
-- Invite link UI and room naming.
-- Static deployment friendly: no build step required.
+- Interactive Three.js companion with mouse and touch rotation.
+- Local photo validation, center cropping, compression, and persistent texture preview.
+- Real WebRTC DataChannel Tip delivery through PeerJS.
+- Host invitation links, room snapshots, member presence, reconnect handling, and offline fallback.
+- Drift-resistant focus timer and configurable study sessions.
+- Responsive cabin UI with WebGL fallback and reduced-motion support.
+- Vite production build and GitHub Pages deployment workflow.
 
-## Run locally
+## Development
 
-Open `index.html` in a browser.
-
-For a local server:
+Requirements: Node.js 22 or newer.
 
 ```powershell
-python -m http.server 5173
+npm install
+npm run dev
 ```
 
-Then open `http://localhost:5173`.
+Open `http://127.0.0.1:5173/newworld-study-room/`.
 
-## Roadmap
+Production checks:
 
-1. Replace local Tip state with WebRTC room presence and peer-to-peer note sync.
-2. Add persistent room sessions and focus history.
-3. Move uploaded toy or character photos to object storage with upload progress, processing status, and deletion.
-4. Replace the photo-textured preview with an AI image-to-3D pipeline and downloadable GLB assets.
-5. Add authentication, moderation, and room privacy controls.
+```powershell
+npm run build
+npm run preview
+```
 
-## Repository
+## P2P rooms
 
-GitHub: https://github.com/safulou/newworld-study-room
+Opening the app without a `host` query creates a room. Share the generated invitation URL; opening that URL connects the guest to the host through a WebRTC DataChannel.
+
+The default configuration uses PeerJS Cloud for signaling. Copy `.env.example` to `.env.local` to configure a private PeerServer or TURN service. Tip payloads use browser-to-browser connections; the signaling server only brokers connection setup.
+
+## 3D generation scope
+
+The MVP maps an uploaded image onto a procedural 3D doll. It does not reconstruct a complete GLB model from one photo. The image pipeline is isolated so a later server-side AI provider can return generated GLB assets without rewriting the room UI or state flow.
+
+See [docs/architecture.md](docs/architecture.md) for module boundaries, P2P topology, trust boundaries, and the AI provider integration path.
+
+## Deployment
+
+Pushes to `main` run `.github/workflows/deploy.yml` and publish `dist` to GitHub Pages. In the repository settings, set Pages source to **GitHub Actions** once before the first deployment.
+
+Repository: https://github.com/safulou/newworld-study-room
