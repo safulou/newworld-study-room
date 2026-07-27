@@ -24,6 +24,11 @@
     <section class="shell" aria-label="伴讀小木屋">
       <section class="stage" aria-label="3D 伴讀房">
         <div class="stars" aria-hidden="true"></div>
+        <div class="tip-meteor" id="tipMeteor" aria-hidden="true" hidden></div>
+        <button class="tip-signal" id="tipSignal" type="button" aria-label="查看新收到的 Tip" title="查看新收到的 Tip" hidden>
+          <i data-lucide="message-circle-heart"></i>
+          <span class="tip-signal-count" id="tipSignalCount">1</span>
+        </button>
         <div class="room-3d" aria-hidden="true">
           <div class="cabin-roof"></div>
           <div class="cabin-sign">小木屋伴讀中</div>
@@ -100,7 +105,7 @@
           </div>
         </section>
 
-        <section class="panel tip-panel">
+        <section class="panel tip-panel" id="tipPanel">
           <div class="panel-head">
             <h2>P2P Tip 紙條</h2>
             <button class="icon-btn subtle" id="seedTip" type="button" aria-label="抽一張 Tip" title="抽一張 Tip">
