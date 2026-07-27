@@ -1,0 +1,54 @@
+import AxeBuilder from "@axe-core/playwright";
+import { expect, test } from "@playwright/test";
+
+test("renders the core room without overflow or serious accessibility violations", async ({ page }, testInfo) => {
+  await page.goto("./");
+  await expect(page.locator("#dollCanvas")).toBeVisible();
+  await expect(page.locator("body")).toHaveCSS("overflow-x", "visible");
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+  expect(overflow).toBe(false);
+
+  if (testInfo.project.name === "mobile") {
+    await expect(page.locator(".mobile-nav")).toBeVisible();
+    const targets = await page
+      .locator(".mobile-nav button")
+      .evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().height));
+    expect(targets.every((height) => height >= 44)).toBe(true);
+    const tipTop = await page.locator("#tipPanel").evaluate((element) => element.getBoundingClientRect().top);
+    const uploadTop = await page.locator("#dollPanel").evaluate((element) => element.getBoundingClientRect().top);
+    expect(tipTop).toBeLessThan(uploadTop);
+  }
+
+  if (testInfo.project.name === "desktop") {
+    const results = await new AxeBuilder({ page }).disableRules(["color-contrast"]).analyze();
+    expect(results.violations.filter((violation) => ["critical", "serious"].includes(violation.impact))).toEqual([]);
+  }
+});
+
+test("delivers a Tip between independent browser contexts", async ({ browser }, testInfo) => {
+  test.skip(testInfo.project.name === "mobile", "The same protocol path is covered once on desktop.");
+  test.setTimeout(50_000);
+  const hostContext = await browser.newContext();
+  const guestContext = await browser.newContext();
+  const host = await hostContext.newPage();
+  const guest = await guestContext.newPage();
+  await host.goto("http://127.0.0.1:4173/newworld-study-room/");
+  await expect(host.locator("#inviteLink")).toHaveValue(/^https?:/, { timeout: 20_000 });
+  const invite = await host.locator("#inviteLink").inputValue();
+  expect(invite).toContain("#token=");
+
+  await guest.goto(invite);
+  await expect(guest.locator("#connectionStatus")).toContainText("已加入", { timeout: 20_000 });
+  await guest.locator("#nickname").fill("Alice");
+  await guest.locator("#nickname").blur();
+  await guest.locator("#noteInput").fill("今天也一起努力");
+  await guest.locator("#noteForm").press("Enter");
+
+  await expect(host.locator("#notes")).toContainText("今天也一起努力");
+  await expect(guest.locator(".tip-delivery").first()).toHaveText("已送達");
+  await hostContext.close();
+  await guestContext.close();
+});

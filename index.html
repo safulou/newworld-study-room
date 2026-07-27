@@ -1,159 +1,222 @@
 <!doctype html>
 <html lang="zh-Hant">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#101823">
-  <meta name="description" content="一間有 3D 娃娃陪伴、能互傳 Tip 紙條的線上伴讀小木屋。">
-  <title>NewWorld Study Room</title>
-  <link rel="icon" href="data:,">
-</head>
-<body>
-  <main class="app">
-    <header class="topbar">
-      <div class="brand">
-        <h1>NewWorld Study Room</h1>
-        <span class="room-code" id="roomCode">正在建立房間</span>
-      </div>
-      <div class="presence" aria-live="polite">
-        <span class="dot" id="presenceDot"></span>
-        <span id="presenceText">連線準備中</span>
-      </div>
-    </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#101823" />
+    <meta name="description" content="一間有 3D 娃娃陪伴、能互傳 Tip 紙條的線上伴讀小木屋。" />
+    <title>NewWorld Study Room</title>
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <div class="brand">
+          <h1>NewWorld Study Room</h1>
+          <span class="room-code" id="roomCode">正在建立房間</span>
+        </div>
+        <div class="room-actions">
+          <div class="presence" aria-live="polite">
+            <span class="dot" id="presenceDot"></span>
+            <span id="presenceText">連線準備中</span>
+          </div>
+          <button
+            class="icon-btn share-room"
+            id="shareRoom"
+            type="button"
+            aria-label="分享房間"
+            title="分享房間"
+            disabled
+          >
+            <i data-lucide="share-2"></i>
+          </button>
+        </div>
+      </header>
 
-    <section class="shell" aria-label="伴讀小木屋">
-      <section class="stage" aria-label="3D 伴讀房">
-        <div class="stars" aria-hidden="true"></div>
-        <div class="tip-meteor" id="tipMeteor" aria-hidden="true" hidden></div>
-        <button class="tip-signal" id="tipSignal" type="button" aria-label="查看新收到的 Tip" title="查看新收到的 Tip" hidden>
-          <i data-lucide="message-circle-heart"></i>
-          <span class="tip-signal-count" id="tipSignalCount">1</span>
-        </button>
-        <div class="room-3d" aria-hidden="true">
-          <div class="cabin-roof"></div>
-          <div class="cabin-sign">小木屋伴讀中</div>
-          <div class="room-box">
-            <div class="window"><span></span></div>
-            <div class="beam beam-v"></div>
-            <div class="beam beam-h"></div>
-            <div class="floor"></div>
-            <div class="desk"></div>
-            <div class="lamp"></div>
-            <div class="bookshelf">
-              <div><span></span><span></span><span></span><span></span></div>
-              <div><span></span><span></span><span></span><span></span></div>
-              <div><span></span><span></span><span></span><span></span></div>
+      <section class="shell" aria-label="伴讀小木屋">
+        <section class="stage" id="roomStage" aria-label="3D 伴讀房">
+          <div class="stars" aria-hidden="true"></div>
+          <div class="tip-meteor" id="tipMeteor" aria-hidden="true" hidden></div>
+          <button
+            class="tip-signal"
+            id="tipSignal"
+            type="button"
+            aria-label="查看新收到的 Tip"
+            title="查看新收到的 Tip"
+            hidden
+          >
+            <i data-lucide="message-circle-heart"></i>
+            <span class="tip-signal-count" id="tipSignalCount">1</span>
+          </button>
+          <div class="room-3d" aria-hidden="true">
+            <div class="cabin-roof"></div>
+            <div class="cabin-sign">小木屋伴讀中</div>
+            <div class="room-box">
+              <div class="window"><span></span></div>
+              <div class="beam beam-v"></div>
+              <div class="beam beam-h"></div>
+              <div class="floor"></div>
+              <div class="desk"></div>
+              <div class="lamp"></div>
+              <div class="bookshelf">
+                <div><span></span><span></span><span></span><span></span></div>
+                <div><span></span><span></span><span></span><span></span></div>
+                <div><span></span><span></span><span></span><span></span></div>
+              </div>
+              <div class="plant"></div>
             </div>
-            <div class="plant"></div>
           </div>
-        </div>
 
-        <div class="avatar-zone" id="avatarZone">
-          <canvas class="doll-canvas" id="dollCanvas" aria-label="可旋轉的 3D 伴讀娃娃"></canvas>
-          <div class="avatar-fallback" id="avatarFallback" aria-hidden="true">
-            <div class="fallback-head">•‿•</div>
-            <div class="fallback-body"></div>
+          <div class="avatar-zone" id="avatarZone">
+            <canvas class="doll-canvas" id="dollCanvas" aria-label="可旋轉的 3D 伴讀娃娃"></canvas>
+            <div class="avatar-fallback" id="avatarFallback" aria-hidden="true">
+              <div class="fallback-head">•‿•</div>
+              <div class="fallback-body"></div>
+            </div>
           </div>
-        </div>
 
-        <div class="focus-bar">
-          <span class="timer" id="timer">25:00</span>
-          <button class="icon-btn primary" id="toggleTimer" type="button" aria-label="開始專注" title="開始專注">
-            <i data-lucide="play"></i>
-          </button>
-          <button class="icon-btn" id="resetTimer" type="button" aria-label="重設計時" title="重設計時">
-            <i data-lucide="rotate-ccw"></i>
-          </button>
-          <button class="icon-btn" id="toggleMusic" type="button" aria-label="播放背景音樂" title="播放背景音樂">
-            <i data-lucide="music-2"></i>
-          </button>
-        </div>
+          <div class="focus-bar">
+            <span class="timer" id="timer">25:00</span>
+            <button class="icon-btn primary" id="toggleTimer" type="button" aria-label="開始專注" title="開始專注">
+              <i data-lucide="play"></i>
+            </button>
+            <button class="icon-btn" id="resetTimer" type="button" aria-label="重設計時" title="重設計時">
+              <i data-lucide="rotate-ccw"></i>
+            </button>
+            <button class="icon-btn" id="toggleMusic" type="button" aria-label="播放背景音樂" title="播放背景音樂">
+              <i data-lucide="music-2"></i>
+            </button>
+          </div>
+        </section>
+
+        <aside class="sidebar">
+          <section class="panel upload-panel" id="dollPanel">
+            <div class="panel-head">
+              <h2>照片伴讀娃娃</h2>
+              <button class="icon-btn subtle" id="clearPhoto" type="button" aria-label="移除照片" title="移除照片">
+                <i data-lucide="trash-2"></i>
+              </button>
+            </div>
+            <label class="drop" id="photoDrop">
+              <input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp" />
+              <i data-lucide="image-plus"></i>
+              <strong>選擇角色照片</strong>
+              <span>JPG、PNG 或 WebP，最大 10 MB</span>
+            </label>
+            <div class="style-switch" role="group" aria-label="娃娃造型">
+              <button class="style-option active" type="button" data-doll-style="cozy" aria-pressed="true">
+                <i data-lucide="sparkles"></i>
+                <span>暖心公仔</span>
+              </button>
+              <button class="style-option" type="button" data-doll-style="detective" aria-pressed="false">
+                <i data-lucide="search"></i>
+                <span>推理 Q 版</span>
+              </button>
+            </div>
+            <div class="generation-card">
+              <div class="generation-top">
+                <span id="generationLabel">等待上傳照片</span>
+                <strong id="generationPercent">0%</strong>
+              </div>
+              <div
+                class="progress"
+                role="progressbar"
+                aria-label="照片材質處理進度"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow="0"
+              >
+                <span id="generationBar"></span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel tip-panel" id="tipPanel">
+            <div class="panel-head">
+              <h2>P2P Tip 紙條</h2>
+              <button class="icon-btn subtle" id="seedTip" type="button" aria-label="抽一張 Tip" title="抽一張 Tip">
+                <i data-lucide="shuffle"></i>
+              </button>
+            </div>
+            <div class="notes" id="notes" aria-live="polite"></div>
+            <form class="note-form" id="noteForm">
+              <input
+                id="noteInput"
+                maxlength="72"
+                autocomplete="off"
+                placeholder="寫一張給同房夥伴的 Tip"
+                aria-label="Tip 內容"
+              />
+              <button class="icon-btn primary" type="submit" aria-label="送出 Tip" title="送出 Tip">
+                <i data-lucide="send"></i>
+              </button>
+            </form>
+          </section>
+
+          <section class="panel settings-panel">
+            <div class="panel-head">
+              <h2>房間設定</h2>
+              <span class="role-badge" id="roleBadge">本機</span>
+            </div>
+            <label class="field">
+              <span>房間名稱</span>
+              <input id="roomName" maxlength="24" value="Midnight Study Room" />
+            </label>
+            <label class="field">
+              <span>顯示名稱</span>
+              <input id="nickname" maxlength="18" value="夥伴" autocomplete="nickname" />
+            </label>
+            <label class="field">
+              <span>專注分鐘</span>
+              <input id="minutes" type="number" min="5" max="120" step="5" value="25" />
+            </label>
+            <label class="field volume-field">
+              <span>音樂音量</span>
+              <span class="range-control">
+                <input id="musicVolume" type="range" min="0" max="100" step="1" value="28" />
+                <output id="musicVolumeValue" for="musicVolume">28%</output>
+              </span>
+            </label>
+            <div class="invite-row">
+              <input id="inviteLink" readonly value="正在建立邀請連結" aria-label="邀請連結" />
+              <button
+                class="icon-btn"
+                id="copyInvite"
+                type="button"
+                aria-label="複製邀請連結"
+                title="複製邀請連結"
+                disabled
+              >
+                <i data-lucide="copy"></i>
+              </button>
+            </div>
+            <div class="connection-row">
+              <p class="connection-status" id="connectionStatus">P2P 網路準備中</p>
+              <button class="icon-btn subtle" id="retryConnection" type="button" aria-label="重新連線" title="重新連線">
+                <i data-lucide="refresh-cw"></i>
+              </button>
+            </div>
+          </section>
+        </aside>
       </section>
+    </main>
 
-      <aside class="sidebar">
-        <section class="panel upload-panel">
-          <div class="panel-head">
-            <h2>3D 伴讀娃娃</h2>
-            <button class="icon-btn subtle" id="clearPhoto" type="button" aria-label="移除照片" title="移除照片">
-              <i data-lucide="trash-2"></i>
-            </button>
-          </div>
-          <label class="drop" id="photoDrop">
-            <input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp">
-            <i data-lucide="image-plus"></i>
-            <strong>選擇玩偶照片</strong>
-            <span>JPG、PNG 或 WebP，最大 10 MB</span>
-          </label>
-          <div class="style-switch" role="group" aria-label="娃娃造型">
-            <button class="style-option active" type="button" data-doll-style="cozy" aria-pressed="true">
-              <i data-lucide="sparkles"></i>
-              <span>暖心公仔</span>
-            </button>
-            <button class="style-option" type="button" data-doll-style="detective" aria-pressed="false">
-              <i data-lucide="search"></i>
-              <span>推理 Q 版</span>
-            </button>
-          </div>
-          <div class="generation-card">
-            <div class="generation-top">
-              <span id="generationLabel">等待上傳照片</span>
-              <strong id="generationPercent">0%</strong>
-            </div>
-            <div class="progress" role="progressbar" aria-label="3D 娃娃處理進度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-              <span id="generationBar"></span>
-            </div>
-          </div>
-        </section>
+    <nav class="mobile-nav" aria-label="手機快速導覽">
+      <button type="button" data-scroll-target="roomStage" aria-label="伴讀房" title="伴讀房">
+        <i data-lucide="house"></i>
+      </button>
+      <button type="button" data-scroll-target="tipPanel" aria-label="Tip 紙條" title="Tip 紙條">
+        <i data-lucide="message-circle-heart"></i>
+      </button>
+      <button type="button" data-scroll-target="dollPanel" aria-label="照片娃娃" title="照片娃娃">
+        <i data-lucide="image-plus"></i>
+      </button>
+      <button type="button" id="mobileShareRoom" aria-label="分享房間" title="分享房間" disabled>
+        <i data-lucide="share-2"></i>
+      </button>
+    </nav>
 
-        <section class="panel tip-panel" id="tipPanel">
-          <div class="panel-head">
-            <h2>P2P Tip 紙條</h2>
-            <button class="icon-btn subtle" id="seedTip" type="button" aria-label="抽一張 Tip" title="抽一張 Tip">
-              <i data-lucide="shuffle"></i>
-            </button>
-          </div>
-          <div class="notes" id="notes" aria-live="polite"></div>
-          <form class="note-form" id="noteForm">
-            <input id="noteInput" maxlength="72" autocomplete="off" placeholder="寫一張給同房夥伴的 Tip" aria-label="Tip 內容">
-            <button class="icon-btn primary" type="submit" aria-label="送出 Tip" title="送出 Tip">
-              <i data-lucide="send"></i>
-            </button>
-          </form>
-        </section>
-
-        <section class="panel settings-panel">
-          <div class="panel-head">
-            <h2>房間設定</h2>
-            <span class="role-badge" id="roleBadge">本機</span>
-          </div>
-          <label class="field">
-            <span>房間名稱</span>
-            <input id="roomName" maxlength="24" value="Midnight Study Room">
-          </label>
-          <label class="field">
-            <span>專注分鐘</span>
-            <input id="minutes" type="number" min="5" max="120" step="5" value="25">
-          </label>
-          <label class="field volume-field">
-            <span>音樂音量</span>
-            <span class="range-control">
-              <input id="musicVolume" type="range" min="0" max="100" step="1" value="28">
-              <output id="musicVolumeValue" for="musicVolume">28%</output>
-            </span>
-          </label>
-          <div class="invite-row">
-            <input id="inviteLink" readonly value="正在建立邀請連結" aria-label="邀請連結">
-            <button class="icon-btn" id="copyInvite" type="button" aria-label="複製邀請連結" title="複製邀請連結" disabled>
-              <i data-lucide="copy"></i>
-            </button>
-          </div>
-          <p class="connection-status" id="connectionStatus">P2P 網路準備中</p>
-        </section>
-      </aside>
-    </section>
-  </main>
-
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="/src/main.js"></script>
-</body>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
 </html>

@@ -1,46 +1,57 @@
 # Architecture
 
-NewWorld Study Room is a static Vite application. It does not need an application server for the current MVP. PeerJS uses a signaling service to establish WebRTC DataChannels; Tip payloads then travel between browsers.
+NewWorld Study Room is a Vite client with an optional Cloudflare Pages Function boundary. PeerJS establishes WebRTC DataChannels, while the Pages Function issues short-lived TURN credentials without exposing the long-lived key to browsers.
 
 ## Runtime flow
 
 ```mermaid
 flowchart LR
-  Photo[User photo] --> Pipeline[Local image pipeline]
-  Pipeline --> Store[Versioned local store]
-  Store --> Doll[Three.js doll viewer]
+  Photo[User photo] --> Pipeline[Local validation and texture]
+  Pipeline --> Provider[Optional 3D job API]
+  Pipeline --> Profile[Device profile store]
+  Provider --> R2[Generated GLB storage]
+  R2 --> Doll[Three.js GLTF viewer]
+  Profile --> Doll
 
   Host[Host browser] <-->|WebRTC DataChannel| Guest[Guest browser]
   Signal[PeerJS signaling] -. connection setup .-> Host
   Signal -. connection setup .-> Guest
-  Host -->|snapshot and relay| Tips[Tip wall]
-  Guest --> Tips
+  Worker[Pages Function] -->|short-lived ICE credentials| Host
+  Worker -->|short-lived ICE credentials| Guest
+  Host -->|snapshot, ACK and relay| RoomStore[Room-scoped Tip store]
+  Guest -->|outbox and retry| Host
 ```
 
-## Modules
+## State boundaries
 
-- `src/main.js`: application composition and DOM event wiring.
-- `src/state/store.js`: validated state, v1 migration, persistence, and Tip deduplication.
-- `src/services/image-pipeline.js`: image validation, center crop, compression, and provider boundary.
-- `src/services/doll-viewer.js`: Three.js scene, photo texture, original style presets, animation, resize, and pointer controls.
-- `src/services/p2p-room.js`: PeerJS lifecycle, host/guest roles, snapshots, presence, Tip relay, and reconnect handling.
-- `src/services/focus-timer.js`: drift-resistant focus timer.
-- `src/services/background-music.js`: user-initiated Web Audio synthesis, looping, and volume control.
+- The profile store contains nickname, timer, music, doll style, photo texture, and optional model URL.
+- Each host ID has a separate room store containing only room name and Tip history.
+- Joining another room cannot merge its Tips into a future room.
+- Outgoing guest Tips remain `pending` until the host returns a protocol ACK. Pending Tips survive reload and retry after reconnection.
+- Legacy v1/v2 state migrates only when creating a local host room, never when following a guest invitation.
 
-## P2P topology
+## P2P protocol
 
-The room host keeps one DataChannel per guest. Guests send Tips to the host, and the host relays each validated message to the other guests. Message IDs prevent duplicates. This topology is intentionally limited to small study rooms; it keeps room discovery and synchronization simple while preserving browser-to-browser payload transport.
+The host uses a small star topology with at most seven guests. Invitations contain a random token in the URL fragment; guests present it in PeerJS connection metadata. The host rejects invalid metadata, incompatible protocol versions, excess members, malformed messages, and peers sending more than six Tips per ten seconds.
 
-The public PeerJS Cloud service is suitable for MVP signaling. Production should configure a private PeerServer and TURN credentials through the `VITE_PEER_*` and `VITE_TURN_*` environment variables.
+Each Tip has bounded `id`, `by`, `text`, and `createdAt` fields. The host acknowledges valid guest Tips, deduplicates IDs, and relays them to other guests. Text is rendered through `textContent`.
 
-## 3D provider boundary
+## Cloudflare boundary
 
-The current image pipeline creates an optimized square texture for the procedural Three.js doll. A future AI provider can replace `prepareCompanionPhoto()` with a job API that returns a GLB URL while the store continues to expose the same processing states. Generated assets should be uploaded directly to object storage with signed URLs; API keys must remain server-side.
+`functions/api/turn-credentials.js` reads `TURN_KEY_ID` and `TURN_KEY_API_TOKEN` from server-side bindings and requests one-day credentials from Cloudflare Realtime TURN. The browser receives only short-lived `iceServers`. If the endpoint is unavailable, P2P falls back to Cloudflare STUN.
 
-## Trust boundaries
+Cloudflare Pages automatically uses `/` as the Vite base. GitHub Pages keeps `/newworld-study-room/`. `public/_headers` supplies CSP, permissions policy, clickjacking protection, and immutable asset caching on Cloudflare Pages.
 
-- Incoming P2P messages are type checked, length limited, and rendered with `textContent`.
-- Uploaded images are type and size checked, decoded locally, and compressed before persistence.
-- Room links contain only a random PeerJS host ID; no image or Tip history is embedded in the URL.
-- Local storage is best-effort. If quota is exceeded, the app drops the photo rather than breaking the room.
-- Background music contains no external recording or sample; the browser synthesizes the public-domain melody after user interaction.
+## 3D provider contract
+
+Local mode validates image type, file size, and decoded pixel count, center-crops to 768 px, and performs asynchronous JPEG compression. Provider mode posts the original file to `VITE_DOLL_GENERATION_URL` and accepts either a direct `modelUrl` or a pollable `statusUrl`.
+
+The status response exposes `status`, `progress`, `message`, and `modelUrl`. Job and model URLs must be same-origin, typically through a Worker/R2 route. The Three.js viewer dynamically loads completed GLB files, frames them to the cabin, and falls back to the procedural doll on failure. Provider API and object-storage credentials stay behind the server boundary.
+
+## Performance and quality
+
+- Three.js, PeerJS, and GLTFLoader are split into lazy chunks.
+- WebGL rendering stops outside the viewport and while the page is hidden.
+- A process ID prevents an older image task from overwriting a newer upload.
+- ESLint, Vitest, Vite build, Playwright, and axe run locally; GitHub CI runs unit/build checks and desktop browser tests.
+- `prefers-reduced-motion` disables decorative motion while preserving state changes.
