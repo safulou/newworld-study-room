@@ -67,6 +67,33 @@
             </div>
           </div>
 
+          <div class="focus-garden" id="focusGarden" data-plant="rose" aria-label="專注植物：玫瑰，種子階段">
+            <div class="garden-plant" aria-hidden="true">
+              <span class="garden-seed"></span>
+              <div class="flower-form">
+                <span class="flower-stem"></span>
+                <span class="flower-leaf flower-leaf-left"></span>
+                <span class="flower-leaf flower-leaf-right"></span>
+                <span class="flower-bloom"><i></i><i></i><i></i><i></i><i></i></span>
+              </div>
+              <div class="cactus-form">
+                <span class="cactus-body"></span>
+                <span class="cactus-arm cactus-arm-left"></span>
+                <span class="cactus-arm cactus-arm-right"></span>
+                <span class="cactus-flower"></span>
+              </div>
+              <div class="succulent-form"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="pine-form">
+                <span class="pine-trunk"></span>
+                <span class="pine-tier pine-tier-one"></span>
+                <span class="pine-tier pine-tier-two"></span>
+                <span class="pine-tier pine-tier-three"></span>
+              </div>
+            </div>
+            <span class="garden-ground" aria-hidden="true"></span>
+            <span class="garden-status" id="gardenStatus" aria-live="polite">玫瑰 · 種子</span>
+          </div>
+
           <div class="avatar-zone" id="avatarZone">
             <canvas class="doll-canvas" id="dollCanvas" aria-label="可旋轉的 3D 伴讀娃娃"></canvas>
             <div class="avatar-fallback" id="avatarFallback" aria-hidden="true">
@@ -169,6 +196,16 @@
             <label class="field">
               <span>專注分鐘</span>
               <input id="minutes" type="number" min="5" max="120" step="5" value="25" />
+            </label>
+            <label class="field">
+              <span>專注植物</span>
+              <select id="plantType">
+                <option value="rose">玫瑰</option>
+                <option value="tulip">鬱金香</option>
+                <option value="cactus">仙人掌</option>
+                <option value="succulent">多肉植物</option>
+                <option value="pine">松樹</option>
+              </select>
             </label>
             <label class="field volume-field">
               <span>音樂音量</span>

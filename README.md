@@ -12,6 +12,7 @@ A cozy online study cabin with a photo-textured 3D companion, a focus timer, and
 - Room-scoped history plus a persistent Tip outbox with acknowledgements and automatic retry.
 - A shooting star carries each newly received peer Tip to the unread indicator in the sky.
 - Drift-resistant focus timer and configurable study sessions.
+- Timer-driven focus garden with rose, tulip, cactus, succulent, and pine growth stages.
 - Browser-synthesized public-domain `Für Elise` background music with volume control.
 - Responsive cabin UI with mobile navigation, native sharing, 44 px touch targets, WebGL fallback, and reduced-motion support.
 - Optional GLB generation-provider contract and dynamic Three.js GLTF loading.

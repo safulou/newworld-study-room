@@ -24,11 +24,18 @@ describe("room-scoped store", () => {
 
   it("shares personal preferences without sharing room data", () => {
     const first = createStore({ roomId: "room-a", includeStarterTips: false });
-    first.update({ nickname: "Mina", roomName: "Room A" });
+    first.update({ nickname: "Mina", plantType: "pine", roomName: "Room A" });
 
     const second = createStore({ roomId: "room-b", includeStarterTips: false });
     expect(second.get().nickname).toBe("Mina");
+    expect(second.get().plantType).toBe("pine");
     expect(second.get().roomName).toBe("Midnight Study Room");
+  });
+
+  it("falls back to a rose for an unknown plant type", () => {
+    localStorage.setItem("newworld-study-room:profile:v3", JSON.stringify({ plantType: "unknown" }));
+    const store = createStore({ roomId: "room-a", includeStarterTips: false });
+    expect(store.get().plantType).toBe("rose");
   });
 
   it("persists outbox delivery state", () => {

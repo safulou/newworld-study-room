@@ -61,6 +61,8 @@ const elements = {
   tipSignal: $("#tipSignal"),
   tipSignalCount: $("#tipSignalCount"),
   tipPanel: $("#tipPanel"),
+  focusGarden: $("#focusGarden"),
+  gardenStatus: $("#gardenStatus"),
   timer: $("#timer"),
   toggleTimer: $("#toggleTimer"),
   resetTimer: $("#resetTimer"),
@@ -80,6 +82,7 @@ const elements = {
   roomName: $("#roomName"),
   nickname: $("#nickname"),
   minutes: $("#minutes"),
+  plantType: $("#plantType"),
   musicVolume: $("#musicVolume"),
   musicVolumeValue: $("#musicVolumeValue"),
   inviteLink: $("#inviteLink"),
@@ -108,6 +111,15 @@ let unreadRemoteTips = 0;
 let meteorAnimation = null;
 let photoProcessId = 0;
 let p2pStartPromise = null;
+let lastGardenStage = "";
+
+const plantLabels = {
+  rose: "玫瑰",
+  tulip: "鬱金香",
+  cactus: "仙人掌",
+  succulent: "多肉植物",
+  pine: "松樹",
+};
 
 function showToast(message) {
   elements.toast.textContent = message;
@@ -216,9 +228,10 @@ function renderTips(tips) {
     elements.notes.append(empty);
     return;
   }
-  tips.slice(0, 12).forEach((tip) => {
+  tips.slice(0, 12).forEach((tip, index) => {
     const note = document.createElement("article");
     note.className = `note ${tip.direction === "outgoing" ? "outgoing" : ""}`.trim();
+    note.dataset.paper = String(index + 1);
     const by = document.createElement("b");
     by.textContent = tip.by;
     const text = document.createElement("span");
@@ -234,12 +247,44 @@ function renderTips(tips) {
   });
 }
 
+function clampProgress(value) {
+  return Math.max(0, Math.min(1, value));
+}
+
+function updateGarden(remaining = timer.remaining) {
+  const totalSeconds = Math.max(1, timer.minutes * 60);
+  const growth = clampProgress(1 - remaining / totalSeconds);
+  const sprout = clampProgress(growth * 5);
+  const leaves = clampProgress((growth - 0.18) / 0.5);
+  const bloom = clampProgress((growth - 0.68) / 0.32);
+  const stage =
+    growth === 0 ? "種子" : growth < 0.18 ? "發芽" : growth < 0.68 ? "成長中" : growth < 1 ? "即將完成" : "完全成長";
+  const plantType = store.get().plantType;
+
+  elements.focusGarden.style.setProperty("--growth", growth.toFixed(4));
+  elements.focusGarden.style.setProperty("--sprout", sprout.toFixed(4));
+  elements.focusGarden.style.setProperty("--leaves", leaves.toFixed(4));
+  elements.focusGarden.style.setProperty("--bloom", bloom.toFixed(4));
+  elements.focusGarden.classList.toggle("complete", growth >= 1);
+
+  const stageKey = `${plantType}:${stage}`;
+  if (stageKey !== lastGardenStage) {
+    const label = plantLabels[plantType];
+    elements.gardenStatus.textContent = `${label} · ${stage}`;
+    elements.focusGarden.setAttribute("aria-label", `專注植物：${label}，${stage}階段`);
+    lastGardenStage = stageKey;
+  }
+}
+
 function renderState(state) {
   if (document.activeElement !== elements.roomName) elements.roomName.value = state.roomName;
   if (document.activeElement !== elements.nickname) elements.nickname.value = state.nickname;
   if (document.activeElement !== elements.minutes) elements.minutes.value = state.minutes;
+  if (document.activeElement !== elements.plantType) elements.plantType.value = state.plantType;
   if (document.activeElement !== elements.musicVolume) elements.musicVolume.value = state.musicVolume;
   elements.musicVolumeValue.value = `${state.musicVolume}%`;
+  elements.focusGarden.dataset.plant = state.plantType;
+  updateGarden();
   music.setVolume(state.musicVolume);
   elements.styleButtons.forEach((button) => {
     const active = button.dataset.dollStyle === state.dollStyle;
@@ -352,9 +397,11 @@ function bindTimer() {
       .toString()
       .padStart(2, "0");
     elements.timer.textContent = `${minutes}:${seconds}`;
+    updateGarden(event.detail);
   });
   timer.addEventListener("running", (event) => {
     replaceButtonIcon(elements.toggleTimer, event.detail ? "pause" : "play", event.detail ? "暫停專注" : "開始專注");
+    elements.focusGarden.classList.toggle("growing", event.detail);
   });
   timer.addEventListener("complete", () => showToast("這輪完成了，留一張 Tip 給同房夥伴吧。 "));
   elements.toggleTimer.addEventListener("click", () => timer.toggle());
@@ -419,6 +466,11 @@ function bindSettings() {
     const minutes = Math.max(5, Math.min(120, Number(elements.minutes.value) || 25));
     store.update({ minutes });
     timer.setMinutes(minutes);
+  });
+  elements.plantType.addEventListener("change", () => {
+    lastGardenStage = "";
+    store.update({ plantType: elements.plantType.value });
+    showToast(`這一輪種植${plantLabels[store.get().plantType]}。 `);
   });
   elements.copyInvite.addEventListener("click", async () => {
     try {

@@ -23,6 +23,11 @@ test("renders the core room without overflow or serious accessibility violations
   }
 
   if (testInfo.project.name === "desktop") {
+    const noteColors = await page
+      .locator(".note")
+      .evaluateAll((notes) => notes.map((note) => getComputedStyle(note).backgroundColor));
+    expect(new Set(noteColors).size).toBe(noteColors.length);
+
     const results = await new AxeBuilder({ page }).disableRules(["color-contrast"]).analyze();
     expect(results.violations.filter((violation) => ["critical", "serious"].includes(violation.impact))).toEqual([]);
   }
@@ -51,4 +56,24 @@ test("delivers a Tip between independent browser contexts", async ({ browser }, 
   await expect(guest.locator(".tip-delivery").first()).toHaveText("已送達");
   await hostContext.close();
   await guestContext.close();
+});
+
+test("grows the selected focus plant with the study timer", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === "mobile", "Timer behavior is covered once on desktop.");
+  await page.goto("./");
+
+  await page.locator("#plantType").selectOption("tulip");
+  await expect(page.locator("#focusGarden")).toHaveAttribute("data-plant", "tulip");
+  await expect(page.locator("#gardenStatus")).toContainText("鬱金香");
+
+  await page.locator("#toggleTimer").click();
+  await expect
+    .poll(async () =>
+      Number(await page.locator("#focusGarden").evaluate((element) => element.style.getPropertyValue("--growth"))),
+    )
+    .toBeGreaterThan(0);
+
+  await page.locator("#resetTimer").click();
+  await expect(page.locator("#focusGarden")).toHaveCSS("--growth", "0.0000");
+  await expect(page.locator("#gardenStatus")).toContainText("種子");
 });
