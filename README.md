@@ -9,6 +9,7 @@ A cozy online study cabin with a photo-textured 3D companion, a focus timer, and
 - Local photo validation, center cropping, compression, and persistent texture preview.
 - Real WebRTC DataChannel Tip delivery through PeerJS.
 - Host invitation links, room snapshots, member presence, reconnect handling, and offline fallback.
+- Starry-sky unread Tip indicator that appears only for newly received peer messages.
 - Drift-resistant focus timer and configurable study sessions.
 - Browser-synthesized public-domain `Für Elise` background music with volume control.
 - Responsive cabin UI with WebGL fallback and reduced-motion support.

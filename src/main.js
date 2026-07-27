@@ -2,6 +2,7 @@ import "./styles.css";
 import {
   Copy,
   ImagePlus,
+  MessageCircleHeart,
   Music2,
   Pause,
   Play,
@@ -19,7 +20,7 @@ import { FocusTimer } from "./services/focus-timer.js";
 import { prepareCompanionPhoto } from "./services/image-pipeline.js";
 import { createStore } from "./state/store.js";
 
-const icons = { Copy, ImagePlus, Music2, Pause, Play, RotateCcw, Search, Send, Shuffle, Sparkles, Trash2, Volume2 };
+const icons = { Copy, ImagePlus, MessageCircleHeart, Music2, Pause, Play, RotateCcw, Search, Send, Shuffle, Sparkles, Trash2, Volume2 };
 createIcons({ icons });
 
 const $ = (selector) => document.querySelector(selector);
@@ -29,6 +30,9 @@ const elements = {
   presenceText: $("#presenceText"),
   dollCanvas: $("#dollCanvas"),
   avatarZone: $("#avatarZone"),
+  tipSignal: $("#tipSignal"),
+  tipSignalCount: $("#tipSignalCount"),
+  tipPanel: $("#tipPanel"),
   timer: $("#timer"),
   toggleTimer: $("#toggleTimer"),
   resetTimer: $("#resetTimer"),
@@ -65,12 +69,31 @@ let toastTimeout = null;
 let lastRenderedPhoto = null;
 let lastRenderedGeneration = null;
 let lastRenderedStyle = null;
+let unreadRemoteTips = 0;
 
 function showToast(message) {
   elements.toast.textContent = message;
   elements.toast.classList.add("show");
   window.clearTimeout(toastTimeout);
   toastTimeout = window.setTimeout(() => elements.toast.classList.remove("show"), 2600);
+}
+
+function showRemoteTipSignal() {
+  unreadRemoteTips = Math.min(99, unreadRemoteTips + 1);
+  elements.tipSignalCount.textContent = String(unreadRemoteTips);
+  elements.tipSignal.setAttribute("aria-label", `查看 ${unreadRemoteTips} 張新收到的 Tip`);
+  elements.tipSignal.hidden = false;
+  elements.tipSignal.classList.remove("arrived");
+  requestAnimationFrame(() => elements.tipSignal.classList.add("arrived"));
+}
+
+function bindTipSignal() {
+  elements.tipSignal.addEventListener("click", () => {
+    unreadRemoteTips = 0;
+    elements.tipSignal.hidden = true;
+    elements.tipSignal.classList.remove("arrived");
+    elements.tipPanel.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
 }
 
 function replaceButtonIcon(button, iconName, label) {
@@ -307,7 +330,10 @@ async function startP2P() {
   });
   p2p.addEventListener("room-meta", (event) => store.update({ roomName: event.detail.roomName }));
   p2p.addEventListener("tip", (event) => {
-    if (store.addTip(event.detail)) showToast(`${event.detail.by} 傳來一張 Tip。 `);
+    if (store.addTip(event.detail)) {
+      showRemoteTipSignal();
+      showToast(`${event.detail.by} 傳來一張 Tip。 `);
+    }
   });
   p2p.addEventListener("network-error", (event) => showToast(event.detail));
   p2p.start();
@@ -331,6 +357,7 @@ function init() {
   bindTimer();
   bindMusic();
   bindTips();
+  bindTipSignal();
   bindSettings();
   timer.emitTick();
   startViewer();
