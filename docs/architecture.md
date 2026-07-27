@@ -22,7 +22,7 @@ flowchart LR
 - `src/main.js`: application composition and DOM event wiring.
 - `src/state/store.js`: validated state, v1 migration, persistence, and Tip deduplication.
 - `src/services/image-pipeline.js`: image validation, center crop, compression, and provider boundary.
-- `src/services/doll-viewer.js`: Three.js scene, photo texture, animation, resize, and pointer controls.
+- `src/services/doll-viewer.js`: Three.js scene, photo texture, original style presets, animation, resize, and pointer controls.
 - `src/services/p2p-room.js`: PeerJS lifecycle, host/guest roles, snapshots, presence, Tip relay, and reconnect handling.
 - `src/services/focus-timer.js`: drift-resistant focus timer.
 - `src/services/background-music.js`: user-initiated Web Audio synthesis, looping, and volume control.

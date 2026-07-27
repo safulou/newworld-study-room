@@ -32,6 +32,7 @@ export class DollViewer {
     this.targetRotation = 0;
     this.userRotation = 0;
     this.lastInteraction = 0;
+    this.currentStyle = null;
     this.reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
     this.init();
   }
@@ -61,56 +62,89 @@ export class DollViewer {
   }
 
   buildDoll() {
-    const skin = new THREE.MeshStandardMaterial({ color: 0xe6c9a2, roughness: .72 });
-    const cloth = new THREE.MeshStandardMaterial({ color: 0x69c8bd, roughness: .62, metalness: .04 });
-    const clothDark = new THREE.MeshStandardMaterial({ color: 0x4e8298, roughness: .68 });
-    const accent = new THREE.MeshStandardMaterial({ color: 0xf1b65f, roughness: .55 });
-    const sole = new THREE.MeshStandardMaterial({ color: 0x24384a, roughness: .8 });
+    this.materials = {
+      cozy: {
+        skin: new THREE.MeshStandardMaterial({ color: 0xe6c9a2, roughness: .72 }),
+        cloth: new THREE.MeshStandardMaterial({ color: 0x69c8bd, roughness: .62, metalness: .04 }),
+        clothDark: new THREE.MeshStandardMaterial({ color: 0x4e8298, roughness: .68 }),
+        accent: new THREE.MeshStandardMaterial({ color: 0xf1b65f, roughness: .55 }),
+        sole: new THREE.MeshStandardMaterial({ color: 0x24384a, roughness: .8 }),
+      },
+      detective: {
+        skin: new THREE.MeshToonMaterial({ color: 0xf0cfa8 }),
+        cloth: new THREE.MeshToonMaterial({ color: 0x294b67 }),
+        clothDark: new THREE.MeshToonMaterial({ color: 0xd8b875 }),
+        accent: new THREE.MeshToonMaterial({ color: 0xe7a94e }),
+        sole: new THREE.MeshToonMaterial({ color: 0x172638 }),
+      },
+    };
+    const cozy = this.materials.cozy;
 
-    const body = new THREE.Mesh(new THREE.SphereGeometry(.76, 40, 28), cloth);
-    body.scale.set(.9, 1.05, .7);
-    body.position.y = .02;
-    this.doll.add(body);
+    this.body = new THREE.Mesh(new THREE.SphereGeometry(.76, 40, 28), cozy.cloth);
+    this.doll.add(this.body);
 
-    const belly = new THREE.Mesh(new THREE.SphereGeometry(.5, 32, 22), clothDark);
-    belly.scale.set(1, 1.08, .36);
-    belly.position.set(0, -.04, .54);
-    this.doll.add(belly);
+    this.belly = new THREE.Mesh(new THREE.SphereGeometry(.5, 32, 22), cozy.clothDark);
+    this.doll.add(this.belly);
 
-    const head = new THREE.Mesh(new THREE.SphereGeometry(.73, 48, 34), skin);
-    head.scale.set(1, 1.03, .92);
-    head.position.y = 1.12;
-    this.doll.add(head);
+    this.head = new THREE.Mesh(new THREE.SphereGeometry(.73, 48, 34), cozy.skin);
+    this.doll.add(this.head);
 
-    const makeLimb = (x, y, rotation, material = cloth) => {
+    const makeLimb = (x, y, rotation, material = cozy.cloth) => {
       const limb = new THREE.Mesh(new THREE.CapsuleGeometry(.18, .46, 8, 18), material);
       limb.position.set(x, y, 0);
       limb.rotation.z = rotation;
       this.doll.add(limb);
+      return limb;
     };
-    makeLimb(-.73, .15, -.48);
-    makeLimb(.73, .15, .48);
-    makeLimb(-.35, -.82, .04, sole);
-    makeLimb(.35, -.82, -.04, sole);
+    this.arms = [makeLimb(-.73, .15, -.48), makeLimb(.73, .15, .48)];
+    this.legs = [makeLimb(-.35, -.82, .04, cozy.sole), makeLimb(.35, -.82, -.04, cozy.sole)];
 
     const earGeometry = new THREE.SphereGeometry(.2, 24, 18);
-    [-1, 1].forEach((side) => {
-      const ear = new THREE.Mesh(earGeometry, accent);
+    this.ears = [-1, 1].map((side) => {
+      const ear = new THREE.Mesh(earGeometry, cozy.accent);
       ear.position.set(side * .58, 1.63, -.05);
       ear.scale.set(1, 1.14, .65);
       this.doll.add(ear);
+      return ear;
     });
 
-    const scarf = new THREE.Mesh(new THREE.TorusGeometry(.47, .09, 12, 40), accent);
-    scarf.rotation.x = Math.PI / 2;
-    scarf.position.set(0, .57, .06);
-    this.doll.add(scarf);
+    this.scarf = new THREE.Mesh(new THREE.TorusGeometry(.47, .09, 12, 40), cozy.accent);
+    this.scarf.rotation.x = Math.PI / 2;
+    this.scarf.position.set(0, .57, .06);
+    this.doll.add(this.scarf);
 
     this.defaultTexture = defaultFaceTexture();
     this.faceMaterial = new THREE.MeshBasicMaterial({ map: this.defaultTexture, transparent: true });
-    const face = new THREE.Mesh(new THREE.CircleGeometry(.575, 64), this.faceMaterial);
-    face.position.set(0, 1.12, .69);
-    this.doll.add(face);
+    this.face = new THREE.Mesh(new THREE.CircleGeometry(.575, 64), this.faceMaterial);
+    this.doll.add(this.face);
+
+    this.outlineMaterial = new THREE.MeshBasicMaterial({ color: 0x111923, side: THREE.BackSide });
+    this.outlines = [];
+    [this.body, this.belly, this.head, ...this.arms, ...this.legs].forEach((mesh) => this.addOutline(mesh));
+
+    this.detectiveAccessories = new THREE.Group();
+    const detective = this.materials.detective;
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(.82, 36, 18), detective.cloth);
+    cap.scale.set(1, .42, .9);
+    cap.position.set(0, 1.84, -.01);
+    this.detectiveAccessories.add(cap);
+    const brim = new THREE.Mesh(new THREE.BoxGeometry(.92, .07, .32), detective.clothDark);
+    brim.position.set(.16, 1.76, .56);
+    brim.rotation.z = -.04;
+    this.detectiveAccessories.add(brim);
+    const tie = new THREE.Mesh(new THREE.OctahedronGeometry(.13, 0), detective.accent);
+    tie.scale.set(.7, 1.35, .4);
+    tie.position.set(0, .28, .65);
+    this.detectiveAccessories.add(tie);
+    const magnifierRing = new THREE.Mesh(new THREE.TorusGeometry(.15, .035, 10, 32), detective.accent);
+    magnifierRing.position.set(.78, .15, .5);
+    const magnifierHandle = new THREE.Mesh(new THREE.CapsuleGeometry(.035, .25, 6, 10), detective.sole);
+    magnifierHandle.position.set(.88, -.02, .5);
+    magnifierHandle.rotation.z = -.58;
+    this.detectiveAccessories.add(magnifierRing, magnifierHandle);
+    [cap, brim, tie, magnifierRing, magnifierHandle].forEach((mesh) => this.addOutline(mesh, 1.055));
+    this.detectiveAccessories.visible = false;
+    this.doll.add(this.detectiveAccessories);
 
     this.scanMaterial = new THREE.MeshBasicMaterial({ color: 0xffe0a3, transparent: true, opacity: .75 });
     this.scanRing = new THREE.Mesh(new THREE.TorusGeometry(.92, .025, 8, 64), this.scanMaterial);
@@ -118,12 +152,21 @@ export class DollViewer {
     this.scanRing.visible = false;
     this.doll.add(this.scanRing);
 
-    const pedestal = new THREE.Mesh(
+    this.pedestal = new THREE.Mesh(
       new THREE.CylinderGeometry(.82, .94, .16, 48),
       new THREE.MeshStandardMaterial({ color: 0x5a3828, roughness: .76 }),
     );
-    pedestal.position.y = -1.22;
-    this.scene.add(pedestal);
+    this.pedestal.position.y = -1.22;
+    this.scene.add(this.pedestal);
+    this.setStyle("cozy");
+  }
+
+  addOutline(mesh, scale = 1.045) {
+    const outline = new THREE.Mesh(mesh.geometry, this.outlineMaterial);
+    outline.scale.setScalar(scale);
+    outline.visible = false;
+    mesh.add(outline);
+    this.outlines.push(outline);
   }
 
   buildLighting() {
@@ -181,6 +224,62 @@ export class DollViewer {
 
   setGeneration(status) {
     this.scanRing.visible = status === "processing";
+  }
+
+  setStyle(style) {
+    const nextStyle = style === "detective" ? "detective" : "cozy";
+    if (nextStyle === this.currentStyle) return;
+    this.currentStyle = nextStyle;
+    const detective = nextStyle === "detective";
+    const materials = this.materials[nextStyle];
+
+    this.body.material = materials.cloth;
+    this.belly.material = materials.clothDark;
+    this.head.material = materials.skin;
+    this.arms.forEach((arm) => { arm.material = materials.cloth; });
+    this.legs.forEach((leg) => { leg.material = materials.sole; });
+    this.ears.forEach((ear) => {
+      ear.material = materials.accent;
+      ear.visible = !detective;
+    });
+    this.scarf.material = materials.accent;
+    this.scarf.visible = !detective;
+
+    if (detective) {
+      this.body.scale.set(.78, .9, .64);
+      this.body.position.set(0, -.08, 0);
+      this.belly.scale.set(.86, .95, .38);
+      this.belly.position.set(0, -.1, .48);
+      this.head.scale.set(1.18, 1.16, 1.04);
+      this.head.position.set(0, 1.14, 0);
+      this.face.scale.setScalar(1.18);
+      this.face.position.set(0, 1.14, .78);
+      this.arms[0].position.set(-.63, .04, 0);
+      this.arms[1].position.set(.63, .04, 0);
+      this.legs[0].position.set(-.28, -.8, 0);
+      this.legs[1].position.set(.28, -.8, 0);
+      this.detectiveAccessories.visible = true;
+      this.camera.position.set(0, .45, 6.2);
+      this.scanRing.scale.setScalar(1.12);
+    } else {
+      this.body.scale.set(.9, 1.05, .7);
+      this.body.position.set(0, .02, 0);
+      this.belly.scale.set(1, 1.08, .36);
+      this.belly.position.set(0, -.04, .54);
+      this.head.scale.set(1, 1.03, .92);
+      this.head.position.set(0, 1.12, 0);
+      this.face.scale.setScalar(1);
+      this.face.position.set(0, 1.12, .69);
+      this.arms[0].position.set(-.73, .15, 0);
+      this.arms[1].position.set(.73, .15, 0);
+      this.legs[0].position.set(-.35, -.82, 0);
+      this.legs[1].position.set(.35, -.82, 0);
+      this.detectiveAccessories.visible = false;
+      this.camera.position.set(0, .38, 5.9);
+      this.scanRing.scale.setScalar(1);
+    }
+    this.outlines.forEach((outline) => { outline.visible = detective; });
+    this.camera.updateProjectionMatrix();
   }
 
   resize() {
