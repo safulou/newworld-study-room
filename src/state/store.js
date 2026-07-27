@@ -34,8 +34,10 @@ const profileDefaults = {
   minutes: 25,
   plantType: "rose",
   musicVolume: 28,
+  companionMode: "doll",
   dollStyle: "cozy",
   photo: "",
+  standeePhoto: "",
   modelUrl: "",
   generation: "empty",
   generationProgress: 0,
@@ -101,8 +103,12 @@ function sanitizeProfile(value = {}) {
       ? value.plantType
       : profileDefaults.plantType,
     musicVolume: Math.max(0, Math.min(100, Number(value.musicVolume ?? profileDefaults.musicVolume))),
+    companionMode: ["doll", "standee"].includes(value.companionMode)
+      ? value.companionMode
+      : profileDefaults.companionMode,
     dollStyle: ["cozy", "detective"].includes(value.dollStyle) ? value.dollStyle : profileDefaults.dollStyle,
     photo: typeof value.photo === "string" ? value.photo : "",
+    standeePhoto: typeof value.standeePhoto === "string" ? value.standeePhoto : "",
     modelUrl: typeof value.modelUrl === "string" ? value.modelUrl : "",
     generation: ["empty", "processing", "ready", "error"].includes(value.generation)
       ? value.generation
@@ -151,7 +157,7 @@ export function createStore({ roomId = "local-draft", includeStarterTips = true,
     try {
       localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
     } catch {
-      profile = { ...profile, photo: "", modelUrl: "", generation: "error", generationProgress: 0 };
+      profile = { ...profile, photo: "", standeePhoto: "", modelUrl: "", generation: "error", generationProgress: 0 };
       try {
         localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
       } catch {
@@ -252,7 +258,14 @@ export function createStore({ roomId = "local-draft", includeStarterTips = true,
       return room.tips.filter((tip) => tip.direction === "outgoing" && tip.delivery === "pending");
     },
     clearPhoto() {
-      profile = { ...profile, photo: "", modelUrl: "", generation: "empty", generationProgress: 0 };
+      profile = {
+        ...profile,
+        photo: "",
+        standeePhoto: "",
+        modelUrl: "",
+        generation: "empty",
+        generationProgress: 0,
+      };
       emit({ saveProfile: true, saveRoom: false });
     },
   };

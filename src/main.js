@@ -1,11 +1,13 @@
 import "./styles.css";
 import {
   Copy,
+  Cuboid,
   House,
   ImagePlus,
   MessageCircleHeart,
   Music2,
   Pause,
+  PanelTop,
   Play,
   RefreshCw,
   RotateCcw,
@@ -25,11 +27,13 @@ import { createStore } from "./state/store.js";
 
 const icons = {
   Copy,
+  Cuboid,
   House,
   ImagePlus,
   MessageCircleHeart,
   Music2,
   Pause,
+  PanelTop,
   Play,
   RefreshCw,
   RotateCcw,
@@ -70,6 +74,9 @@ const elements = {
   photoInput: $("#photoInput"),
   photoDrop: $("#photoDrop"),
   clearPhoto: $("#clearPhoto"),
+  companionModeButtons: [...document.querySelectorAll("[data-companion-mode]")],
+  companionPanelTitle: $("#companionPanelTitle"),
+  dollStyleSwitch: $("#dollStyleSwitch"),
   styleButtons: [...document.querySelectorAll("[data-doll-style]")],
   generationLabel: $("#generationLabel"),
   generationPercent: $("#generationPercent"),
@@ -104,8 +111,10 @@ let viewer = null;
 let p2p = null;
 let toastTimeout = null;
 let lastRenderedPhoto = null;
+let lastRenderedStandeePhoto = null;
 let lastRenderedModelUrl = null;
 let lastRenderedGeneration = null;
+let lastRenderedCompanionMode = null;
 let lastRenderedStyle = null;
 let unreadRemoteTips = 0;
 let meteorAnimation = null;
@@ -222,10 +231,11 @@ function replaceButtonIcon(button, iconName, label) {
 
 function renderGeneration(state) {
   const progress = state.generationProgress;
+  const standee = state.companionMode === "standee";
   const labels = {
     empty: "等待上傳照片",
-    processing: "正在建立照片材質",
-    ready: "照片娃娃已放進小木屋",
+    processing: standee ? "正在製作照片立牌" : "正在建立照片材質",
+    ready: standee ? "照片立牌已放進小木屋" : "照片娃娃已放進小木屋",
     error: "照片處理失敗",
   };
   elements.generationLabel.textContent = labels[state.generation] || labels.empty;
@@ -300,6 +310,13 @@ function renderState(state) {
   if (document.activeElement !== elements.musicVolume) elements.musicVolume.value = state.musicVolume;
   elements.musicVolumeValue.value = `${state.musicVolume}%`;
   elements.focusGarden.dataset.plant = state.plantType;
+  elements.avatarZone.dataset.companionMode = state.companionMode;
+  elements.dollCanvas.setAttribute(
+    "aria-label",
+    state.companionMode === "standee" ? "可旋轉的照片伴讀立牌" : "可旋轉的 3D 伴讀娃娃",
+  );
+  elements.companionPanelTitle.textContent = state.companionMode === "standee" ? "照片伴讀立牌" : "照片伴讀夥伴";
+  elements.dollStyleSwitch.hidden = state.companionMode === "standee";
   updateGarden();
   music.setVolume(state.musicVolume);
   elements.styleButtons.forEach((button) => {
@@ -307,11 +324,17 @@ function renderState(state) {
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", String(active));
   });
+  elements.companionModeButtons.forEach((button) => {
+    const active = button.dataset.companionMode === state.companionMode;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
   renderGeneration(state);
   renderTips(state.tips);
-  if (viewer && state.photo !== lastRenderedPhoto) {
-    viewer.setPhoto(state.photo);
+  if (viewer && (state.photo !== lastRenderedPhoto || state.standeePhoto !== lastRenderedStandeePhoto)) {
+    viewer.setPhoto(state.photo, state.standeePhoto || state.photo);
     lastRenderedPhoto = state.photo;
+    lastRenderedStandeePhoto = state.standeePhoto;
   }
   if (viewer && state.modelUrl !== lastRenderedModelUrl) {
     viewer.setModel(state.modelUrl);
@@ -320,6 +343,10 @@ function renderState(state) {
   if (viewer && state.generation !== lastRenderedGeneration) {
     viewer.setGeneration(state.generation);
     lastRenderedGeneration = state.generation;
+  }
+  if (viewer && state.companionMode !== lastRenderedCompanionMode) {
+    viewer.setMode(state.companionMode);
+    lastRenderedCompanionMode = state.companionMode;
   }
   if (viewer && state.dollStyle !== lastRenderedStyle) {
     viewer.setStyle(state.dollStyle);
@@ -348,21 +375,34 @@ function addAndSendTip(text, by = store.get().nickname) {
 
 async function processPhoto(file) {
   const processId = ++photoProcessId;
+  const companionMode = store.get().companionMode;
   try {
     store.update({ generation: "processing", generationProgress: 4 });
-    const asset = await createCompanionAsset(file, (generationProgress, label) => {
-      if (processId !== photoProcessId) return;
-      store.update({ generation: "processing", generationProgress });
-      elements.generationLabel.textContent = label;
-    });
+    const asset = await createCompanionAsset(
+      file,
+      (generationProgress, label) => {
+        if (processId !== photoProcessId) return;
+        store.update({ generation: "processing", generationProgress });
+        elements.generationLabel.textContent = label;
+      },
+      { companionMode },
+    );
     if (processId !== photoProcessId) return;
-    store.update({ photo: asset.photo, modelUrl: asset.modelUrl, generation: "ready", generationProgress: 100 });
+    store.update({
+      photo: asset.photo,
+      standeePhoto: asset.standeePhoto,
+      modelUrl: asset.modelUrl,
+      generation: "ready",
+      generationProgress: 100,
+    });
     showToast(
-      asset.mode === "generated"
-        ? "3D 模型已放進小木屋。 "
-        : asset.warning
-          ? "3D 生成暫時失敗，已改用照片娃娃。 "
-          : "照片娃娃已放進小木屋。 ",
+      asset.mode === "standee"
+        ? "照片立牌已放進小木屋。 "
+        : asset.mode === "generated"
+          ? "3D 模型已放進小木屋。 "
+          : asset.warning
+            ? "3D 生成暫時失敗，已改用照片娃娃。 "
+            : "照片娃娃已放進小木屋。 ",
     );
   } catch (error) {
     if (processId !== photoProcessId) return;
@@ -390,7 +430,17 @@ function bindImageUpload() {
   elements.photoDrop.addEventListener("drop", (event) => processPhoto(event.dataTransfer?.files?.[0]));
   elements.clearPhoto.addEventListener("click", () => {
     store.clearPhoto();
-    showToast("已換回預設伴讀娃娃。 ");
+    showToast("已移除角色照片。 ");
+  });
+}
+
+function bindCompanionMode() {
+  elements.companionModeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const companionMode = button.dataset.companionMode;
+      store.update({ companionMode });
+      showToast(companionMode === "standee" ? "已換成照片伴讀立牌。 " : "已換回 3D 伴讀公仔。 ");
+    });
   });
 }
 
@@ -588,6 +638,7 @@ async function startViewer() {
 function init() {
   store.subscribe(renderState);
   bindImageUpload();
+  bindCompanionMode();
   bindDollStyle();
   bindTimer();
   bindMusic();

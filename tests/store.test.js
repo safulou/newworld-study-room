@@ -24,10 +24,11 @@ describe("room-scoped store", () => {
 
   it("shares personal preferences without sharing room data", () => {
     const first = createStore({ roomId: "room-a", includeStarterTips: false });
-    first.update({ nickname: "Mina", plantType: "pine", roomName: "Room A" });
+    first.update({ nickname: "Mina", companionMode: "standee", plantType: "pine", roomName: "Room A" });
 
     const second = createStore({ roomId: "room-b", includeStarterTips: false });
     expect(second.get().nickname).toBe("Mina");
+    expect(second.get().companionMode).toBe("standee");
     expect(second.get().plantType).toBe("pine");
     expect(second.get().roomName).toBe("Midnight Study Room");
   });
@@ -36,6 +37,12 @@ describe("room-scoped store", () => {
     localStorage.setItem("newworld-study-room:profile:v3", JSON.stringify({ plantType: "unknown" }));
     const store = createStore({ roomId: "room-a", includeStarterTips: false });
     expect(store.get().plantType).toBe("rose");
+  });
+
+  it("falls back to the doll for an unknown companion mode", () => {
+    localStorage.setItem("newworld-study-room:profile:v3", JSON.stringify({ companionMode: "poster" }));
+    const store = createStore({ roomId: "room-a", includeStarterTips: false });
+    expect(store.get().companionMode).toBe("doll");
   });
 
   it("persists outbox delivery state", () => {

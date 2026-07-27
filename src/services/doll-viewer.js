@@ -21,21 +21,61 @@ function defaultFaceTexture() {
   return texture;
 }
 
+function defaultStandeeTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 768;
+  canvas.height = 1024;
+  const context = canvas.getContext("2d");
+  const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
+  gradient.addColorStop(0, "#d7edf0");
+  gradient.addColorStop(1, "#f2dfb7");
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "rgba(255, 255, 255, 0.58)";
+  context.beginPath();
+  context.arc(384, 340, 180, 0, Math.PI * 2);
+  context.fill();
+  context.fillStyle = "#5b867d";
+  context.beginPath();
+  context.arc(330, 320, 17, 0, Math.PI * 2);
+  context.arc(438, 320, 17, 0, Math.PI * 2);
+  context.fill();
+  context.lineWidth = 14;
+  context.lineCap = "round";
+  context.beginPath();
+  context.arc(384, 370, 70, 0.25, Math.PI - 0.25);
+  context.stroke();
+  context.fillStyle = "#6d9e91";
+  context.beginPath();
+  context.roundRect(220, 545, 328, 330, 150);
+  context.fill();
+  context.fillStyle = "#fff3d4";
+  context.font = "700 34px sans-serif";
+  context.textAlign = "center";
+  context.fillText("YOUR PHOTO", 384, 940);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
 export class DollViewer {
   constructor(canvas, container) {
     this.canvas = canvas;
     this.container = container;
     this.currentPhoto = null;
+    this.currentStandeePhoto = null;
     this.currentModelUrl = "";
     this.generatedModel = null;
     this.modelLoadId = 0;
     this.photoTexture = null;
+    this.standeeTexture = null;
     this.dragging = false;
     this.pointerX = 0;
     this.targetRotation = 0;
     this.userRotation = 0;
     this.lastInteraction = 0;
     this.currentStyle = null;
+    this.currentMode = null;
     this.reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
     this.inViewport = true;
     this.pageVisible = !document.hidden;
@@ -55,6 +95,7 @@ export class DollViewer {
     this.doll.rotation.x = -0.04;
     this.scene.add(this.doll);
     this.buildDoll();
+    this.setMode("doll");
     this.buildLighting();
     this.bindControls();
 
@@ -179,6 +220,62 @@ export class DollViewer {
     this.setStyle("cozy");
   }
 
+  buildStandee() {
+    this.standee = new THREE.Group();
+    this.standee.visible = false;
+
+    this.defaultStandeeTexture = defaultStandeeTexture();
+    this.standeeFaceMaterial = new THREE.MeshStandardMaterial({
+      map: this.defaultStandeeTexture,
+      roughness: 0.38,
+      metalness: 0.02,
+    });
+    this.standeeBackMaterial = this.standeeFaceMaterial.clone();
+    const edgeMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0xd7edf0,
+      roughness: 0.18,
+      metalness: 0.04,
+      transparent: true,
+      opacity: 0.82,
+    });
+    const panelMaterials = [
+      edgeMaterial,
+      edgeMaterial,
+      edgeMaterial,
+      edgeMaterial,
+      this.standeeFaceMaterial,
+      this.standeeBackMaterial,
+    ];
+    this.standeePanel = new THREE.Mesh(new THREE.BoxGeometry(1.82, 2.58, 0.09, 2, 2, 1), panelMaterials);
+    this.standeePanel.position.y = 0.18;
+    this.standee.add(this.standeePanel);
+
+    const rim = new THREE.Mesh(
+      new THREE.BoxGeometry(1.94, 2.7, 0.055),
+      new THREE.MeshPhysicalMaterial({
+        color: 0xbfe3e4,
+        transparent: true,
+        opacity: 0.28,
+        roughness: 0.12,
+        side: THREE.DoubleSide,
+      }),
+    );
+    rim.position.set(0, 0.18, -0.06);
+    this.standee.add(rim);
+
+    const wood = new THREE.MeshStandardMaterial({ color: 0x6c442e, roughness: 0.76 });
+    const slot = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.22, 0.28), wood);
+    slot.position.y = -1.16;
+    this.standee.add(slot);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.86, 0.98, 0.18, 48), wood);
+    base.scale.z = 0.48;
+    base.position.y = -1.31;
+    this.standee.add(base);
+
+    this.scene.add(this.standee);
+    if (this.currentStandeePhoto) this.loadStandeeTexture(this.currentStandeePhoto);
+  }
+
   addOutline(mesh, scale = 1.045) {
     const outline = new THREE.Mesh(mesh.geometry, this.outlineMaterial);
     outline.scale.setScalar(scale);
@@ -217,14 +314,23 @@ export class DollViewer {
     this.canvas.addEventListener("pointercancel", stop);
   }
 
-  setPhoto(dataUrl) {
-    if (dataUrl === this.currentPhoto) return;
+  setPhoto(dataUrl, standeeDataUrl = dataUrl) {
+    if (dataUrl === this.currentPhoto && standeeDataUrl === this.currentStandeePhoto) return;
     this.currentPhoto = dataUrl;
+    this.currentStandeePhoto = standeeDataUrl;
     if (!dataUrl) {
       this.photoTexture?.dispose();
+      this.standeeTexture?.dispose();
       this.photoTexture = null;
+      this.standeeTexture = null;
       this.faceMaterial.map = this.defaultTexture;
       this.faceMaterial.needsUpdate = true;
+      if (this.standeeFaceMaterial) {
+        this.standeeFaceMaterial.map = this.defaultStandeeTexture;
+        this.standeeBackMaterial.map = this.defaultStandeeTexture;
+        this.standeeFaceMaterial.needsUpdate = true;
+        this.standeeBackMaterial.needsUpdate = true;
+      }
       return;
     }
     const image = new Image();
@@ -238,8 +344,33 @@ export class DollViewer {
       this.photoTexture.colorSpace = THREE.SRGBColorSpace;
       this.faceMaterial.map = this.photoTexture;
       this.faceMaterial.needsUpdate = true;
+      this.standeeFaceMaterial.map = this.photoTexture;
+      this.standeeBackMaterial.map = this.photoTexture;
+      this.standeeFaceMaterial.needsUpdate = true;
+      this.standeeBackMaterial.needsUpdate = true;
     };
     image.src = dataUrl;
+
+    if (this.standee) this.loadStandeeTexture(standeeDataUrl);
+  }
+
+  loadStandeeTexture(dataUrl) {
+    const standeeImage = new Image();
+    standeeImage.onload = () => {
+      if (dataUrl !== this.currentStandeePhoto || !this.standeeFaceMaterial) return;
+      const canvas = document.createElement("canvas");
+      canvas.width = 768;
+      canvas.height = 1024;
+      canvas.getContext("2d").drawImage(standeeImage, 0, 0, canvas.width, canvas.height);
+      this.standeeTexture?.dispose();
+      this.standeeTexture = new THREE.CanvasTexture(canvas);
+      this.standeeTexture.colorSpace = THREE.SRGBColorSpace;
+      this.standeeFaceMaterial.map = this.standeeTexture;
+      this.standeeBackMaterial.map = this.standeeTexture;
+      this.standeeFaceMaterial.needsUpdate = true;
+      this.standeeBackMaterial.needsUpdate = true;
+    };
+    standeeImage.src = dataUrl;
   }
 
   async setModel(modelUrl) {
@@ -251,8 +382,7 @@ export class DollViewer {
       this.scene.remove(this.generatedModel);
       this.generatedModel = null;
     }
-    this.doll.visible = true;
-    this.pedestal.visible = true;
+    this.updateModeVisibility();
     if (!modelUrl) return;
 
     try {
@@ -271,13 +401,32 @@ export class DollViewer {
       model.position.set(-center.x * scale, -bounds.min.y * scale - 1.2, -center.z * scale);
       this.generatedModel = model;
       this.scene.add(model);
-      this.doll.visible = false;
-      this.pedestal.visible = false;
+      this.updateModeVisibility();
     } catch {
       this.currentModelUrl = "";
-      this.doll.visible = true;
-      this.pedestal.visible = true;
+      this.updateModeVisibility();
     }
+  }
+
+  setMode(mode) {
+    const nextMode = mode === "standee" ? "standee" : "doll";
+    if (nextMode === this.currentMode) return;
+    if (nextMode === "standee" && !this.standee) this.buildStandee();
+    this.currentMode = nextMode;
+    this.targetRotation = 0;
+    this.userRotation = 0;
+    this.updateModeVisibility();
+    this.camera.position.set(0, nextMode === "standee" ? 0.12 : this.currentStyle === "detective" ? 0.45 : 0.38, 5.9);
+    this.camera.updateProjectionMatrix();
+  }
+
+  updateModeVisibility() {
+    const standee = this.currentMode === "standee";
+    const generated = Boolean(this.generatedModel) && !standee;
+    if (this.standee) this.standee.visible = standee;
+    this.doll.visible = !standee && !generated;
+    this.pedestal.visible = !standee && !generated;
+    if (this.generatedModel) this.generatedModel.visible = generated;
   }
 
   setGeneration(status) {
@@ -321,7 +470,7 @@ export class DollViewer {
       this.legs[0].position.set(-0.28, -0.8, 0);
       this.legs[1].position.set(0.28, -0.8, 0);
       this.detectiveAccessories.visible = true;
-      this.camera.position.set(0, 0.45, 6.2);
+      if (this.currentMode !== "standee") this.camera.position.set(0, 0.45, 6.2);
       this.scanRing.scale.setScalar(1.12);
     } else {
       this.body.scale.set(0.9, 1.05, 0.7);
@@ -337,7 +486,7 @@ export class DollViewer {
       this.legs[0].position.set(-0.35, -0.82, 0);
       this.legs[1].position.set(0.35, -0.82, 0);
       this.detectiveAccessories.visible = false;
-      this.camera.position.set(0, 0.38, 5.9);
+      if (this.currentMode !== "standee") this.camera.position.set(0, 0.38, 5.9);
       this.scanRing.scale.setScalar(1);
     }
     this.outlines.forEach((outline) => {
@@ -368,6 +517,10 @@ export class DollViewer {
     }
     this.doll.rotation.y += (this.targetRotation - this.doll.rotation.y) * 0.08;
     this.doll.position.y = this.reducedMotion ? 0 : Math.sin(elapsed * 1.8) * 0.035;
+    if (this.standee) {
+      this.standee.rotation.y += (this.targetRotation - this.standee.rotation.y) * 0.08;
+      this.standee.position.y = this.reducedMotion ? 0 : Math.sin(elapsed * 1.45) * 0.018;
+    }
     if (this.generatedModel && !this.reducedMotion) this.generatedModel.rotation.y = Math.sin(elapsed * 0.4) * 0.12;
     if (this.scanRing.visible) {
       this.scanRing.position.y = Math.sin(elapsed * 2.7) * 1.15 + 0.18;
@@ -388,8 +541,11 @@ export class DollViewer {
       else object.material?.dispose();
     });
     this.photoTexture?.dispose();
+    this.standeeTexture?.dispose();
     this.defaultTexture.dispose();
+    this.defaultStandeeTexture?.dispose();
     this.renderer.dispose();
+    this.renderer.forceContextLoss();
   }
 
   disposeObject(root) {

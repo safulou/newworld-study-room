@@ -119,7 +119,7 @@
         <aside class="sidebar">
           <section class="panel upload-panel" id="dollPanel">
             <div class="panel-head">
-              <h2>照片伴讀娃娃</h2>
+              <h2 id="companionPanelTitle">照片伴讀夥伴</h2>
               <button class="icon-btn subtle" id="clearPhoto" type="button" aria-label="移除照片" title="移除照片">
                 <i data-lucide="trash-2"></i>
               </button>
@@ -130,7 +130,17 @@
               <strong>選擇角色照片</strong>
               <span>JPG、PNG 或 WebP，最大 10 MB</span>
             </label>
-            <div class="style-switch" role="group" aria-label="娃娃造型">
+            <div class="style-switch companion-switch" role="group" aria-label="伴讀夥伴形式">
+              <button class="style-option active" type="button" data-companion-mode="doll" aria-pressed="true">
+                <i data-lucide="cuboid"></i>
+                <span>3D 公仔</span>
+              </button>
+              <button class="style-option" type="button" data-companion-mode="standee" aria-pressed="false">
+                <i data-lucide="panel-top"></i>
+                <span>照片立牌</span>
+              </button>
+            </div>
+            <div class="style-switch" id="dollStyleSwitch" role="group" aria-label="公仔造型">
               <button class="style-option active" type="button" data-doll-style="cozy" aria-pressed="true">
                 <i data-lucide="sparkles"></i>
                 <span>暖心公仔</span>

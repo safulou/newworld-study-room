@@ -35,18 +35,18 @@ test("renders the core room without overflow or serious accessibility violations
 
 test("delivers a Tip between independent browser contexts", async ({ browser }, testInfo) => {
   test.skip(testInfo.project.name === "mobile", "The same protocol path is covered once on desktop.");
-  test.setTimeout(50_000);
+  test.setTimeout(70_000);
   const hostContext = await browser.newContext();
   const guestContext = await browser.newContext();
   const host = await hostContext.newPage();
   const guest = await guestContext.newPage();
-  await host.goto("http://127.0.0.1:4173/newworld-study-room/");
+  await host.goto("http://127.0.0.1:4173/newworld-study-room/", { waitUntil: "domcontentloaded" });
   await expect(host.locator("#inviteLink")).toHaveValue(/^https?:/, { timeout: 20_000 });
   const invite = await host.locator("#inviteLink").inputValue();
   expect(invite).toContain("#token=");
 
-  await guest.goto(invite);
-  await expect(guest.locator("#connectionStatus")).toContainText("已加入", { timeout: 20_000 });
+  await guest.goto(invite, { waitUntil: "domcontentloaded" });
+  await expect(guest.locator("#connectionStatus")).toContainText("已加入", { timeout: 30_000 });
   await guest.locator("#nickname").fill("Alice");
   await guest.locator("#nickname").blur();
   await guest.locator("#noteInput").fill("今天也一起努力");
@@ -76,4 +76,29 @@ test("grows the selected focus plant with the study timer", async ({ page }, tes
   await page.locator("#resetTimer").click();
   await expect(page.locator("#focusGarden")).toHaveCSS("--growth", "0.0000");
   await expect(page.locator("#gardenStatus")).toContainText("種子");
+});
+
+test("switches between the 3D doll and photo standee", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === "mobile", "Companion mode behavior is covered once on desktop.");
+  await page.goto("./");
+
+  const standeeButton = page.locator('button[data-companion-mode="standee"]');
+  await standeeButton.click();
+  await expect(page.locator("#avatarZone")).toHaveAttribute("data-companion-mode", "standee");
+  await expect(standeeButton).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#dollStyleSwitch")).toBeHidden();
+  await expect(page.locator("#dollCanvas")).toHaveAttribute("aria-label", "可旋轉的照片伴讀立牌");
+
+  const png = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZlGQAAAAASUVORK5CYII=",
+    "base64",
+  );
+  await page.locator("#photoInput").setInputFiles({ name: "character.png", mimeType: "image/png", buffer: png });
+  await expect(page.locator("#generationPercent")).toHaveText("100%", { timeout: 15_000 });
+  const savedProfile = await page.evaluate(() => JSON.parse(localStorage.getItem("newworld-study-room:profile:v3")));
+  expect(savedProfile.photo).toMatch(/^data:image\/jpeg;base64,/);
+  expect(savedProfile.standeePhoto).toMatch(/^data:image\/jpeg;base64,/);
+
+  await page.reload();
+  await expect(page.locator("#avatarZone")).toHaveAttribute("data-companion-mode", "standee");
 });

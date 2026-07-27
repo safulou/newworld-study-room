@@ -27,12 +27,15 @@ async function waitForJob(statusUrl, onProgress) {
   throw new Error("3D 模型生成逾時，請稍後再試。 ");
 }
 
-export async function createCompanionAsset(file, onProgress = () => {}) {
-  const photo = await prepareCompanionPhoto(file, (progress, label) =>
-    onProgress(Math.min(progress * 0.72, 72), label),
+export async function createCompanionAsset(file, onProgress = () => {}, { companionMode = "doll" } = {}) {
+  const { photo, standeePhoto } = await prepareCompanionPhoto(
+    file,
+    (progress, label) => onProgress(Math.min(progress * 0.72, 72), label),
+    { companionMode },
   );
+  if (companionMode === "standee") return { photo, standeePhoto, modelUrl: "", mode: "standee" };
   const endpoint = import.meta.env.VITE_DOLL_GENERATION_URL;
-  if (!endpoint) return { photo, modelUrl: "", mode: "texture" };
+  if (!endpoint) return { photo, standeePhoto, modelUrl: "", mode: "texture" };
 
   try {
     onProgress(74, "上傳至 3D 生成服務");
@@ -46,9 +49,15 @@ export async function createCompanionAsset(file, onProgress = () => {}) {
     const modelUrl = immediateModel || (statusUrl ? await waitForJob(statusUrl, onProgress) : "");
     if (!modelUrl) throw new Error("3D 生成服務沒有回傳可用模型。 ");
     onProgress(100, "3D 模型已完成");
-    return { photo, modelUrl, mode: "generated" };
+    return { photo, standeePhoto, modelUrl, mode: "generated" };
   } catch (error) {
-    return { photo, modelUrl: "", mode: "texture", warning: error.message || "3D 生成服務暫時無法使用。 " };
+    return {
+      photo,
+      standeePhoto,
+      modelUrl: "",
+      mode: "texture",
+      warning: error.message || "3D 生成服務暫時無法使用。 ",
+    };
   }
 }
 

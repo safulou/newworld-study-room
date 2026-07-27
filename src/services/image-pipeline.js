@@ -1,5 +1,6 @@
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const OUTPUT_SIZE = 768;
+const STANDEE_HEIGHT = 1024;
 const MAX_SOURCE_PIXELS = 48_000_000;
 const ACCEPTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -48,7 +49,7 @@ export function validateImage(file) {
   if (file.size > MAX_FILE_BYTES) throw new Error("照片超過 10 MB，請先縮小檔案。 ");
 }
 
-export async function prepareCompanionPhoto(file, onProgress = () => {}) {
+export async function prepareCompanionPhoto(file, onProgress = () => {}, { companionMode = "doll" } = {}) {
   validateImage(file);
   onProgress(12, "讀取照片");
   const image = await loadImage(file);
@@ -70,9 +71,23 @@ export async function prepareCompanionPhoto(file, onProgress = () => {}) {
   context.drawImage(image, sx, sy, sourceSize, sourceSize, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
   await nextFrame();
 
-  onProgress(72, "建立 3D 材質");
-  const dataUrl = await canvasToDataUrl(canvas);
+  onProgress(64, companionMode === "standee" ? "建立立牌印刷面" : "建立 3D 材質");
+  const photo = await canvasToDataUrl(canvas);
+  const standeeCanvas = document.createElement("canvas");
+  standeeCanvas.width = OUTPUT_SIZE;
+  standeeCanvas.height = STANDEE_HEIGHT;
+  const standeeContext = standeeCanvas.getContext("2d", { alpha: false });
+  const targetRatio = OUTPUT_SIZE / STANDEE_HEIGHT;
+  const sourceRatio = image.naturalWidth / image.naturalHeight;
+  const standeeWidth = sourceRatio > targetRatio ? image.naturalHeight * targetRatio : image.naturalWidth;
+  const standeeHeight = sourceRatio > targetRatio ? image.naturalHeight : image.naturalWidth / targetRatio;
+  const standeeX = (image.naturalWidth - standeeWidth) / 2;
+  const standeeY = (image.naturalHeight - standeeHeight) / 2;
+  standeeContext.fillStyle = "#f2d7b6";
+  standeeContext.fillRect(0, 0, OUTPUT_SIZE, STANDEE_HEIGHT);
+  standeeContext.drawImage(image, standeeX, standeeY, standeeWidth, standeeHeight, 0, 0, OUTPUT_SIZE, STANDEE_HEIGHT);
+  const standeePhoto = await canvasToDataUrl(standeeCanvas);
   await nextFrame();
-  onProgress(100, "3D 娃娃已完成");
-  return dataUrl;
+  onProgress(100, companionMode === "standee" ? "照片立牌已完成" : "3D 娃娃已完成");
+  return { photo, standeePhoto };
 }
