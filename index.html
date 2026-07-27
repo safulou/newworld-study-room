@@ -146,53 +146,116 @@
     .room-3d {
       position: absolute;
       left: 50%;
-      bottom: 86px;
-      width: min(620px, 86%);
+      bottom: 74px;
+      width: min(650px, 88%);
       aspect-ratio: 1.18 / 1;
       transform: translateX(-50%);
-      perspective: 980px;
+      perspective: 900px;
+    }
+
+    .cabin-roof {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      z-index: 4;
+      width: 88%;
+      height: 32%;
+      transform: translateX(-50%);
+      clip-path: polygon(50% 0, 100% 100%, 0 100%);
+      background:
+        repeating-linear-gradient(115deg, rgba(255, 255, 255, .08) 0 2px, transparent 2px 18px),
+        linear-gradient(180deg, #7a452d, #4d2f24);
+      border: 1px solid rgba(255, 225, 167, .24);
+      filter: drop-shadow(0 18px 22px rgba(0, 0, 0, .34));
+    }
+
+    .cabin-sign {
+      position: absolute;
+      left: 50%;
+      top: 18%;
+      z-index: 8;
+      min-width: 148px;
+      padding: 7px 12px;
+      border: 1px solid rgba(255, 225, 167, .35);
+      border-radius: 6px;
+      color: var(--lamp-soft);
+      background: rgba(62, 43, 30, .9);
+      text-align: center;
+      transform: translateX(-50%) rotate(-1deg);
+      box-shadow: 0 10px 18px rgba(0, 0, 0, .25);
     }
 
     .room-box {
       position: absolute;
-      inset: 12% 5% 8%;
+      inset: 24% 8% 7%;
       transform-style: preserve-3d;
-      transform: rotateX(58deg) rotateZ(-38deg);
+      border: 4px solid #5a3828;
+      border-radius: 7px;
+      background:
+        linear-gradient(90deg, rgba(255, 255, 255, .04), transparent 18%, rgba(255, 255, 255, .04)),
+        repeating-linear-gradient(0deg, #644530 0 28px, #583b2b 28px 31px);
+      box-shadow: inset 0 0 0 8px rgba(28, 18, 13, .18), 0 30px 44px rgba(0, 0, 0, .34);
+    }
+
+    .room-box::before,
+    .room-box::after {
+      content: "";
+      position: absolute;
+      z-index: 3;
+      background: linear-gradient(180deg, #795238, #4b3125);
+      box-shadow: 0 0 0 1px rgba(255, 225, 167, .12);
+    }
+
+    .room-box::before {
+      left: 50%;
+      top: 0;
+      width: 12px;
+      height: 100%;
+      transform: translateX(-50%);
+    }
+
+    .room-box::after {
+      left: 0;
+      bottom: 27%;
+      width: 100%;
+      height: 12px;
     }
 
     .floor {
       position: absolute;
-      inset: 34% 5% 6%;
+      left: 4%;
+      right: 4%;
+      bottom: 0;
+      height: 31%;
       border: 1px solid rgba(255, 225, 167, .22);
-      border-radius: 8px;
+      border-radius: 0 0 6px 6px;
       background:
-        linear-gradient(135deg, rgba(240, 179, 93, .18), rgba(104, 199, 189, .1)),
-        repeating-linear-gradient(90deg, rgba(255, 255, 255, .06) 0 1px, transparent 1px 44px),
-        #33425b;
-      box-shadow: 0 28px 42px rgba(0, 0, 0, .34);
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, .08) 0 1px, transparent 1px 42px),
+        linear-gradient(135deg, #7e5a3f, #4d372b);
+      clip-path: polygon(7% 0, 93% 0, 100% 100%, 0 100%);
+      box-shadow: 0 -18px 30px rgba(0, 0, 0, .14) inset;
     }
 
     .wall {
       position: absolute;
-      width: 62%;
-      height: 48%;
-      border: 1px solid rgba(255, 225, 167, .2);
-      background: linear-gradient(180deg, #2a3850, #223149);
-      transform-origin: bottom;
+      border: 1px solid rgba(255, 225, 167, .16);
+      background: rgba(45, 31, 24, .14);
     }
 
     .wall.back {
-      left: 19%;
-      top: 2%;
-      transform: translateZ(-2px) rotateX(-90deg);
+      left: 5%;
+      top: 7%;
+      width: 58%;
+      height: 52%;
     }
 
     .wall.side {
       right: 5%;
-      top: 24%;
-      width: 28%;
-      transform: rotateY(90deg) rotateX(-90deg);
-      background: linear-gradient(180deg, #1e2d43, #1a283e);
+      top: 7%;
+      width: 26%;
+      height: 52%;
+      background:
+        repeating-linear-gradient(0deg, #553b2c 0 22px, #493126 22px 25px);
     }
 
     .window {
@@ -231,13 +294,13 @@
     .furniture {
       position: absolute;
       transform-style: preserve-3d;
-      transform: rotateZ(38deg) rotateX(-58deg);
       filter: drop-shadow(0 12px 10px rgba(0, 0, 0, .2));
+      z-index: 5;
     }
 
     .desk {
-      left: 18%;
-      top: 38%;
+      left: 15%;
+      top: 54%;
       width: 168px;
       height: 88px;
     }
@@ -267,8 +330,8 @@
     }
 
     .lamp {
-      left: 34%;
-      top: 28%;
+      left: 32%;
+      top: 44%;
       width: 58px;
       height: 100px;
     }
@@ -296,8 +359,8 @@
     }
 
     .bookshelf {
-      right: 16%;
-      top: 18%;
+      right: 12%;
+      top: 22%;
       width: 92px;
       height: 150px;
       border-radius: 5px;
@@ -333,8 +396,8 @@
     }
 
     .plant {
-      right: 10%;
-      bottom: 28%;
+      right: 8%;
+      bottom: 14%;
       width: 78px;
       height: 108px;
     }
@@ -364,7 +427,7 @@
     .avatar-zone {
       position: absolute;
       left: 50%;
-      bottom: 108px;
+      bottom: 96px;
       width: 180px;
       height: 220px;
       transform: translateX(-50%);
@@ -382,15 +445,30 @@
       animation: breathe 3.6s ease-in-out infinite;
     }
 
+    .avatar::before {
+      content: "";
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      bottom: -10px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, .26);
+      filter: blur(2px);
+    }
+
     .avatar-body {
       position: absolute;
       left: 24px;
       bottom: 0;
       width: 84px;
       height: 108px;
-      border-radius: 40px 40px 26px 26px;
-      background: linear-gradient(180deg, #6fc0b8, #4c8b99);
+      border-radius: 48px 48px 26px 26px;
+      background:
+        radial-gradient(circle at 50% 22%, rgba(255, 255, 255, .28), transparent 25%),
+        linear-gradient(180deg, #76c8bd, #4f909d);
       border: 2px solid rgba(255, 255, 255, .16);
+      box-shadow: inset -10px -16px 20px rgba(0, 0, 0, .16);
     }
 
     .avatar-face,
@@ -447,6 +525,17 @@
 
     .avatar.has-photo .avatar-photo {
       display: block;
+    }
+
+    .avatar.generated .avatar-body {
+      background:
+        radial-gradient(circle at 50% 18%, rgba(255, 255, 255, .36), transparent 24%),
+        linear-gradient(180deg, #f0b35d, #68c7bd 72%, #477c92);
+    }
+
+    .avatar.generating {
+      animation: breathe 1.1s ease-in-out infinite;
+      filter: drop-shadow(0 0 20px rgba(240, 179, 93, .34));
     }
 
     .focus-pill {
@@ -559,6 +648,40 @@
       list-style: none;
       color: var(--muted);
       font-size: 13px;
+    }
+
+    .generation-card {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid rgba(255, 225, 167, .18);
+      border-radius: 7px;
+      background: #121d2e;
+    }
+
+    .generation-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .progress {
+      height: 8px;
+      overflow: hidden;
+      border-radius: 99px;
+      background: #0c1422;
+    }
+
+    .progress span {
+      display: block;
+      width: var(--progress, 8%);
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--lamp), var(--aqua));
+      transition: width .35s ease;
     }
 
     .status-list li {
@@ -765,6 +888,8 @@
       <div class="stage">
         <div class="stars" aria-hidden="true"></div>
         <div class="room-3d" aria-label="3D 伴讀房">
+          <div class="cabin-roof" aria-hidden="true"></div>
+          <div class="cabin-sign">小木屋伴讀中</div>
           <div class="room-box">
             <div class="wall back"><div class="window"></div></div>
             <div class="wall side"></div>
@@ -809,6 +934,13 @@
             <li><span class="check">✓</span><span>自動裁成圓形頭像</span></li>
             <li><span class="check">✓</span><span id="avatarState">目前使用預設伴讀娃娃</span></li>
           </ul>
+          <div class="generation-card">
+            <div class="generation-top">
+              <span id="generationLabel">等待上傳玩偶照片</span>
+              <strong id="generationPercent">0%</strong>
+            </div>
+            <div class="progress" aria-label="3D 娃娃生成進度"><span id="generationBar"></span></div>
+          </div>
         </section>
 
         <section class="panel">
@@ -859,6 +991,9 @@
     const avatar = document.getElementById("avatar");
     const avatarPhoto = document.getElementById("avatarPhoto");
     const avatarState = document.getElementById("avatarState");
+    const generationLabel = document.getElementById("generationLabel");
+    const generationPercent = document.getElementById("generationPercent");
+    const generationBar = document.getElementById("generationBar");
     const notesEl = document.getElementById("notes");
     const timerEl = document.getElementById("timer");
     const minutesEl = document.getElementById("minutes");
@@ -876,6 +1011,7 @@
     let state = loadState();
     let remaining = state.minutes * 60;
     let timer = null;
+    let generationTimer = null;
 
     function loadState() {
       try {
@@ -884,10 +1020,12 @@
           roomName: saved?.roomName || "Midnight Study Room",
           minutes: Number(saved?.minutes) || 25,
           photo: saved?.photo || "",
+          generation: saved?.generation || (saved?.photo ? "ready" : "empty"),
+          generationProgress: Number(saved?.generationProgress) || (saved?.photo ? 100 : 0),
           tips: Array.isArray(saved?.tips) && saved.tips.length ? saved.tips : defaultTips
         };
       } catch {
-        return { roomName: "Midnight Study Room", minutes: 25, photo: "", tips: defaultTips };
+        return { roomName: "Midnight Study Room", minutes: 25, photo: "", generation: "empty", generationProgress: 0, tips: defaultTips };
       }
     }
 
@@ -900,6 +1038,7 @@
       minutesEl.value = state.minutes;
       updateRoomCode();
       renderAvatar();
+      renderGeneration();
       renderTips();
       renderTimer();
       saveState();
@@ -916,12 +1055,42 @@
       if (state.photo) {
         avatar.classList.add("has-photo");
         avatarPhoto.src = state.photo;
-        avatarState.textContent = "角色圖片已套用到伴讀娃娃";
+        avatarState.textContent = state.generation === "ready" ? "3D 娃娃已放進小木屋伴讀" : "正在用照片產出 3D 娃娃";
       } else {
         avatar.classList.remove("has-photo");
         avatarPhoto.removeAttribute("src");
         avatarState.textContent = "目前使用預設伴讀娃娃";
       }
+      avatar.classList.toggle("generated", state.generation === "ready");
+      avatar.classList.toggle("generating", state.generation === "generating");
+    }
+
+    function renderGeneration() {
+      generationBar.style.setProperty("--progress", `${state.generationProgress || 0}%`);
+      generationPercent.textContent = `${state.generationProgress || 0}%`;
+      if (state.generation === "ready") {
+        generationLabel.textContent = "3D 娃娃已完成";
+      } else if (state.generation === "generating") {
+        generationLabel.textContent = "正在產出 3D 娃娃";
+      } else {
+        generationLabel.textContent = "等待上傳玩偶照片";
+      }
+    }
+
+    function beginGeneration() {
+      window.clearInterval(generationTimer);
+      state.generation = "generating";
+      state.generationProgress = 12;
+      renderAll();
+      generationTimer = window.setInterval(() => {
+        state.generationProgress = Math.min(100, state.generationProgress + 22);
+        if (state.generationProgress >= 100) {
+          state.generation = "ready";
+          window.clearInterval(generationTimer);
+          showToast("3D 娃娃已完成，正在小木屋陪你讀書。");
+        }
+        renderAll();
+      }, 420);
     }
 
     function renderTips() {
@@ -986,14 +1155,17 @@
       const reader = new FileReader();
       reader.onload = () => {
         state.photo = String(reader.result);
-        renderAll();
-        showToast("角色圖片已更新。");
+        beginGeneration();
+        showToast("已收到照片，開始生成 3D 娃娃。");
       };
       reader.readAsDataURL(file);
     });
 
     document.getElementById("clearPhoto").addEventListener("click", () => {
       state.photo = "";
+      state.generation = "empty";
+      state.generationProgress = 0;
+      window.clearInterval(generationTimer);
       document.getElementById("photoInput").value = "";
       renderAll();
       showToast("已回到預設伴讀娃娃。");

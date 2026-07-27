@@ -1,11 +1,11 @@
 # newworld-study-room
 
-NewWorld Study Room is an early MVP for a cozy online study room: a 3D-feeling companion room, a character image upload flow, a local P2P-style Tip note wall, a focus timer, and a shareable room invitation.
+NewWorld Study Room is an early MVP for a cozy online study room: a small wooden cabin, a photo-to-3D companion doll flow, a local P2P-style Tip note wall, a focus timer, and a shareable room invitation.
 
 ## MVP scope
 
-- 3D companion room built as a static HTML/CSS scene.
-- Character image upload with local browser preview.
+- Small wooden cabin study room built as a static HTML/CSS scene.
+- Upload a favorite doll or character photo and simulate 3D companion generation.
 - P2P Tip note wall prototype using local state.
 - Focus timer with configurable session length.
 - Invite link UI and room naming.
@@ -27,8 +27,8 @@ Then open `http://localhost:5173`.
 
 1. Replace local Tip state with WebRTC room presence and peer-to-peer note sync.
 2. Add persistent room sessions and focus history.
-3. Move character images to object storage with upload progress, processing status, and deletion.
-4. Add generated companion styles after upload.
+3. Move uploaded toy or character photos to object storage with upload progress, processing status, and deletion.
+4. Add real image-to-3D companion generation and downloadable doll assets.
 5. Add authentication, moderation, and room privacy controls.
 
 ## Repository
