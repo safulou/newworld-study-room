@@ -44,7 +44,7 @@ export class DollViewer {
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(32, 1, .1, 20);
-    this.camera.position.set(0, .25, 5.2);
+    this.camera.position.set(0, .38, 5.9);
     this.doll = new THREE.Group();
     this.doll.rotation.x = -.04;
     this.scene.add(this.doll);
