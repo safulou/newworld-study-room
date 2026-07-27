@@ -32,6 +32,7 @@ const starterTips = [
 const profileDefaults = {
   nickname: "夥伴",
   minutes: 25,
+  plantType: "rose",
   musicVolume: 28,
   dollStyle: "cozy",
   photo: "",
@@ -96,6 +97,9 @@ function sanitizeProfile(value = {}) {
         .trim()
         .slice(0, 18) || profileDefaults.nickname,
     minutes,
+    plantType: ["rose", "tulip", "cactus", "succulent", "pine"].includes(value.plantType)
+      ? value.plantType
+      : profileDefaults.plantType,
     musicVolume: Math.max(0, Math.min(100, Number(value.musicVolume ?? profileDefaults.musicVolume))),
     dollStyle: ["cozy", "detective"].includes(value.dollStyle) ? value.dollStyle : profileDefaults.dollStyle,
     photo: typeof value.photo === "string" ? value.photo : "",
