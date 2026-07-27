@@ -121,6 +121,21 @@ const plantLabels = {
   pine: "松樹",
 };
 
+const tipPaperColors = [
+  "#f2e0b2",
+  "#edc8b9",
+  "#c9dfc4",
+  "#c7dce8",
+  "#e1d0e8",
+  "#f0d2a9",
+  "#c3e0da",
+  "#e8d7a5",
+  "#d2d7ed",
+  "#e7c5ce",
+  "#d5dfb1",
+  "#c8d5cf",
+];
+
 function showToast(message) {
   elements.toast.textContent = message;
   elements.toast.classList.add("show");
@@ -232,6 +247,7 @@ function renderTips(tips) {
     const note = document.createElement("article");
     note.className = `note ${tip.direction === "outgoing" ? "outgoing" : ""}`.trim();
     note.dataset.paper = String(index + 1);
+    note.style.setProperty("--note-paper", tipPaperColors[index]);
     const by = document.createElement("b");
     by.textContent = tip.by;
     const text = document.createElement("span");
