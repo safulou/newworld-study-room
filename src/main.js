@@ -228,9 +228,10 @@ function renderTips(tips) {
     elements.notes.append(empty);
     return;
   }
-  tips.slice(0, 12).forEach((tip) => {
+  tips.slice(0, 12).forEach((tip, index) => {
     const note = document.createElement("article");
     note.className = `note ${tip.direction === "outgoing" ? "outgoing" : ""}`.trim();
+    note.dataset.paper = String(index + 1);
     const by = document.createElement("b");
     by.textContent = tip.by;
     const text = document.createElement("span");

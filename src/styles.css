@@ -1138,18 +1138,59 @@ h1 {
 }
 
 .note {
+  --note-paper: var(--paper);
   display: grid;
   gap: 3px;
   padding: 9px 10px;
   border-radius: 4px;
   color: var(--ink);
-  background: var(--paper);
+  background: var(--note-paper);
   box-shadow: 0 3px 0 rgba(0, 0, 0, 0.18);
 }
 
 .note:nth-child(even) {
-  background: var(--paper-rose);
   transform: rotate(0.3deg);
+}
+
+.note:nth-child(3n) {
+  transform: rotate(-0.25deg);
+}
+
+.note[data-paper="1"] {
+  --note-paper: #f2e0b2;
+}
+.note[data-paper="2"] {
+  --note-paper: #edc8b9;
+}
+.note[data-paper="3"] {
+  --note-paper: #c9dfc4;
+}
+.note[data-paper="4"] {
+  --note-paper: #c7dce8;
+}
+.note[data-paper="5"] {
+  --note-paper: #e1d0e8;
+}
+.note[data-paper="6"] {
+  --note-paper: #f0d2a9;
+}
+.note[data-paper="7"] {
+  --note-paper: #c3e0da;
+}
+.note[data-paper="8"] {
+  --note-paper: #e8d7a5;
+}
+.note[data-paper="9"] {
+  --note-paper: #d2d7ed;
+}
+.note[data-paper="10"] {
+  --note-paper: #e7c5ce;
+}
+.note[data-paper="11"] {
+  --note-paper: #d5dfb1;
+}
+.note[data-paper="12"] {
+  --note-paper: #c8d5cf;
 }
 .note b {
   font-size: 11px;
