@@ -1,14 +1,17 @@
 import "./styles.css";
 import {
   Copy,
+  House,
   ImagePlus,
   MessageCircleHeart,
   Music2,
   Pause,
   Play,
+  RefreshCw,
   RotateCcw,
   Search,
   Send,
+  Share2,
   Shuffle,
   Sparkles,
   Trash2,
@@ -16,19 +19,42 @@ import {
   createIcons,
 } from "lucide";
 import { BackgroundMusic } from "./services/background-music.js";
+import { createCompanionAsset } from "./services/doll-generation.js";
 import { FocusTimer } from "./services/focus-timer.js";
-import { prepareCompanionPhoto } from "./services/image-pipeline.js";
 import { createStore } from "./state/store.js";
 
-const icons = { Copy, ImagePlus, MessageCircleHeart, Music2, Pause, Play, RotateCcw, Search, Send, Shuffle, Sparkles, Trash2, Volume2 };
+const icons = {
+  Copy,
+  House,
+  ImagePlus,
+  MessageCircleHeart,
+  Music2,
+  Pause,
+  Play,
+  RefreshCw,
+  RotateCcw,
+  Search,
+  Send,
+  Share2,
+  Shuffle,
+  Sparkles,
+  Trash2,
+  Volume2,
+};
 createIcons({ icons });
 
 const $ = (selector) => document.querySelector(selector);
+const initialUrl = new URL(location.href);
+const initialHostId = /^[a-zA-Z0-9_-]{1,80}$/.test(initialUrl.searchParams.get("host") || "")
+  ? initialUrl.searchParams.get("host")
+  : "";
 const elements = {
   stage: $(".stage"),
   roomCode: $("#roomCode"),
   presenceDot: $("#presenceDot"),
   presenceText: $("#presenceText"),
+  shareRoom: $("#shareRoom"),
+  mobileShareRoom: $("#mobileShareRoom"),
   dollCanvas: $("#dollCanvas"),
   avatarZone: $("#avatarZone"),
   tipMeteor: $("#tipMeteor"),
@@ -52,6 +78,7 @@ const elements = {
   noteInput: $("#noteInput"),
   seedTip: $("#seedTip"),
   roomName: $("#roomName"),
+  nickname: $("#nickname"),
   minutes: $("#minutes"),
   musicVolume: $("#musicVolume"),
   musicVolumeValue: $("#musicVolumeValue"),
@@ -59,20 +86,28 @@ const elements = {
   copyInvite: $("#copyInvite"),
   roleBadge: $("#roleBadge"),
   connectionStatus: $("#connectionStatus"),
+  retryConnection: $("#retryConnection"),
   toast: $("#toast"),
 };
 
-const store = createStore();
+const store = createStore({
+  roomId: initialHostId || `local-${crypto.randomUUID()}`,
+  includeStarterTips: !initialHostId,
+  migrateLegacy: !initialHostId,
+});
 const timer = new FocusTimer(store.get().minutes);
 const music = new BackgroundMusic(store.get().musicVolume);
 let viewer = null;
 let p2p = null;
 let toastTimeout = null;
 let lastRenderedPhoto = null;
+let lastRenderedModelUrl = null;
 let lastRenderedGeneration = null;
 let lastRenderedStyle = null;
 let unreadRemoteTips = 0;
 let meteorAnimation = null;
+let photoProcessId = 0;
+let p2pStartPromise = null;
 
 function showToast(message) {
   elements.toast.textContent = message;
@@ -101,20 +136,31 @@ function launchTipMeteor(onArrival) {
   elements.tipMeteor.hidden = false;
   elements.tipMeteor.style.left = `${targetX - 100}px`;
   elements.tipMeteor.style.top = `${targetY - 2}px`;
-  meteorAnimation = elements.tipMeteor.animate([
-    { opacity: 0, transform: `translate(${offsetX}px, ${offsetY}px) rotate(${angle}deg)` },
-    { opacity: 1, offset: 0.12, transform: `translate(${offsetX * 0.9}px, ${offsetY * 0.9}px) rotate(${angle}deg)` },
-    { opacity: 1, offset: 0.78, transform: `translate(${offsetX * 0.18}px, ${offsetY * 0.18}px) rotate(${angle}deg)` },
-    { opacity: 0, transform: `translate(0, 0) rotate(${angle}deg)` },
-  ], {
-    duration: 900,
-    easing: "cubic-bezier(.2, .72, .25, 1)",
-  });
-  meteorAnimation.addEventListener("finish", () => {
-    elements.tipMeteor.hidden = true;
-    meteorAnimation = null;
-    onArrival();
-  }, { once: true });
+  meteorAnimation = elements.tipMeteor.animate(
+    [
+      { opacity: 0, transform: `translate(${offsetX}px, ${offsetY}px) rotate(${angle}deg)` },
+      { opacity: 1, offset: 0.12, transform: `translate(${offsetX * 0.9}px, ${offsetY * 0.9}px) rotate(${angle}deg)` },
+      {
+        opacity: 1,
+        offset: 0.78,
+        transform: `translate(${offsetX * 0.18}px, ${offsetY * 0.18}px) rotate(${angle}deg)`,
+      },
+      { opacity: 0, transform: `translate(0, 0) rotate(${angle}deg)` },
+    ],
+    {
+      duration: 900,
+      easing: "cubic-bezier(.2, .72, .25, 1)",
+    },
+  );
+  meteorAnimation.addEventListener(
+    "finish",
+    () => {
+      elements.tipMeteor.hidden = true;
+      meteorAnimation = null;
+      onArrival();
+    },
+    { once: true },
+  );
 }
 
 function showRemoteTipSignal() {
@@ -151,8 +197,8 @@ function renderGeneration(state) {
   const progress = state.generationProgress;
   const labels = {
     empty: "等待上傳照片",
-    processing: "正在建立 3D 娃娃",
-    ready: "3D 娃娃已放進小木屋",
+    processing: "正在建立照片材質",
+    ready: "照片娃娃已放進小木屋",
     error: "照片處理失敗",
   };
   elements.generationLabel.textContent = labels[state.generation] || labels.empty;
@@ -172,18 +218,25 @@ function renderTips(tips) {
   }
   tips.slice(0, 12).forEach((tip) => {
     const note = document.createElement("article");
-    note.className = "note";
+    note.className = `note ${tip.direction === "outgoing" ? "outgoing" : ""}`.trim();
     const by = document.createElement("b");
     by.textContent = tip.by;
     const text = document.createElement("span");
     text.textContent = tip.text;
     note.append(by, text);
+    if (tip.direction === "outgoing") {
+      const delivery = document.createElement("small");
+      delivery.className = `tip-delivery ${tip.delivery}`;
+      delivery.textContent = tip.delivery === "sent" ? "已送達" : tip.delivery === "failed" ? "傳送失敗" : "等待傳送";
+      note.append(delivery);
+    }
     elements.notes.append(note);
   });
 }
 
 function renderState(state) {
   if (document.activeElement !== elements.roomName) elements.roomName.value = state.roomName;
+  if (document.activeElement !== elements.nickname) elements.nickname.value = state.nickname;
   if (document.activeElement !== elements.minutes) elements.minutes.value = state.minutes;
   if (document.activeElement !== elements.musicVolume) elements.musicVolume.value = state.musicVolume;
   elements.musicVolumeValue.value = `${state.musicVolume}%`;
@@ -199,6 +252,10 @@ function renderState(state) {
     viewer.setPhoto(state.photo);
     lastRenderedPhoto = state.photo;
   }
+  if (viewer && state.modelUrl !== lastRenderedModelUrl) {
+    viewer.setModel(state.modelUrl);
+    lastRenderedModelUrl = state.modelUrl;
+  }
   if (viewer && state.generation !== lastRenderedGeneration) {
     viewer.setGeneration(state.generation);
     lastRenderedGeneration = state.generation;
@@ -209,32 +266,45 @@ function renderState(state) {
   }
 }
 
-function makeTip(text, by = "You") {
+function makeTip(text, by = store.get().nickname) {
   return {
     id: crypto.randomUUID(),
     by,
     text: text.trim().slice(0, 72),
     createdAt: Date.now(),
+    direction: "outgoing",
+    delivery: p2p?.role === "host" ? "sent" : "pending",
   };
 }
 
-function addAndSendTip(text, by = p2p?.role === "host" ? "房主" : "夥伴") {
+function addAndSendTip(text, by = store.get().nickname) {
   const tip = makeTip(text, by);
-  if (!tip.text) return;
-  store.addTip(tip);
-  p2p?.sendTip(tip);
+  if (!tip.text) return { accepted: false, sent: false };
+  store.addTip(tip, "outgoing");
+  const sent = p2p?.sendTip(tip) || false;
+  return { accepted: true, sent, pending: tip.delivery === "pending" };
 }
 
 async function processPhoto(file) {
+  const processId = ++photoProcessId;
   try {
     store.update({ generation: "processing", generationProgress: 4 });
-    const photo = await prepareCompanionPhoto(file, (generationProgress, label) => {
+    const asset = await createCompanionAsset(file, (generationProgress, label) => {
+      if (processId !== photoProcessId) return;
       store.update({ generation: "processing", generationProgress });
       elements.generationLabel.textContent = label;
     });
-    store.update({ photo, generation: "ready", generationProgress: 100 });
-    showToast("3D 娃娃已放進小木屋。 ");
+    if (processId !== photoProcessId) return;
+    store.update({ photo: asset.photo, modelUrl: asset.modelUrl, generation: "ready", generationProgress: 100 });
+    showToast(
+      asset.mode === "generated"
+        ? "3D 模型已放進小木屋。 "
+        : asset.warning
+          ? "3D 生成暫時失敗，已改用照片娃娃。 "
+          : "照片娃娃已放進小木屋。 ",
+    );
   } catch (error) {
+    if (processId !== photoProcessId) return;
     store.update({ generation: "error", generationProgress: 0 });
     showToast(error.message || "照片處理失敗。 ");
   } finally {
@@ -275,8 +345,12 @@ function bindDollStyle() {
 
 function bindTimer() {
   timer.addEventListener("tick", (event) => {
-    const minutes = Math.floor(event.detail / 60).toString().padStart(2, "0");
-    const seconds = Math.floor(event.detail % 60).toString().padStart(2, "0");
+    const minutes = Math.floor(event.detail / 60)
+      .toString()
+      .padStart(2, "0");
+    const seconds = Math.floor(event.detail % 60)
+      .toString()
+      .padStart(2, "0");
     elements.timer.textContent = `${minutes}:${seconds}`;
   });
   timer.addEventListener("running", (event) => {
@@ -289,7 +363,11 @@ function bindTimer() {
 
 function bindMusic() {
   music.addEventListener("running", (event) => {
-    replaceButtonIcon(elements.toggleMusic, event.detail ? "volume-2" : "music-2", event.detail ? "暫停背景音樂" : "播放背景音樂");
+    replaceButtonIcon(
+      elements.toggleMusic,
+      event.detail ? "volume-2" : "music-2",
+      event.detail ? "暫停背景音樂" : "播放背景音樂",
+    );
     elements.toggleMusic.classList.toggle("primary", event.detail);
   });
   elements.toggleMusic.addEventListener("click", async () => {
@@ -315,9 +393,9 @@ function bindTips() {
     event.preventDefault();
     const text = elements.noteInput.value.trim();
     if (!text) return;
-    addAndSendTip(text);
+    const result = addAndSendTip(text);
     elements.noteInput.value = "";
-    showToast(p2p?.connections.size ? "Tip 已傳給同房夥伴。 " : "Tip 已先保存在這間小木屋。 ");
+    showToast(result.pending && !result.sent ? "Tip 已加入待送，連線後會自動補送。 " : "Tip 已送出。 ");
   });
   elements.seedTip.addEventListener("click", () => {
     const samples = [
@@ -334,6 +412,9 @@ function bindSettings() {
     store.update({ roomName: elements.roomName.value });
     p2p?.sendRoomMeta(store.get().roomName);
   });
+  elements.nickname.addEventListener("change", () => {
+    store.update({ nickname: elements.nickname.value });
+  });
   elements.minutes.addEventListener("change", () => {
     const minutes = Math.max(5, Math.min(120, Number(elements.minutes.value) || 25));
     store.update({ minutes });
@@ -348,6 +429,20 @@ function bindSettings() {
       showToast("已選取邀請連結。 ");
     }
   });
+  const shareInvite = async () => {
+    const url = elements.inviteLink.value;
+    if (!url.startsWith("http")) return;
+    try {
+      if (navigator.share) await navigator.share({ title: store.get().roomName, text: "一起來小木屋伴讀", url });
+      else await navigator.clipboard.writeText(url);
+      showToast(navigator.share ? "已開啟分享選單。 " : "邀請連結已複製。 ");
+    } catch (error) {
+      if (error?.name !== "AbortError") showToast("目前無法分享，請使用複製連結。 ");
+    }
+  };
+  elements.shareRoom.addEventListener("click", shareInvite);
+  elements.mobileShareRoom.addEventListener("click", shareInvite);
+  elements.retryConnection.addEventListener("click", () => restartP2P());
 }
 
 async function startP2P() {
@@ -355,9 +450,12 @@ async function startP2P() {
   p2p = new P2PRoom({ getSnapshot: () => store.get() });
   p2p.addEventListener("ready", (event) => {
     const info = event.detail;
+    if (info.role === "host") store.setRoomId(info.hostId, { migrateCurrent: true, includeStarters: true });
     elements.roomCode.textContent = `room://${info.hostId.slice(0, 16)}`;
     elements.inviteLink.value = info.invite;
     elements.copyInvite.disabled = false;
+    elements.shareRoom.disabled = false;
+    elements.mobileShareRoom.disabled = false;
     elements.roleBadge.textContent = info.role === "host" ? "房主" : "夥伴";
     elements.roomName.readOnly = info.role === "guest";
   });
@@ -374,13 +472,38 @@ async function startP2P() {
   });
   p2p.addEventListener("room-meta", (event) => store.update({ roomName: event.detail.roomName }));
   p2p.addEventListener("tip", (event) => {
-    if (store.addTip(event.detail)) {
+    if (store.addTip({ ...event.detail, direction: "incoming", delivery: "received" }, "incoming")) {
       showRemoteTipSignal();
       showToast(`${event.detail.by} 傳來一張 Tip。 `);
     }
   });
+  p2p.addEventListener("tip-delivery", (event) => store.markTipDelivery(event.detail.id, event.detail.delivery));
+  p2p.addEventListener("security-event", (event) => showToast(event.detail));
   p2p.addEventListener("network-error", (event) => showToast(event.detail));
-  p2p.start();
+  await p2p.start();
+  p2p.restoreOutbox(store.getPendingTips());
+}
+
+async function restartP2P() {
+  if (p2pStartPromise) return;
+  p2p?.destroy();
+  elements.copyInvite.disabled = true;
+  elements.shareRoom.disabled = true;
+  elements.mobileShareRoom.disabled = true;
+  p2pStartPromise = startP2P()
+    .catch((error) => showToast(error.message || "P2P 初始化失敗，Tip 會等待下次連線。 "))
+    .finally(() => {
+      p2pStartPromise = null;
+    });
+  await p2pStartPromise;
+}
+
+function bindMobileNavigation() {
+  document.querySelectorAll("[data-scroll-target]").forEach((button) => {
+    button.addEventListener("click", () => {
+      document.getElementById(button.dataset.scrollTarget)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
 }
 
 async function startViewer() {
@@ -403,9 +526,10 @@ function init() {
   bindTips();
   bindTipSignal();
   bindSettings();
+  bindMobileNavigation();
   timer.emitTick();
   startViewer();
-  startP2P().catch(() => showToast("P2P 初始化失敗，Tip 會保存在本機。 "));
+  restartP2P();
   window.addEventListener("beforeunload", () => {
     p2p?.destroy();
     viewer?.dispose();

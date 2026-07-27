@@ -1,0 +1,3 @@
+# Server-side Cloudflare Pages Function secrets. Never prefix these with VITE_.
+TURN_KEY_ID=
+TURN_KEY_API_TOKEN=

@@ -1,5 +1,6 @@
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const OUTPUT_SIZE = 768;
+const MAX_SOURCE_PIXELS = 48_000_000;
 const ACCEPTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function nextFrame() {
@@ -22,6 +23,25 @@ function loadImage(file) {
   });
 }
 
+function canvasToDataUrl(canvas) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error("照片壓縮失敗，請改用另一張圖片。"));
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("照片無法轉換，請再試一次。"));
+        reader.readAsDataURL(blob);
+      },
+      "image/jpeg",
+      0.86,
+    );
+  });
+}
+
 export function validateImage(file) {
   if (!file) throw new Error("請先選擇照片。 ");
   if (!ACCEPTED_TYPES.has(file.type)) throw new Error("只支援 JPG、PNG 與 WebP 圖片。 ");
@@ -32,6 +52,9 @@ export async function prepareCompanionPhoto(file, onProgress = () => {}) {
   validateImage(file);
   onProgress(12, "讀取照片");
   const image = await loadImage(file);
+  if (image.naturalWidth * image.naturalHeight > MAX_SOURCE_PIXELS) {
+    throw new Error("照片解析度過高，請使用 4800 萬像素以下的圖片。 ");
+  }
   await nextFrame();
 
   onProgress(38, "裁切角色主體");
@@ -48,7 +71,7 @@ export async function prepareCompanionPhoto(file, onProgress = () => {}) {
   await nextFrame();
 
   onProgress(72, "建立 3D 材質");
-  const dataUrl = canvas.toDataURL("image/jpeg", .86);
+  const dataUrl = await canvasToDataUrl(canvas);
   await nextFrame();
   onProgress(100, "3D 娃娃已完成");
   return dataUrl;
