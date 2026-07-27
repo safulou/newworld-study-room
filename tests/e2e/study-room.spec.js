@@ -25,7 +25,7 @@ test("renders the core room without overflow or serious accessibility violations
   if (testInfo.project.name === "desktop") {
     const noteColors = await page
       .locator(".note")
-      .evaluateAll((notes) => notes.map((note) => getComputedStyle(note).backgroundColor));
+      .evaluateAll((notes) => notes.map((note) => note.style.getPropertyValue("--note-paper")));
     expect(new Set(noteColors).size).toBe(noteColors.length);
 
     const results = await new AxeBuilder({ page }).disableRules(["color-contrast"]).analyze();
