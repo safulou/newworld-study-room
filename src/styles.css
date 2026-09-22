@@ -893,6 +893,56 @@ h1 {
   cursor: grabbing;
 }
 
+.companion-bubble {
+  position: absolute;
+  top: -42px;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px) scale(0.92);
+  z-index: 10;
+  max-width: 220px;
+  min-width: 140px;
+  padding: 8px 14px;
+  border-radius: 16px;
+  background: rgba(22, 28, 40, 0.94);
+  border: 1px solid rgba(246, 200, 81, 0.4);
+  box-shadow:
+    0 10px 25px rgba(0, 0, 0, 0.4),
+    0 0 14px rgba(246, 200, 81, 0.18);
+  color: #fff4db;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    visibility 0.28s;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.companion-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px 6px 0;
+  border-style: solid;
+  border-color: rgba(22, 28, 40, 0.94) transparent transparent;
+  display: block;
+  width: 0;
+}
+
+.companion-bubble.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+
 .avatar-fallback {
   position: absolute;
   inset: 32px 48px 18px;
@@ -1054,7 +1104,7 @@ h1 {
 
 .style-switch {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
   gap: 4px;
   margin-top: 10px;
   padding: 4px;

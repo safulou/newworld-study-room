@@ -18,9 +18,11 @@ import {
   Sparkles,
   Trash2,
   Volume2,
+  Wand2,
   createIcons,
 } from "lucide";
 import { BackgroundMusic } from "./services/background-music.js";
+import { CompanionSoundManager } from "./services/companion-sound.js";
 import { createCompanionAsset } from "./services/doll-generation.js";
 import { FocusTimer } from "./services/focus-timer.js";
 import { createStore } from "./state/store.js";
@@ -44,6 +46,7 @@ const icons = {
   Sparkles,
   Trash2,
   Volume2,
+  Wand2,
 };
 createIcons({ icons });
 
@@ -61,6 +64,9 @@ const elements = {
   mobileShareRoom: $("#mobileShareRoom"),
   dollCanvas: $("#dollCanvas"),
   avatarZone: $("#avatarZone"),
+  companionBubble: $("#companionBubble"),
+  bubbleText: $("#bubbleText"),
+  avatarFallback: $("#avatarFallback"),
   tipMeteor: $("#tipMeteor"),
   tipSignal: $("#tipSignal"),
   tipSignalCount: $("#tipSignalCount"),
@@ -107,9 +113,11 @@ const store = createStore({
 });
 const timer = new FocusTimer(store.get().minutes);
 const music = new BackgroundMusic(store.get().musicVolume);
+const companionSound = new CompanionSoundManager(0.4);
 let viewer = null;
 let p2p = null;
 let toastTimeout = null;
+let bubbleTimeout = null;
 let lastRenderedPhoto = null;
 let lastRenderedStandeePhoto = null;
 let lastRenderedModelUrl = null;
@@ -150,6 +158,32 @@ function showToast(message) {
   elements.toast.classList.add("show");
   window.clearTimeout(toastTimeout);
   toastTimeout = window.setTimeout(() => elements.toast.classList.remove("show"), 2600);
+}
+
+const companionQuotes = [
+  "每一分鐘的專注，都是給未來的禮物 ✨",
+  "深呼吸～坐姿端正，我們一起加油！",
+  "你已經做得很棒了，繼續保持步調 🌿",
+  "累了隨時喝口水，休息一下喔 🍵",
+  "今日的努力，花園裡的植物都看在眼裡 🌸",
+  "有我在這裡陪你，放心沉浸在學習中吧 💫",
+];
+
+const focusQuotes = [
+  "噓～正在專注沈浸中，維持這個節奏 🤫✨",
+  "專注是前進的超能力，加油！🎯",
+  "雜念退散～眼前這一段馬上就能完成 💫",
+  "心無旁騖，你認真的樣子特別耀眼 🌟",
+];
+
+function showCompanionBubble(text, duration = 3600) {
+  if (!elements.companionBubble || !elements.bubbleText) return;
+  elements.bubbleText.textContent = text;
+  elements.companionBubble.classList.add("visible");
+  window.clearTimeout(bubbleTimeout);
+  bubbleTimeout = window.setTimeout(() => {
+    elements.companionBubble?.classList.remove("visible");
+  }, duration);
 }
 
 function launchTipMeteor(onArrival) {
@@ -449,7 +483,13 @@ function bindDollStyle() {
     button.addEventListener("click", () => {
       const dollStyle = button.dataset.dollStyle;
       store.update({ dollStyle });
-      showToast(dollStyle === "detective" ? "已換成原創推理 Q 版公仔。 " : "已換回暖心公仔。 ");
+      const label =
+        dollStyle === "detective"
+          ? "已換成原創推理 Q 版公仔。 "
+          : dollStyle === "wizard"
+            ? "已換成星空魔法學者公仔。 "
+            : "已換回暖心公仔。 ";
+      showToast(label);
     });
   });
 }
@@ -468,10 +508,22 @@ function bindTimer() {
   timer.addEventListener("running", (event) => {
     replaceButtonIcon(elements.toggleTimer, event.detail ? "pause" : "play", event.detail ? "暫停專注" : "開始專注");
     elements.focusGarden.classList.toggle("growing", event.detail);
+    viewer?.setTimerState(event.detail ? "focusing" : "idle");
+    if (event.detail) {
+      showCompanionBubble("專注計時開始～我們一起加油！✨", 3000);
+    }
   });
-  timer.addEventListener("complete", () => showToast("這輪完成了，留一張 Tip 給同房夥伴吧。 "));
+  timer.addEventListener("complete", () => {
+    viewer?.setTimerState("completed");
+    companionSound.playCelebrationFanfare();
+    showCompanionBubble("這輪專注完成了！起來活動一下筋骨，你超棒的 🎉", 5000);
+    showToast("這輪完成了，留一張 Tip 給同房夥伴吧。 ");
+  });
   elements.toggleTimer.addEventListener("click", () => timer.toggle());
-  elements.resetTimer.addEventListener("click", () => timer.reset());
+  elements.resetTimer.addEventListener("click", () => {
+    timer.reset();
+    viewer?.setTimerState("idle");
+  });
 }
 
 function bindMusic() {
@@ -628,6 +680,13 @@ async function startViewer() {
   try {
     const { DollViewer } = await import("./services/doll-viewer.js");
     viewer = new DollViewer(elements.dollCanvas, elements.avatarZone);
+    viewer.onTap = () => {
+      companionSound.playTapChime();
+      const isRunning = elements.focusGarden.classList.contains("growing");
+      const quotes = isRunning ? focusQuotes : companionQuotes;
+      const quote = quotes[Math.floor(Math.random() * quotes.length)];
+      showCompanionBubble(quote);
+    };
     renderState(store.get());
   } catch {
     elements.dollCanvas.hidden = true;
@@ -646,6 +705,10 @@ function init() {
   bindTipSignal();
   bindSettings();
   bindMobileNavigation();
+  elements.avatarFallback?.addEventListener("click", () => {
+    viewer?.triggerBounce();
+    viewer?.onTap?.();
+  });
   timer.emitTick();
   startViewer();
   restartP2P();

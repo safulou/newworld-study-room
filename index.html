@@ -95,7 +95,10 @@
           </div>
 
           <div class="avatar-zone" id="avatarZone">
-            <canvas class="doll-canvas" id="dollCanvas" aria-label="可旋轉的 3D 伴讀娃娃"></canvas>
+            <div class="companion-bubble" id="companionBubble" aria-live="polite">
+              <span class="bubble-text" id="bubbleText"></span>
+            </div>
+            <canvas class="doll-canvas" id="dollCanvas" aria-label="可旋轉與互動的 3D 伴讀娃娃"></canvas>
             <div class="avatar-fallback" id="avatarFallback" aria-hidden="true">
               <div class="fallback-head">•‿•</div>
               <div class="fallback-body"></div>
@@ -148,6 +151,10 @@
               <button class="style-option" type="button" data-doll-style="detective" aria-pressed="false">
                 <i data-lucide="search"></i>
                 <span>推理 Q 版</span>
+              </button>
+              <button class="style-option" type="button" data-doll-style="wizard" aria-pressed="false">
+                <i data-lucide="wand-2"></i>
+                <span>魔法學者</span>
               </button>
             </div>
             <div class="generation-card">

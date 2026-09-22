@@ -79,6 +79,13 @@ export class DollViewer {
     this.reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
     this.inViewport = true;
     this.pageVisible = !document.hidden;
+    this.timerState = "idle";
+    this.bounceStartTime = 0;
+    this.celebrationStartTime = 0;
+    this.onTap = null;
+    this.pointerDownX = 0;
+    this.pointerDownY = 0;
+    this.pointerDownTime = 0;
     this.init();
   }
 
@@ -135,6 +142,13 @@ export class DollViewer {
         clothDark: new THREE.MeshToonMaterial({ color: 0xd8b875 }),
         accent: new THREE.MeshToonMaterial({ color: 0xe7a94e }),
         sole: new THREE.MeshToonMaterial({ color: 0x172638 }),
+      },
+      wizard: {
+        skin: new THREE.MeshToonMaterial({ color: 0xf3d2b3 }),
+        cloth: new THREE.MeshToonMaterial({ color: 0x2b2254 }),
+        clothDark: new THREE.MeshToonMaterial({ color: 0x483a82 }),
+        accent: new THREE.MeshToonMaterial({ color: 0xf7ca51 }),
+        sole: new THREE.MeshToonMaterial({ color: 0x181432 }),
       },
     };
     const cozy = this.materials.cozy;
@@ -204,6 +218,38 @@ export class DollViewer {
     [cap, brim, tie, magnifierRing, magnifierHandle].forEach((mesh) => this.addOutline(mesh, 1.055));
     this.detectiveAccessories.visible = false;
     this.doll.add(this.detectiveAccessories);
+
+    this.wizardAccessories = new THREE.Group();
+    const wizard = this.materials.wizard;
+    const wizardCone = new THREE.Mesh(new THREE.ConeGeometry(0.72, 1.25, 32), wizard.cloth);
+    wizardCone.position.set(0.06, 2.18, -0.02);
+    wizardCone.rotation.z = -0.12;
+
+    const wizardBrim = new THREE.Mesh(new THREE.CylinderGeometry(0.96, 0.96, 0.05, 32), wizard.clothDark);
+    wizardBrim.position.set(0, 1.76, 0);
+    wizardBrim.rotation.z = -0.05;
+
+    const wizardBand = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.045, 8, 32), wizard.accent);
+    wizardBand.rotation.x = Math.PI / 2;
+    wizardBand.position.set(0.02, 1.82, 0);
+
+    const starBrooch = new THREE.Mesh(new THREE.OctahedronGeometry(0.14, 0), wizard.accent);
+    starBrooch.position.set(0.1, 1.95, 0.58);
+    starBrooch.scale.set(1, 1, 0.4);
+
+    const wandGroup = new THREE.Group();
+    const wandHandle = new THREE.Mesh(new THREE.CapsuleGeometry(0.03, 0.65, 6, 10), wizard.sole);
+    const wandStar = new THREE.Mesh(new THREE.OctahedronGeometry(0.15, 0), wizard.accent);
+    wandStar.position.y = 0.42;
+    wandGroup.add(wandHandle, wandStar);
+    wandGroup.position.set(0.82, 0.22, 0.46);
+    wandGroup.rotation.z = 0.42;
+    wandGroup.rotation.x = -0.22;
+
+    this.wizardAccessories.add(wizardCone, wizardBrim, wizardBand, starBrooch, wandGroup);
+    [wizardCone, wizardBrim, wandHandle, wandStar].forEach((mesh) => this.addOutline(mesh, 1.055));
+    this.wizardAccessories.visible = false;
+    this.doll.add(this.wizardAccessories);
 
     this.scanMaterial = new THREE.MeshBasicMaterial({ color: 0xffe0a3, transparent: true, opacity: 0.75 });
     this.scanRing = new THREE.Mesh(new THREE.TorusGeometry(0.92, 0.025, 8, 64), this.scanMaterial);
@@ -298,6 +344,9 @@ export class DollViewer {
     this.canvas.addEventListener("pointerdown", (event) => {
       this.dragging = true;
       this.pointerX = event.clientX;
+      this.pointerDownX = event.clientX;
+      this.pointerDownY = event.clientY;
+      this.pointerDownTime = performance.now();
       this.canvas.setPointerCapture(event.pointerId);
     });
     this.canvas.addEventListener("pointermove", (event) => {
@@ -307,11 +356,38 @@ export class DollViewer {
       this.pointerX = event.clientX;
       this.lastInteraction = performance.now();
     });
-    const stop = () => {
-      this.dragging = false;
+    const stop = (event) => {
+      if (this.dragging) {
+        this.dragging = false;
+        const dx = event.clientX - this.pointerDownX;
+        const dy = event.clientY - this.pointerDownY;
+        const dt = performance.now() - this.pointerDownTime;
+        if (Math.hypot(dx, dy) < 8 && dt < 450) {
+          this.triggerBounce();
+          this.onTap?.();
+        }
+      }
     };
     this.canvas.addEventListener("pointerup", stop);
     this.canvas.addEventListener("pointercancel", stop);
+  }
+
+  triggerBounce() {
+    this.bounceStartTime = performance.now();
+  }
+
+  setTimerState(state) {
+    this.timerState = state;
+    if (state === "completed") {
+      this.celebrationStartTime = performance.now();
+      this.triggerBounce();
+    } else {
+      this.celebrationStartTime = 0;
+      if (this.arms && this.arms.length === 2) {
+        this.arms[0].rotation.z = -0.48;
+        this.arms[1].rotation.z = 0.48;
+      }
+    }
   }
 
   setPhoto(dataUrl, standeeDataUrl = dataUrl) {
@@ -434,10 +510,11 @@ export class DollViewer {
   }
 
   setStyle(style) {
-    const nextStyle = style === "detective" ? "detective" : "cozy";
+    const nextStyle = ["detective", "wizard"].includes(style) ? style : "cozy";
     if (nextStyle === this.currentStyle) return;
     this.currentStyle = nextStyle;
-    const detective = nextStyle === "detective";
+    const isDetective = nextStyle === "detective";
+    const isWizard = nextStyle === "wizard";
     const materials = this.materials[nextStyle];
 
     this.body.material = materials.cloth;
@@ -451,12 +528,12 @@ export class DollViewer {
     });
     this.ears.forEach((ear) => {
       ear.material = materials.accent;
-      ear.visible = !detective;
+      ear.visible = !isDetective && !isWizard;
     });
     this.scarf.material = materials.accent;
-    this.scarf.visible = !detective;
+    this.scarf.visible = !isDetective && !isWizard;
 
-    if (detective) {
+    if (isDetective || isWizard) {
       this.body.scale.set(0.78, 0.9, 0.64);
       this.body.position.set(0, -0.08, 0);
       this.belly.scale.set(0.86, 0.95, 0.38);
@@ -469,7 +546,8 @@ export class DollViewer {
       this.arms[1].position.set(0.63, 0.04, 0);
       this.legs[0].position.set(-0.28, -0.8, 0);
       this.legs[1].position.set(0.28, -0.8, 0);
-      this.detectiveAccessories.visible = true;
+      this.detectiveAccessories.visible = isDetective;
+      if (this.wizardAccessories) this.wizardAccessories.visible = isWizard;
       if (this.currentMode !== "standee") this.camera.position.set(0, 0.45, 6.2);
       this.scanRing.scale.setScalar(1.12);
     } else {
@@ -486,11 +564,12 @@ export class DollViewer {
       this.legs[0].position.set(-0.35, -0.82, 0);
       this.legs[1].position.set(0.35, -0.82, 0);
       this.detectiveAccessories.visible = false;
+      if (this.wizardAccessories) this.wizardAccessories.visible = false;
       if (this.currentMode !== "standee") this.camera.position.set(0, 0.38, 5.9);
       this.scanRing.scale.setScalar(1);
     }
     this.outlines.forEach((outline) => {
-      outline.visible = detective;
+      outline.visible = isDetective || isWizard;
     });
     this.camera.updateProjectionMatrix();
   }
@@ -516,7 +595,37 @@ export class DollViewer {
       this.userRotation = this.targetRotation;
     }
     this.doll.rotation.y += (this.targetRotation - this.doll.rotation.y) * 0.08;
-    this.doll.position.y = this.reducedMotion ? 0 : Math.sin(elapsed * 1.8) * 0.035;
+
+    const targetTilt = this.timerState === "focusing" ? -0.12 : -0.04;
+    this.doll.rotation.x += (targetTilt - this.doll.rotation.x) * 0.06;
+
+    const breatheSpeed = this.timerState === "focusing" ? 1.0 : 1.8;
+    const breatheAmp = this.timerState === "focusing" ? 0.022 : 0.035;
+    let basePosY = this.reducedMotion ? 0 : Math.sin(elapsed * breatheSpeed) * breatheAmp;
+
+    if (this.bounceStartTime) {
+      const dt = (performance.now() - this.bounceStartTime) / 1000;
+      if (dt < 0.5) {
+        const progress = dt / 0.5;
+        const jump = Math.sin(progress * Math.PI) * 0.16;
+        const squash = 1 + Math.sin(progress * Math.PI * 2) * 0.08;
+        basePosY += jump;
+        this.doll.scale.set(1 / Math.sqrt(squash), squash, 1 / Math.sqrt(squash));
+      } else {
+        this.bounceStartTime = 0;
+        this.doll.scale.set(1, 1, 1);
+      }
+    }
+    this.doll.position.y = basePosY;
+
+    if (this.celebrationStartTime && performance.now() - this.celebrationStartTime < 6000) {
+      const wave = Math.sin(elapsed * 9) * 0.38;
+      if (this.arms && this.arms.length === 2) {
+        this.arms[0].rotation.z = -0.85 + wave;
+        this.arms[1].rotation.z = 0.85 - wave;
+      }
+    }
+
     if (this.standee) {
       this.standee.rotation.y += (this.targetRotation - this.standee.rotation.y) * 0.08;
       this.standee.position.y = this.reducedMotion ? 0 : Math.sin(elapsed * 1.45) * 0.018;

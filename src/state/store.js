@@ -106,7 +106,7 @@ function sanitizeProfile(value = {}) {
     companionMode: ["doll", "standee"].includes(value.companionMode)
       ? value.companionMode
       : profileDefaults.companionMode,
-    dollStyle: ["cozy", "detective"].includes(value.dollStyle) ? value.dollStyle : profileDefaults.dollStyle,
+    dollStyle: ["cozy", "detective", "wizard"].includes(value.dollStyle) ? value.dollStyle : profileDefaults.dollStyle,
     photo: typeof value.photo === "string" ? value.photo : "",
     standeePhoto: typeof value.standeePhoto === "string" ? value.standeePhoto : "",
     modelUrl: typeof value.modelUrl === "string" ? value.modelUrl : "",
