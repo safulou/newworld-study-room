@@ -1,0 +1,23 @@
+{
+  "name": "NewWorld Study Room",
+  "short_name": "StudyRoom",
+  "description": "A cozy online study cabin with a photo-textured 3D companion, focus timer, ambient soundscapes, and P2P notes.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#101823",
+  "theme_color": "#182537",
+  "icons": [
+    {
+      "src": "icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,11 +1,18 @@
 import "./styles.css";
 import {
   BarChart2,
+  Cat,
   CheckSquare,
+  ClipboardCopy,
   CloudRain,
+  Coffee,
   Copy,
+  Crown,
   Cuboid,
+  Download,
   Flame,
+  Glasses,
+  HandMetal,
   House,
   ImagePlus,
   MessageCircleHeart,
@@ -21,14 +28,16 @@ import {
   Share2,
   Shuffle,
   Sparkles,
+  SunMoon,
   Trash2,
   Volume2,
   Wand2,
   Waves,
   Wind,
+  Zap,
   createIcons,
 } from "lucide";
-import { AmbientSoundscapeManager } from "./services/ambient-sound.js";
+import { AmbientSoundscapeManager, SOUNDSCAPE_PRESETS } from "./services/ambient-sound.js";
 import { BackgroundMusic } from "./services/background-music.js";
 import { CompanionSoundManager } from "./services/companion-sound.js";
 import { createCompanionAsset } from "./services/doll-generation.js";
@@ -39,11 +48,18 @@ import { createStore } from "./state/store.js";
 
 const icons = {
   BarChart2,
+  Cat,
   CheckSquare,
+  ClipboardCopy,
   CloudRain,
+  Coffee,
   Copy,
+  Crown,
   Cuboid,
+  Download,
   Flame,
+  Glasses,
+  HandMetal,
   House,
   ImagePlus,
   MessageCircleHeart,
@@ -59,11 +75,13 @@ const icons = {
   Share2,
   Shuffle,
   Sparkles,
+  SunMoon,
   Trash2,
   Volume2,
   Wand2,
   Waves,
   Wind,
+  Zap,
 };
 createIcons({ icons });
 
@@ -95,10 +113,20 @@ const elements = {
   resetTimer: $("#resetTimer"),
   toggleMusic: $("#toggleMusic"),
   toggleAmbient: $("#toggleAmbient"),
+  toggleAtmosphere: $("#toggleAtmosphere"),
+  cabinWindow: $("#cabinWindow"),
+  windowRain: $("#windowRain"),
+  windowCelestial: $("#windowCelestial"),
+  peerStatusBar: $("#peerStatusBar"),
+  peerStatusText: $("#peerStatusText"),
+  celebrateBanner: $("#celebrateBanner"),
+  celebrateText: $("#celebrateText"),
+  sendCheer: $("#sendCheer"),
   ambientBar: $("#ambientBar"),
   ambientVolume: $("#ambientVolume"),
   ambientVolumeValue: $("#ambientVolumeValue"),
   ambientChips: [...document.querySelectorAll(".ambient-chip")],
+  presetButtons: [...document.querySelectorAll(".preset-btn")],
   taskPanel: $("#taskPanel"),
   taskForm: $("#taskForm"),
   taskInput: $("#taskInput"),
@@ -110,6 +138,9 @@ const elements = {
   statTotalHours: $("#statTotalHours"),
   statCompletedSessions: $("#statCompletedSessions"),
   statTotalHarvest: $("#statTotalHarvest"),
+  heatmapGrid: $("#heatmapGrid"),
+  copyMarkdownLog: $("#copyMarkdownLog"),
+  exportBackupJson: $("#exportBackupJson"),
   photoInput: $("#photoInput"),
   photoDrop: $("#photoDrop"),
   clearPhoto: $("#clearPhoto"),
@@ -117,6 +148,7 @@ const elements = {
   companionPanelTitle: $("#companionPanelTitle"),
   dollStyleSwitch: $("#dollStyleSwitch"),
   styleButtons: [...document.querySelectorAll("[data-doll-style]")],
+  accessoryButtons: [...document.querySelectorAll(".accessory-chip")],
   generationLabel: $("#generationLabel"),
   generationPercent: $("#generationPercent"),
   generationBar: $("#generationBar"),
@@ -411,6 +443,82 @@ function renderStats() {
   elements.statTotalHours.textContent = String(summary.totalHours);
   elements.statCompletedSessions.textContent = String(summary.totalSessions);
   elements.statTotalHarvest.textContent = String(totalHarvest);
+  renderHeatmap();
+}
+
+function renderHeatmap() {
+  if (!elements.heatmapGrid) return;
+  elements.heatmapGrid.replaceChildren();
+  const data = studyStats.getHeatmapData(28);
+  data.forEach((day) => {
+    const cell = document.createElement("div");
+    cell.className = `heatmap-cell heat-box level-${day.level}`;
+    cell.title = `${day.date}：專注 ${day.minutes} 分鐘`;
+    elements.heatmapGrid.append(cell);
+  });
+}
+
+function updateAtmosphere(mode = "auto") {
+  let resolved = mode;
+  if (mode === "auto") {
+    const hour = new Date().getHours();
+    if (hour >= 6 && hour < 17) resolved = "day";
+    else if (hour >= 17 && hour < 19.5) resolved = "dusk";
+    else resolved = "night";
+  }
+  elements.stage.dataset.atmosphere = resolved;
+  const labels = {
+    auto: "環境氛圍：自動（跟隨真實時間）",
+    day: "環境氛圍：白晝陽光",
+    dusk: "環境氛圍：黃昏晚霞",
+    night: "環境氛圍：子夜星空",
+  };
+  if (elements.toggleAtmosphere) elements.toggleAtmosphere.title = labels[mode] || labels.auto;
+}
+
+let rainAnimationFrame = null;
+const raindrops = Array.from({ length: 28 }, () => ({
+  x: Math.random() * 88,
+  y: Math.random() * 96,
+  length: 6 + Math.random() * 8,
+  speed: 1.5 + Math.random() * 2.5,
+  opacity: 0.3 + Math.random() * 0.5,
+}));
+
+function startWindowRain() {
+  if (rainAnimationFrame || !elements.windowRain) return;
+  const ctx = elements.windowRain.getContext("2d");
+  if (!ctx) return;
+  function renderRain() {
+    ctx.clearRect(0, 0, 88, 96);
+    ctx.strokeStyle = "rgba(180, 220, 255, 0.6)";
+    ctx.lineWidth = 1;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    for (const drop of raindrops) {
+      ctx.moveTo(drop.x, drop.y);
+      ctx.lineTo(drop.x - 0.5, drop.y + drop.length);
+      drop.y += drop.speed;
+      if (drop.y > 96) {
+        drop.y = -drop.length;
+        drop.x = Math.random() * 88;
+      }
+    }
+    ctx.stroke();
+    rainAnimationFrame = requestAnimationFrame(renderRain);
+  }
+  renderRain();
+}
+
+function stopWindowRain() {
+  if (rainAnimationFrame) {
+    cancelAnimationFrame(rainAnimationFrame);
+    rainAnimationFrame = null;
+  }
+  if (elements.windowRain) {
+    const ctx = elements.windowRain.getContext("2d");
+    ctx?.clearRect(0, 0, 88, 96);
+  }
 }
 
 function clampProgress(value) {
@@ -492,6 +600,16 @@ function renderState(state) {
     viewer.setStyle(state.dollStyle);
     lastRenderedStyle = state.dollStyle;
   }
+  elements.accessoryButtons.forEach((btn) => {
+    const acc = btn.dataset.accessory;
+    const active = Boolean(state.accessories?.[acc]);
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-pressed", String(active));
+  });
+  if (viewer && state.accessories) {
+    viewer.setAccessories(state.accessories);
+  }
+  updateAtmosphere(state.ambientMode);
 }
 
 function makeTip(text, by = store.get().nickname) {
@@ -615,6 +733,7 @@ function bindTimer() {
     replaceButtonIcon(elements.toggleTimer, event.detail ? "pause" : "play", event.detail ? "暫停專注" : "開始專注");
     elements.focusGarden.classList.toggle("growing", event.detail);
     viewer?.setTimerState(event.detail ? "focusing" : "idle");
+    p2p?.sendStatus(event.detail ? "focusing" : "resting", store.get().nickname, store.get().plantType);
     if (event.detail) {
       showCompanionBubble("專注計時開始～我們一起加油！✨", 3000);
     }
@@ -689,10 +808,12 @@ function bindAmbientSound() {
         ambientSound.stopTrack(sound);
         chip.classList.remove("active");
         chip.setAttribute("aria-pressed", "false");
+        if (sound === "rain") stopWindowRain();
       } else {
         ambientSound.startTrack(sound);
         chip.classList.add("active");
         chip.setAttribute("aria-pressed", "true");
+        if (sound === "rain") startWindowRain();
       }
     });
   });
@@ -701,6 +822,103 @@ function bindAmbientSound() {
     const volume = Number(elements.ambientVolume.value) / 100;
     ambientSound.setMasterVolume(volume);
     elements.ambientVolumeValue.value = `${elements.ambientVolume.value}%`;
+  });
+}
+
+function bindPresets() {
+  elements.presetButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const presetId = button.dataset.preset;
+      const preset = SOUNDSCAPE_PRESETS[presetId];
+      if (!preset) return;
+      ambientSound.applyPreset(presetId);
+      elements.ambientChips.forEach((chip) => {
+        const sound = chip.dataset.sound;
+        const isPlaying = sound in preset.tracks;
+        chip.classList.toggle("active", isPlaying);
+        chip.setAttribute("aria-pressed", String(isPlaying));
+      });
+      if ("rain" in preset.tracks) {
+        startWindowRain();
+      } else {
+        stopWindowRain();
+      }
+      showToast(`已套用「${preset.name}」音景預設。`);
+    });
+  });
+}
+
+function bindAtmosphere() {
+  const modes = ["auto", "day", "dusk", "night"];
+  const cycleMode = () => {
+    const current = store.get().ambientMode || "auto";
+    const nextIdx = (modes.indexOf(current) + 1) % modes.length;
+    const next = modes[nextIdx];
+    store.update({ ambientMode: next });
+    const labels = {
+      auto: "已切換至「自動（跟隨真實時間）」",
+      day: "已切換至「白晝陽光」",
+      dusk: "已切換至「黃昏晚霞」",
+      night: "已切換至「子夜星空」",
+    };
+    showToast(labels[next]);
+  };
+  elements.toggleAtmosphere?.addEventListener("click", cycleMode);
+  elements.windowCelestial?.addEventListener("click", cycleMode);
+}
+
+function bindAccessories() {
+  elements.accessoryButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const acc = button.dataset.accessory;
+      const current = store.get().accessories || {};
+      const next = { ...current, [acc]: !current[acc] };
+      store.update({ accessories: next });
+      const labels = {
+        glasses: "復古金框眼鏡",
+        crown: "學霸金冠",
+        coffee: "暖心熱咖啡",
+        cat: "伴讀小貓",
+      };
+      showToast(`${next[acc] ? "已為玩偶佩戴" : "已卸下"}${labels[acc] || acc}。`);
+    });
+  });
+}
+
+function bindP2PCheer() {
+  elements.sendCheer?.addEventListener("click", () => {
+    const res = p2p?.sendCelebration("clap", store.get().nickname);
+    companionSound.playTapChime();
+    if (res) {
+      showToast("已向同房夥伴送出喝采拍手！👏");
+    } else {
+      showToast("喝采拍手已準備，連線後夥伴會收到。");
+    }
+  });
+}
+
+function bindExports() {
+  elements.copyMarkdownLog?.addEventListener("click", async () => {
+    const md = studyStats.exportMarkdownSummary(taskTracker.tasks);
+    try {
+      await navigator.clipboard.writeText(md);
+      showToast("今日 Markdown 伴讀日誌已複製到剪貼簿！📋");
+    } catch {
+      showToast("無法存取剪貼簿，請稍後重試。");
+    }
+  });
+
+  elements.exportBackupJson?.addEventListener("click", () => {
+    const json = studyStats.exportJsonBackup(taskTracker.tasks);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const today = new Date().toISOString().split("T")[0];
+    a.href = url;
+    a.download = `newworld-study-backup-${today}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("學習記錄 JSON 備份檔已開始下載。📥");
   });
 }
 
@@ -835,6 +1053,29 @@ async function startP2P() {
     }
   });
   p2p.addEventListener("tip-delivery", (event) => store.markTipDelivery(event.detail.id, event.detail.delivery));
+  p2p.addEventListener("peer-celebrate", (event) => {
+    const detail = event.detail;
+    companionSound.playCelebrationFanfare();
+    if (elements.celebrateBanner && elements.celebrateText) {
+      elements.celebrateText.textContent = `🎉 ${detail.by || "夥伴"} 送來了拍手喝采！`;
+      elements.celebrateBanner.hidden = false;
+      window.setTimeout(() => {
+        if (elements.celebrateBanner) elements.celebrateBanner.hidden = true;
+      }, 4500);
+    }
+    showToast(`🎉 ${detail.by || "夥伴"} 為你送上喝采！`);
+  });
+  p2p.addEventListener("peer-status", (event) => {
+    const detail = event.detail;
+    if (elements.peerStatusBar && elements.peerStatusText) {
+      const statusText = detail.status === "focusing" ? "正在專注沈浸中 🎯" : "正在小憩喝水 🍵";
+      elements.peerStatusText.textContent = `${detail.by} ${statusText}`;
+      elements.peerStatusBar.hidden = false;
+      window.setTimeout(() => {
+        if (elements.peerStatusBar) elements.peerStatusBar.hidden = true;
+      }, 6000);
+    }
+  });
   p2p.addEventListener("security-event", (event) => showToast(event.detail));
   p2p.addEventListener("network-error", (event) => showToast(event.detail));
   await p2p.start();
@@ -891,10 +1132,15 @@ function init() {
   bindImageUpload();
   bindCompanionMode();
   bindDollStyle();
+  bindAccessories();
+  bindAtmosphere();
   bindTimer();
   bindMusic();
   bindAmbientSound();
+  bindPresets();
+  bindP2PCheer();
   bindTasks();
+  bindExports();
   renderStats();
   bindTips();
   bindTipSignal();
@@ -907,11 +1153,15 @@ function init() {
   timer.emitTick();
   startViewer();
   restartP2P();
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  }
   window.addEventListener("beforeunload", () => {
     p2p?.destroy();
     viewer?.dispose();
     music.destroy();
     ambientSound.stopAll();
+    stopWindowRain();
   });
 }
 

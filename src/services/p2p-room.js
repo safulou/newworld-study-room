@@ -231,6 +231,20 @@ export class P2PRoom extends EventTarget {
       }
       return;
     }
+    if (message.type === "peer-status") {
+      this.dispatchEvent(new CustomEvent("peer-status", { detail: message }));
+      if (this.role === "host") {
+        this.broadcast(message, source.peer);
+      }
+      return;
+    }
+    if (message.type === "peer-celebrate") {
+      this.dispatchEvent(new CustomEvent("peer-celebrate", { detail: message }));
+      if (this.role === "host") {
+        this.broadcast(message, source.peer);
+      }
+      return;
+    }
     if (message.type !== "tip" || !isTip(message.tip)) return;
 
     const tip = publicTip(message.tip);
@@ -291,6 +305,42 @@ export class P2PRoom extends EventTarget {
   sendRoomMeta(roomName) {
     if (this.role !== "host") return;
     this.broadcast({ type: "room-meta", version: MESSAGE_VERSION, roomName: String(roomName).trim().slice(0, 24) });
+  }
+
+  sendStatus(status, nickname, plant) {
+    const msg = {
+      type: "peer-status",
+      version: MESSAGE_VERSION,
+      peerId: this.peer?.id || "",
+      by: String(nickname || "夥伴").slice(0, 18),
+      status: String(status || "idle").slice(0, 20),
+      plant: String(plant || "rose").slice(0, 20),
+      timestamp: Date.now(),
+    };
+    if (this.role === "host") {
+      this.broadcast(msg);
+    } else {
+      const host = this.connections.get(this.hostId);
+      this.send(host, msg);
+    }
+    return msg;
+  }
+
+  sendCelebration(kind = "clap", by = "夥伴") {
+    const msg = {
+      type: "peer-celebrate",
+      version: MESSAGE_VERSION,
+      kind: ["clap", "tea", "highfive"].includes(kind) ? kind : "clap",
+      by: String(by || "夥伴").slice(0, 18),
+      timestamp: Date.now(),
+    };
+    if (this.role === "host") {
+      this.broadcast(msg);
+    } else {
+      const host = this.connections.get(this.hostId);
+      this.send(host, msg);
+    }
+    return msg;
   }
 
   broadcast(message, exceptPeer = "") {

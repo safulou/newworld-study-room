@@ -16,6 +16,17 @@ export default [
     },
   },
   {
+    files: ["public/**/*.js"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: { ...globals.serviceworker, ...globals.browser },
+    },
+    rules: {
+      "no-empty": ["error", { allowEmptyCatch: true }],
+    },
+  },
+  {
     files: ["functions/**/*.js"],
     languageOptions: {
       ecmaVersion: "latest",

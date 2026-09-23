@@ -6,7 +6,9 @@
     <meta name="theme-color" content="#101823" />
     <meta name="description" content="一間有 3D 娃娃陪伴、能互傳 Tip 紙條的線上伴讀小木屋。" />
     <title>NewWorld Study Room</title>
-    <link rel="icon" href="data:," />
+    <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="icon-192.svg" />
   </head>
   <body>
     <main class="app">
@@ -20,6 +22,15 @@
             <span class="dot" id="presenceDot"></span>
             <span id="presenceText">連線準備中</span>
           </div>
+          <button
+            class="icon-btn subtle"
+            id="toggleAtmosphere"
+            type="button"
+            aria-label="切換晝夜氛圍"
+            title="切換晝夜氛圍（自動/白晝/黃昏/子夜）"
+          >
+            <i data-lucide="sun-moon"></i>
+          </button>
           <button
             class="icon-btn share-room"
             id="shareRoom"
@@ -37,6 +48,12 @@
         <section class="stage" id="roomStage" aria-label="3D 伴讀房">
           <div class="stars" aria-hidden="true"></div>
           <div class="tip-meteor" id="tipMeteor" aria-hidden="true" hidden></div>
+          <div class="peer-status-bar" id="peerStatusBar" hidden>
+            <span id="peerStatusText">夥伴正在專注中...</span>
+          </div>
+          <div class="celebrate-banner" id="celebrateBanner" hidden>
+            <span id="celebrateText">🎉 夥伴送來了掌聲喝采！</span>
+          </div>
           <button
             class="tip-signal"
             id="tipSignal"
@@ -52,7 +69,10 @@
             <div class="cabin-roof"></div>
             <div class="cabin-sign">小木屋伴讀中</div>
             <div class="room-box">
-              <div class="window"><span></span></div>
+              <div class="window" id="cabinWindow">
+                <canvas class="window-rain" id="windowRain" width="88" height="96"></canvas>
+                <span id="windowCelestial" title="點擊切換晝夜氛圍"></span>
+              </div>
               <div class="beam beam-v"></div>
               <div class="beam beam-h"></div>
               <div class="floor"></div>
@@ -125,9 +145,24 @@
             >
               <i data-lucide="cloud-rain"></i>
             </button>
+            <button
+              class="icon-btn"
+              id="sendCheer"
+              type="button"
+              aria-label="為夥伴喝采"
+              title="為同房夥伴送上拍手喝采"
+            >
+              <i data-lucide="hand-metal"></i>
+            </button>
           </div>
 
           <div class="ambient-bar" id="ambientBar" hidden>
+            <div class="ambient-presets">
+              <span class="ambient-preset-title">場景預設：</span>
+              <button class="preset-btn" type="button" data-preset="cozy_fireplace">🌧️ 雨夜壁爐</button>
+              <button class="preset-btn" type="button" data-preset="forest_breeze">🌲 林間微風</button>
+              <button class="preset-btn" type="button" data-preset="deep_flow">🧘 深度心流</button>
+            </div>
             <div class="ambient-chips">
               <button class="ambient-chip" type="button" data-sound="rain" aria-pressed="false">
                 <i data-lucide="cloud-rain"></i>
@@ -144,6 +179,14 @@
               <button class="ambient-chip" type="button" data-sound="brown_noise" aria-pressed="false">
                 <i data-lucide="waves"></i>
                 <span>潮汐</span>
+              </button>
+              <button class="ambient-chip" type="button" data-sound="binaural_alpha" aria-pressed="false">
+                <i data-lucide="sparkles"></i>
+                <span>Alpha波</span>
+              </button>
+              <button class="ambient-chip" type="button" data-sound="binaural_gamma" aria-pressed="false">
+                <i data-lucide="zap"></i>
+                <span>Gamma波</span>
               </button>
             </div>
             <div class="ambient-volume-row">
@@ -190,6 +233,36 @@
               <button class="style-option" type="button" data-doll-style="wizard" aria-pressed="false">
                 <i data-lucide="wand-2"></i>
                 <span>魔法學者</span>
+              </button>
+            </div>
+            <div class="accessory-switch" id="accessorySwitch" role="group" aria-label="玩偶配件">
+              <button
+                class="accessory-chip"
+                type="button"
+                data-accessory="glasses"
+                aria-pressed="false"
+                title="復古金框眼鏡"
+              >
+                <i data-lucide="glasses"></i>
+                <span>眼鏡</span>
+              </button>
+              <button class="accessory-chip" type="button" data-accessory="crown" aria-pressed="false" title="學霸金冠">
+                <i data-lucide="crown"></i>
+                <span>金冠</span>
+              </button>
+              <button
+                class="accessory-chip"
+                type="button"
+                data-accessory="coffee"
+                aria-pressed="false"
+                title="暖心熱咖啡"
+              >
+                <i data-lucide="coffee"></i>
+                <span>咖啡</span>
+              </button>
+              <button class="accessory-chip" type="button" data-accessory="cat" aria-pressed="false" title="伴讀小貓">
+                <i data-lucide="cat"></i>
+                <span>小貓</span>
               </button>
             </div>
             <div class="generation-card">
@@ -274,6 +347,29 @@
                 <span class="stat-number" id="statTotalHarvest">0</span>
                 <span class="stat-caption">收穫植物數</span>
               </div>
+            </div>
+            <div class="heatmap-section">
+              <div class="heatmap-head">
+                <span>近 28 天專注熱力</span>
+                <span class="heatmap-legend" aria-hidden="true">
+                  <span class="heat-box level-0" title="0分"></span>
+                  <span class="heat-box level-1" title="1-25分"></span>
+                  <span class="heat-box level-2" title="26-60分"></span>
+                  <span class="heat-box level-3" title="61-120分"></span>
+                  <span class="heat-box level-4" title="120+分"></span>
+                </span>
+              </div>
+              <div class="heatmap-grid" id="heatmapGrid" aria-label="近 28 天專注熱力圖"></div>
+            </div>
+            <div class="stats-export-row">
+              <button class="stats-action-btn" id="copyMarkdownLog" type="button" title="複製今日專注 Markdown 日誌">
+                <i data-lucide="clipboard-copy"></i>
+                <span>複製 Markdown 日誌</span>
+              </button>
+              <button class="stats-action-btn" id="exportBackupJson" type="button" title="匯出學習歷史 JSON 備份檔">
+                <i data-lucide="download"></i>
+                <span>匯出備份</span>
+              </button>
             </div>
           </section>
 

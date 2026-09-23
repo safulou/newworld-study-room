@@ -285,6 +285,80 @@ export class DollViewer {
     this.wizardAccessories.visible = false;
     this.doll.add(this.wizardAccessories);
 
+    // Custom Accessories (Glasses, Crown, Coffee, Cat)
+    this.customAccessories = new THREE.Group();
+
+    // 1. Glasses
+    this.glassesGroup = new THREE.Group();
+    const goldMetal = new THREE.MeshStandardMaterial({ color: 0xf1b65f, metalness: 0.85, roughness: 0.2 });
+    const ringL = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.022, 10, 24), goldMetal);
+    ringL.position.set(-0.25, 1.25, 0.68);
+    const ringR = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.022, 10, 24), goldMetal);
+    ringR.position.set(0.25, 1.25, 0.68);
+    const bridge = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.18, 8), goldMetal);
+    bridge.position.set(0, 1.25, 0.69);
+    bridge.rotation.z = Math.PI / 2;
+    this.glassesGroup.add(ringL, ringR, bridge);
+    this.glassesGroup.visible = false;
+
+    // 2. Golden Crown
+    this.crownGroup = new THREE.Group();
+    const crownMat = new THREE.MeshStandardMaterial({ color: 0xf7ca51, metalness: 0.8, roughness: 0.25 });
+    const crownBase = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.52, 0.14, 24, 1, true), crownMat);
+    crownBase.position.set(0, 1.96, 0);
+    this.crownGroup.add(crownBase);
+    for (let i = 0; i < 4; i++) {
+      const angle = (i * Math.PI) / 2;
+      const peak = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.2, 4), crownMat);
+      peak.position.set(Math.cos(angle) * 0.46, 2.08, Math.sin(angle) * 0.46);
+      this.crownGroup.add(peak);
+    }
+    const jewel = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.08, 0),
+      new THREE.MeshStandardMaterial({ color: 0xdc5858, roughness: 0.3 }),
+    );
+    jewel.position.set(0, 2.02, 0.5);
+    this.crownGroup.add(jewel);
+    this.crownGroup.visible = false;
+
+    // 3. Coffee Mug
+    this.coffeeGroup = new THREE.Group();
+    const mugMat = new THREE.MeshStandardMaterial({ color: 0xf2ece1, roughness: 0.4 });
+    const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.11, 0.26, 20), mugMat);
+    mug.position.set(0.72, -0.92, 0.38);
+    const handle = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.022, 8, 16, Math.PI), mugMat);
+    handle.position.set(0.86, -0.92, 0.38);
+    handle.rotation.z = Math.PI / 2;
+    const coffeeLiquid = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.13, 0.13, 0.02, 20),
+      new THREE.MeshStandardMaterial({ color: 0x3d2616, roughness: 0.8 }),
+    );
+    coffeeLiquid.position.set(0.72, -0.8, 0.38);
+    this.coffeeGroup.add(mug, handle, coffeeLiquid);
+    this.coffeeGroup.visible = false;
+
+    // 4. Sleeping Kitten
+    this.catGroup = new THREE.Group();
+    const catMat = new THREE.MeshStandardMaterial({ color: 0xe89758, roughness: 0.7 });
+    const catBody = new THREE.Mesh(new THREE.SphereGeometry(0.19, 18, 14), catMat);
+    catBody.scale.set(1.25, 0.8, 1.0);
+    catBody.position.set(-0.68, -1.05, 0.35);
+    const catHead = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 12), catMat);
+    catHead.position.set(-0.52, -0.96, 0.42);
+    const earL = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.08, 4), catMat);
+    earL.position.set(-0.58, -0.84, 0.44);
+    earL.rotation.z = -0.2;
+    const earR = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.08, 4), catMat);
+    earR.position.set(-0.46, -0.84, 0.44);
+    earR.rotation.z = 0.2;
+    const tail = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.028, 8, 20, Math.PI * 0.9), catMat);
+    tail.position.set(-0.76, -1.06, 0.3);
+    this.catGroup.add(catBody, catHead, earL, earR, tail);
+    this.catGroup.visible = false;
+
+    this.customAccessories.add(this.glassesGroup, this.crownGroup, this.coffeeGroup, this.catGroup);
+    this.doll.add(this.customAccessories);
+
     this.scanMaterial = new THREE.MeshBasicMaterial({ color: 0xffe0a3, transparent: true, opacity: 0.75 });
     this.scanRing = new THREE.Mesh(new THREE.TorusGeometry(0.92, 0.025, 8, 64), this.scanMaterial);
     this.scanRing.rotation.x = Math.PI / 2;
@@ -626,6 +700,13 @@ export class DollViewer {
       outline.visible = isDetective || isWizard;
     });
     this.camera.updateProjectionMatrix();
+  }
+
+  setAccessories({ glasses = false, crown = false, coffee = false, cat = false } = {}) {
+    if (this.glassesGroup) this.glassesGroup.visible = Boolean(glasses);
+    if (this.crownGroup) this.crownGroup.visible = Boolean(crown);
+    if (this.coffeeGroup) this.coffeeGroup.visible = Boolean(coffee);
+    if (this.catGroup) this.catGroup.visible = Boolean(cat);
   }
 
   resize() {

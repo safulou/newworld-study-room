@@ -41,6 +41,13 @@ const profileDefaults = {
   modelUrl: "",
   generation: "empty",
   generationProgress: 0,
+  accessories: {
+    glasses: false,
+    crown: false,
+    coffee: false,
+    cat: false,
+  },
+  ambientMode: "auto",
 };
 
 const roomDefaults = {
@@ -93,6 +100,13 @@ function normalizeTip(tip, fallbackDirection = "incoming") {
 
 function sanitizeProfile(value = {}) {
   const minutes = Math.max(5, Math.min(120, Number(value.minutes) || profileDefaults.minutes));
+  const accessories = {
+    glasses: Boolean(value.accessories?.glasses),
+    crown: Boolean(value.accessories?.crown),
+    coffee: Boolean(value.accessories?.coffee),
+    cat: Boolean(value.accessories?.cat),
+  };
+  const ambientMode = ["auto", "day", "dusk", "night"].includes(value.ambientMode) ? value.ambientMode : "auto";
   return {
     nickname:
       String(value.nickname || profileDefaults.nickname)
@@ -116,6 +130,8 @@ function sanitizeProfile(value = {}) {
         ? "ready"
         : "empty",
     generationProgress: Math.max(0, Math.min(100, Number(value.generationProgress) || 0)),
+    accessories,
+    ambientMode,
   };
 }
 

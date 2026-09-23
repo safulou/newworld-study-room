@@ -61,4 +61,21 @@ describe("StudyStatsManager Service", () => {
     expect(summary.totalHours).toBe(1.0);
     expect(summary.harvestCounts["pine"]).toBe(1);
   });
+
+  it("generates 28-day heatmap data accurately", () => {
+    stats.recordSession({ durationMinutes: 45 });
+    const heatmap = stats.getHeatmapData(28);
+    expect(heatmap.length).toBe(28);
+    const todayData = heatmap[heatmap.length - 1];
+    expect(todayData.minutes).toBe(45);
+    expect(todayData.level).toBe(2);
+  });
+
+  it("exports formatted markdown study log", () => {
+    stats.recordSession({ durationMinutes: 25, plantHarvested: "rose" });
+    const md = stats.exportMarkdownSummary([{ title: "撰寫代碼", completed: true, pomodoros: 1 }]);
+    expect(md).toContain("NewWorld Study Room 伴讀工作日誌");
+    expect(md).toContain("玫瑰 x1");
+    expect(md).toContain("[x] 撰寫代碼 (🍅 1)");
+  });
 });

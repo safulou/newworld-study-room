@@ -1,10 +1,32 @@
 /**
  * Ambient Soundscapes Synthesizer
- * Pure Web Audio API procedural generation for rain, wind, campfire, and brown noise.
+ * Pure Web Audio API procedural generation for rain, wind, campfire, brown noise,
+ * and scientific binaural beats (Alpha & Gamma flow waves).
  * Requires 0 external audio assets.
  */
 
-export const AMBIENT_SOUND_TYPES = ["rain", "wind", "campfire", "brown_noise"];
+export const AMBIENT_SOUND_TYPES = ["rain", "wind", "campfire", "brown_noise", "binaural_alpha", "binaural_gamma"];
+
+export const SOUNDSCAPE_PRESETS = {
+  cozy_fireplace: {
+    id: "cozy_fireplace",
+    name: "雨夜壁爐",
+    icon: "flame",
+    tracks: { rain: 0.35, campfire: 0.3 },
+  },
+  forest_breeze: {
+    id: "forest_breeze",
+    name: "林間微風",
+    icon: "wind",
+    tracks: { wind: 0.35, brown_noise: 0.25 },
+  },
+  deep_flow: {
+    id: "deep_flow",
+    name: "深度心流",
+    icon: "sparkles",
+    tracks: { binaural_alpha: 0.22, rain: 0.2 },
+  },
+};
 
 export class AmbientSoundscapeManager {
   constructor() {
@@ -53,6 +75,48 @@ export class AmbientSoundscapeManager {
     if (!ctx) return false;
     if (this.nodes.has(name)) return true;
 
+    const trackGain = ctx.createGain();
+    trackGain.gain.setValueAtTime(volume, ctx.currentTime);
+    trackGain.connect(this.masterGain);
+
+    // Procedural Binaural Beat Synthesis (Alpha 10Hz or Gamma 40Hz)
+    if (name === "binaural_alpha" || name === "binaural_gamma") {
+      const baseFreq = name === "binaural_alpha" ? 210 : 200;
+      const diffFreq = name === "binaural_alpha" ? 10 : 40;
+
+      const oscL = ctx.createOscillator();
+      const oscR = ctx.createOscillator();
+      oscL.type = "sine";
+      oscR.type = "sine";
+      oscL.frequency.setValueAtTime(baseFreq, ctx.currentTime);
+      oscR.frequency.setValueAtTime(baseFreq + diffFreq, ctx.currentTime);
+
+      if (ctx.createStereoPanner) {
+        const panL = ctx.createStereoPanner();
+        const panR = ctx.createStereoPanner();
+        panL.pan.setValueAtTime(-1, ctx.currentTime);
+        panR.pan.setValueAtTime(1, ctx.currentTime);
+        oscL.connect(panL);
+        oscR.connect(panR);
+        panL.connect(trackGain);
+        panR.connect(trackGain);
+      } else {
+        oscL.connect(trackGain);
+        oscR.connect(trackGain);
+      }
+
+      oscL.start();
+      oscR.start();
+
+      this.nodes.set(name, {
+        sources: [oscL, oscR],
+        gain: trackGain,
+        volume,
+      });
+      return true;
+    }
+
+    // Procedural Noise-based Ambient Sound Synthesis
     const noiseBuffer = this.createNoiseBuffer(4);
     if (!noiseBuffer) return false;
 
@@ -61,8 +125,6 @@ export class AmbientSoundscapeManager {
     noiseSource.loop = true;
 
     const filter = ctx.createBiquadFilter();
-    const trackGain = ctx.createGain();
-    trackGain.gain.setValueAtTime(volume, ctx.currentTime);
 
     switch (name) {
       case "rain":
@@ -87,7 +149,6 @@ export class AmbientSoundscapeManager {
 
     noiseSource.connect(filter);
     filter.connect(trackGain);
-    trackGain.connect(this.masterGain);
     noiseSource.start();
 
     this.nodes.set(name, {
@@ -104,10 +165,18 @@ export class AmbientSoundscapeManager {
     if (!track) return false;
 
     try {
-      track.source.stop();
-      track.source.disconnect();
-      track.filter.disconnect();
-      track.gain.disconnect();
+      if (track.source) {
+        track.source.stop();
+        track.source.disconnect();
+      }
+      if (track.sources) {
+        track.sources.forEach((s) => {
+          s.stop();
+          s.disconnect();
+        });
+      }
+      if (track.filter) track.filter.disconnect();
+      if (track.gain) track.gain.disconnect();
     } catch {}
 
     this.nodes.delete(name);
@@ -139,6 +208,17 @@ export class AmbientSoundscapeManager {
 
   getActiveTracks() {
     return Array.from(this.nodes.keys());
+  }
+
+  applyPreset(presetId) {
+    const preset = SOUNDSCAPE_PRESETS[presetId];
+    if (!preset) return [];
+
+    this.stopAll();
+    for (const [trackName, vol] of Object.entries(preset.tracks)) {
+      this.startTrack(trackName, vol);
+    }
+    return this.getActiveTracks();
   }
 
   stopAll() {
