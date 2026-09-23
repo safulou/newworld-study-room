@@ -116,6 +116,41 @@
             <button class="icon-btn" id="toggleMusic" type="button" aria-label="播放背景音樂" title="播放背景音樂">
               <i data-lucide="music-2"></i>
             </button>
+            <button
+              class="icon-btn"
+              id="toggleAmbient"
+              type="button"
+              aria-label="切換白噪音面板"
+              title="切換白噪音面板"
+            >
+              <i data-lucide="cloud-rain"></i>
+            </button>
+          </div>
+
+          <div class="ambient-bar" id="ambientBar" hidden>
+            <div class="ambient-chips">
+              <button class="ambient-chip" type="button" data-sound="rain" aria-pressed="false">
+                <i data-lucide="cloud-rain"></i>
+                <span>雨聲</span>
+              </button>
+              <button class="ambient-chip" type="button" data-sound="wind" aria-pressed="false">
+                <i data-lucide="wind"></i>
+                <span>微風</span>
+              </button>
+              <button class="ambient-chip" type="button" data-sound="campfire" aria-pressed="false">
+                <i data-lucide="flame"></i>
+                <span>營火</span>
+              </button>
+              <button class="ambient-chip" type="button" data-sound="brown_noise" aria-pressed="false">
+                <i data-lucide="waves"></i>
+                <span>潮汐</span>
+              </button>
+            </div>
+            <div class="ambient-volume-row">
+              <span class="ambient-label">白噪音量</span>
+              <input id="ambientVolume" type="range" min="0" max="100" step="1" value="40" aria-label="白噪音音量" />
+              <output id="ambientVolumeValue" for="ambientVolume">40%</output>
+            </div>
           </div>
         </section>
 
@@ -197,6 +232,51 @@
             </form>
           </section>
 
+          <section class="panel task-panel" id="taskPanel">
+            <div class="panel-head">
+              <h2>伴讀待辦清單</h2>
+              <span class="task-summary-badge" id="taskSummaryBadge">0/0</span>
+            </div>
+            <form class="task-form" id="taskForm">
+              <input
+                id="taskInput"
+                maxlength="40"
+                placeholder="新增今日專注任務..."
+                autocomplete="off"
+                aria-label="待辦任務名稱"
+              />
+              <button class="icon-btn primary" type="submit" aria-label="新增任務" title="新增任務">
+                <i data-lucide="plus"></i>
+              </button>
+            </form>
+            <div class="task-list" id="taskList" aria-live="polite"></div>
+          </section>
+
+          <section class="panel stats-panel" id="statsPanel">
+            <div class="panel-head">
+              <h2>專注里程碑</h2>
+              <span class="streak-badge" id="streakBadge" title="連續專注天數">🔥 0 天連續</span>
+            </div>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <span class="stat-number" id="statTodayMinutes">0</span>
+                <span class="stat-caption">今日專注 (分)</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-number" id="statTotalHours">0</span>
+                <span class="stat-caption">累計時數 (時)</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-number" id="statCompletedSessions">0</span>
+                <span class="stat-caption">完成番茄輪次</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-number" id="statTotalHarvest">0</span>
+                <span class="stat-caption">收穫植物數</span>
+              </div>
+            </div>
+          </section>
+
           <section class="panel settings-panel">
             <div class="panel-head">
               <h2>房間設定</h2>
@@ -258,6 +338,12 @@
     <nav class="mobile-nav" aria-label="手機快速導覽">
       <button type="button" data-scroll-target="roomStage" aria-label="伴讀房" title="伴讀房">
         <i data-lucide="house"></i>
+      </button>
+      <button type="button" data-scroll-target="taskPanel" aria-label="待辦任務" title="待辦任務">
+        <i data-lucide="check-square"></i>
+      </button>
+      <button type="button" data-scroll-target="statsPanel" aria-label="專注里程碑" title="專注里程碑">
+        <i data-lucide="bar-chart-2"></i>
       </button>
       <button type="button" data-scroll-target="tipPanel" aria-label="Tip 紙條" title="Tip 紙條">
         <i data-lucide="message-circle-heart"></i>

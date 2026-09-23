@@ -1,7 +1,11 @@
 import "./styles.css";
 import {
+  BarChart2,
+  CheckSquare,
+  CloudRain,
   Copy,
   Cuboid,
+  Flame,
   House,
   ImagePlus,
   MessageCircleHeart,
@@ -9,6 +13,7 @@ import {
   Pause,
   PanelTop,
   Play,
+  Plus,
   RefreshCw,
   RotateCcw,
   Search,
@@ -19,17 +24,26 @@ import {
   Trash2,
   Volume2,
   Wand2,
+  Waves,
+  Wind,
   createIcons,
 } from "lucide";
+import { AmbientSoundscapeManager } from "./services/ambient-sound.js";
 import { BackgroundMusic } from "./services/background-music.js";
 import { CompanionSoundManager } from "./services/companion-sound.js";
 import { createCompanionAsset } from "./services/doll-generation.js";
 import { FocusTimer } from "./services/focus-timer.js";
+import { StudyStatsManager } from "./services/study-stats.js";
+import { TaskTracker } from "./services/task-tracker.js";
 import { createStore } from "./state/store.js";
 
 const icons = {
+  BarChart2,
+  CheckSquare,
+  CloudRain,
   Copy,
   Cuboid,
+  Flame,
   House,
   ImagePlus,
   MessageCircleHeart,
@@ -37,6 +51,7 @@ const icons = {
   Pause,
   PanelTop,
   Play,
+  Plus,
   RefreshCw,
   RotateCcw,
   Search,
@@ -47,6 +62,8 @@ const icons = {
   Trash2,
   Volume2,
   Wand2,
+  Waves,
+  Wind,
 };
 createIcons({ icons });
 
@@ -77,6 +94,22 @@ const elements = {
   toggleTimer: $("#toggleTimer"),
   resetTimer: $("#resetTimer"),
   toggleMusic: $("#toggleMusic"),
+  toggleAmbient: $("#toggleAmbient"),
+  ambientBar: $("#ambientBar"),
+  ambientVolume: $("#ambientVolume"),
+  ambientVolumeValue: $("#ambientVolumeValue"),
+  ambientChips: [...document.querySelectorAll(".ambient-chip")],
+  taskPanel: $("#taskPanel"),
+  taskForm: $("#taskForm"),
+  taskInput: $("#taskInput"),
+  taskList: $("#taskList"),
+  taskSummaryBadge: $("#taskSummaryBadge"),
+  statsPanel: $("#statsPanel"),
+  streakBadge: $("#streakBadge"),
+  statTodayMinutes: $("#statTodayMinutes"),
+  statTotalHours: $("#statTotalHours"),
+  statCompletedSessions: $("#statCompletedSessions"),
+  statTotalHarvest: $("#statTotalHarvest"),
   photoInput: $("#photoInput"),
   photoDrop: $("#photoDrop"),
   clearPhoto: $("#clearPhoto"),
@@ -113,6 +146,9 @@ const store = createStore({
 });
 const timer = new FocusTimer(store.get().minutes);
 const music = new BackgroundMusic(store.get().musicVolume);
+const ambientSound = new AmbientSoundscapeManager();
+const taskTracker = new TaskTracker();
+const studyStats = new StudyStatsManager();
 const companionSound = new CompanionSoundManager(0.4);
 let viewer = null;
 let p2p = null;
@@ -305,6 +341,76 @@ function renderTips(tips) {
     }
     elements.notes.append(note);
   });
+}
+
+function renderTasks() {
+  elements.taskList.replaceChildren();
+  const summary = taskTracker.getSummary();
+  elements.taskSummaryBadge.textContent = `${summary.completed}/${summary.total}`;
+
+  if (!taskTracker.tasks.length) {
+    const empty = document.createElement("div");
+    empty.className = "task-empty";
+    empty.textContent = "尚未新增任務，輸入上方文字開始！";
+    elements.taskList.append(empty);
+    return;
+  }
+
+  taskTracker.tasks.forEach((task) => {
+    const item = document.createElement("div");
+    item.className = `task-item ${task.completed ? "completed" : ""}`.trim();
+    item.dataset.taskId = task.id;
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "task-checkbox";
+    checkbox.checked = task.completed;
+    checkbox.setAttribute("aria-label", `標記任務「${task.title}」完成狀態`);
+
+    const title = document.createElement("span");
+    title.className = "task-title";
+    title.textContent = task.title;
+    title.title = task.title;
+
+    item.append(checkbox, title);
+
+    if (task.pomodoros > 0) {
+      const pomo = document.createElement("span");
+      pomo.className = "task-pomo-badge";
+      pomo.textContent = `🍅 ${task.pomodoros}`;
+      pomo.title = `累計 ${task.pomodoros} 個番茄鐘`;
+      item.append(pomo);
+    }
+
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "task-del-btn";
+    delBtn.setAttribute("aria-label", `刪除任務「${task.title}」`);
+    delBtn.title = "刪除任務";
+    const trashIcon = document.createElement("i");
+    trashIcon.setAttribute("data-lucide", "trash-2");
+    delBtn.append(trashIcon);
+    item.append(delBtn);
+
+    elements.taskList.append(item);
+  });
+
+  createIcons({ icons, root: elements.taskList });
+}
+
+function renderStats() {
+  const summary = studyStats.getExecutiveSummary();
+  const today = new Date().toISOString().split("T")[0];
+  const todayMinutes = studyStats.history
+    .filter((h) => h.date === today)
+    .reduce((sum, h) => sum + (h.durationMinutes || 0), 0);
+  const totalHarvest = Object.values(summary.harvestCounts).reduce((a, b) => a + b, 0);
+
+  elements.streakBadge.textContent = `🔥 ${summary.streakDays} 天連續`;
+  elements.statTodayMinutes.textContent = String(todayMinutes);
+  elements.statTotalHours.textContent = String(summary.totalHours);
+  elements.statCompletedSessions.textContent = String(summary.totalSessions);
+  elements.statTotalHarvest.textContent = String(totalHarvest);
 }
 
 function clampProgress(value) {
@@ -518,6 +624,20 @@ function bindTimer() {
     companionSound.playCelebrationFanfare();
     showCompanionBubble("這輪專注完成了！起來活動一下筋骨，你超棒的 🎉", 5000);
     showToast("這輪完成了，留一張 Tip 給同房夥伴吧。 ");
+
+    const activeTasks = taskTracker.getActiveTasks();
+    let completedTaskId = null;
+    if (activeTasks.length > 0) {
+      completedTaskId = activeTasks[0].id;
+      taskTracker.incrementPomodoro(completedTaskId);
+      renderTasks();
+    }
+    studyStats.recordSession({
+      durationMinutes: store.get().minutes,
+      plantHarvested: store.get().plantType,
+      taskId: completedTaskId,
+    });
+    renderStats();
   });
   elements.toggleTimer.addEventListener("click", () => timer.toggle());
   elements.resetTimer.addEventListener("click", () => {
@@ -551,6 +671,73 @@ function bindMusic() {
   elements.musicVolume.addEventListener("change", () => {
     store.update({ musicVolume: Number(elements.musicVolume.value) });
   });
+}
+
+function bindAmbientSound() {
+  elements.toggleAmbient.addEventListener("click", () => {
+    const isHidden = elements.ambientBar.hidden;
+    elements.ambientBar.hidden = !isHidden;
+    elements.toggleAmbient.classList.toggle("primary", isHidden);
+    elements.toggleAmbient.setAttribute("aria-pressed", String(isHidden));
+  });
+
+  elements.ambientChips.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const sound = chip.dataset.sound;
+      const isPlaying = chip.classList.contains("active");
+      if (isPlaying) {
+        ambientSound.stopTrack(sound);
+        chip.classList.remove("active");
+        chip.setAttribute("aria-pressed", "false");
+      } else {
+        ambientSound.startTrack(sound);
+        chip.classList.add("active");
+        chip.setAttribute("aria-pressed", "true");
+      }
+    });
+  });
+
+  elements.ambientVolume.addEventListener("input", () => {
+    const volume = Number(elements.ambientVolume.value) / 100;
+    ambientSound.setMasterVolume(volume);
+    elements.ambientVolumeValue.value = `${elements.ambientVolume.value}%`;
+  });
+}
+
+function bindTasks() {
+  elements.taskForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const title = elements.taskInput.value.trim();
+    if (!title) return;
+    taskTracker.addTask(title);
+    elements.taskInput.value = "";
+    renderTasks();
+  });
+
+  elements.taskList.addEventListener("click", (event) => {
+    const target = event.target;
+    const item = target.closest(".task-item");
+    if (!item) return;
+    const taskId = item.dataset.taskId;
+
+    if (target.classList.contains("task-checkbox")) {
+      const isCompleted = taskTracker.toggleTask(taskId);
+      if (isCompleted) {
+        companionSound.playTapChime();
+        showToast("任務已完成！繼續保持 🌟");
+      }
+      renderTasks();
+      return;
+    }
+
+    const delBtn = target.closest(".task-del-btn");
+    if (delBtn) {
+      taskTracker.removeTask(taskId);
+      renderTasks();
+    }
+  });
+
+  renderTasks();
 }
 
 function bindTips() {
@@ -687,6 +874,11 @@ async function startViewer() {
       const quote = quotes[Math.floor(Math.random() * quotes.length)];
       showCompanionBubble(quote);
     };
+    viewer.onJoySpin = () => {
+      companionSound.playCelebrationFanfare();
+      showCompanionBubble("哇～旋轉大跳躍！今天的精神滿分！💫🌟", 3600);
+      showToast("解鎖伴讀玩偶 360° 開心旋轉！🎉");
+    };
     renderState(store.get());
   } catch {
     elements.dollCanvas.hidden = true;
@@ -701,6 +893,9 @@ function init() {
   bindDollStyle();
   bindTimer();
   bindMusic();
+  bindAmbientSound();
+  bindTasks();
+  renderStats();
   bindTips();
   bindTipSignal();
   bindSettings();
@@ -716,6 +911,7 @@ function init() {
     p2p?.destroy();
     viewer?.dispose();
     music.destroy();
+    ambientSound.stopAll();
   });
 }
 

@@ -7,7 +7,9 @@ A cozy online study cabin with a photo-textured 3D companion, a focus timer, and
 - Interactive Three.js companion with mouse and touch rotation.
 - Switchable 3D doll and double-sided photo standee modes with a dimensional wooden base.
 - Switchable cozy, original chibi detective, and star wizard doll styles with toon shading and outlines.
-- Interactive companion tapping with 3D squash-and-stretch bounce animations, procedural Web Audio chimes, encouraging speech bubbles, and focus timer pose synchronization.
+- Interactive companion tapping with 3D squash-and-stretch bounce animations, procedural facial micro-expressions (natural blinking), triple-click 360° Happy Spin, procedural Web Audio chimes, encouraging speech bubbles, and focus timer pose synchronization.
+- Multi-track procedural ambient soundscapes (rain, wind, campfire, and brown noise) with independent toggles and master volume control, synthesized via Web Audio API.
+- Integrated daily task checklist and focus analytics milestone panel with Pomodoro completion tags, streak tracking, and plant harvest counts.
 - Local photo validation, center cropping, compression, and persistent texture preview.
 - Real WebRTC DataChannel Tip delivery through PeerJS.
 - Token-protected invitation links, room snapshots, an eight-member limit, presence, reconnect handling, and Tip rate limits.

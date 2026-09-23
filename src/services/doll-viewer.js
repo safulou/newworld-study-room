@@ -1,24 +1,45 @@
 import * as THREE from "three";
 
-function defaultFaceTexture() {
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = 512;
-  const context = canvas.getContext("2d");
+function drawDollFace(context, eyesClosed = false) {
+  context.clearRect(0, 0, 512, 512);
   context.fillStyle = "#f2d7b6";
   context.fillRect(0, 0, 512, 512);
+
   context.fillStyle = "#30261f";
-  context.beginPath();
-  context.arc(166, 235, 22, 0, Math.PI * 2);
-  context.arc(346, 235, 22, 0, Math.PI * 2);
-  context.fill();
+  context.strokeStyle = "#30261f";
+
+  if (eyesClosed) {
+    context.lineWidth = 14;
+    context.lineCap = "round";
+    context.beginPath();
+    context.arc(166, 246, 26, Math.PI * 1.15, Math.PI * 1.85);
+    context.stroke();
+
+    context.beginPath();
+    context.arc(346, 246, 26, Math.PI * 1.15, Math.PI * 1.85);
+    context.stroke();
+  } else {
+    context.beginPath();
+    context.arc(166, 235, 22, 0, Math.PI * 2);
+    context.arc(346, 235, 22, 0, Math.PI * 2);
+    context.fill();
+  }
+
   context.lineWidth = 18;
   context.lineCap = "round";
   context.beginPath();
   context.arc(256, 292, 85, 0.25, Math.PI - 0.25);
   context.stroke();
+}
+
+function createFaceBundle() {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 512;
+  const context = canvas.getContext("2d");
+  drawDollFace(context, false);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
+  return { canvas, context, texture };
 }
 
 function defaultStandeeTexture() {
@@ -86,6 +107,16 @@ export class DollViewer {
     this.pointerDownX = 0;
     this.pointerDownY = 0;
     this.pointerDownTime = 0;
+    this.faceCanvas = null;
+    this.faceContext = null;
+    this.nextBlinkTime = performance.now() + 2500 + Math.random() * 2500;
+    this.isBlinking = false;
+    this.blinkEndTime = 0;
+    this.consecutiveTaps = 0;
+    this.lastTapTime = 0;
+    this.spinStartTime = 0;
+    this.lastSpinAngle = 0;
+    this.onJoySpin = null;
     this.init();
   }
 
@@ -186,7 +217,10 @@ export class DollViewer {
     this.scarf.position.set(0, 0.57, 0.06);
     this.doll.add(this.scarf);
 
-    this.defaultTexture = defaultFaceTexture();
+    const faceBundle = createFaceBundle();
+    this.faceCanvas = faceBundle.canvas;
+    this.faceContext = faceBundle.context;
+    this.defaultTexture = faceBundle.texture;
     this.faceMaterial = new THREE.MeshBasicMaterial({ map: this.defaultTexture, transparent: true });
     this.face = new THREE.Mesh(new THREE.CircleGeometry(0.575, 64), this.faceMaterial);
     this.doll.add(this.face);
@@ -363,8 +397,22 @@ export class DollViewer {
         const dy = event.clientY - this.pointerDownY;
         const dt = performance.now() - this.pointerDownTime;
         if (Math.hypot(dx, dy) < 8 && dt < 450) {
-          this.triggerBounce();
-          this.onTap?.();
+          const now = performance.now();
+          if (now - this.lastTapTime < 700) {
+            this.consecutiveTaps += 1;
+          } else {
+            this.consecutiveTaps = 1;
+          }
+          this.lastTapTime = now;
+
+          if (this.consecutiveTaps >= 3) {
+            this.consecutiveTaps = 0;
+            this.triggerJoySpin();
+            this.onJoySpin?.();
+          } else {
+            this.triggerBounce();
+            this.onTap?.();
+          }
         }
       }
     };
@@ -374,6 +422,12 @@ export class DollViewer {
 
   triggerBounce() {
     this.bounceStartTime = performance.now();
+  }
+
+  triggerJoySpin() {
+    this.spinStartTime = performance.now();
+    this.lastSpinAngle = 0;
+    this.triggerBounce();
   }
 
   setTimerState(state) {
@@ -590,11 +644,42 @@ export class DollViewer {
   render() {
     this.clock.update();
     const elapsed = this.clock.getElapsed();
-    if (!this.dragging && performance.now() - this.lastInteraction > 5000) {
+    const now = performance.now();
+
+    // Procedural eye blinking (for default face)
+    if (!this.currentPhoto && this.faceContext && !this.reducedMotion) {
+      if (!this.isBlinking && now > this.nextBlinkTime) {
+        this.isBlinking = true;
+        this.blinkEndTime = now + 140;
+        drawDollFace(this.faceContext, true);
+        this.defaultTexture.needsUpdate = true;
+      } else if (this.isBlinking && now > this.blinkEndTime) {
+        this.isBlinking = false;
+        this.nextBlinkTime = now + 3200 + Math.random() * 3200;
+        drawDollFace(this.faceContext, false);
+        this.defaultTexture.needsUpdate = true;
+      }
+    }
+
+    if (!this.dragging && now - this.lastInteraction > 5000) {
       this.targetRotation = this.reducedMotion ? 0 : Math.sin(elapsed * 0.45) * 0.16;
       this.userRotation = this.targetRotation;
     }
     this.doll.rotation.y += (this.targetRotation - this.doll.rotation.y) * 0.08;
+
+    // Joy spin 360-degree acrobatic animation
+    if (this.spinStartTime) {
+      const dt = (now - this.spinStartTime) / 1000;
+      if (dt < 0.72) {
+        const p = dt / 0.72;
+        const spinAngle = p * Math.PI * 2;
+        this.doll.rotation.y += spinAngle - this.lastSpinAngle;
+        this.lastSpinAngle = spinAngle;
+      } else {
+        this.spinStartTime = 0;
+        this.lastSpinAngle = 0;
+      }
+    }
 
     const targetTilt = this.timerState === "focusing" ? -0.12 : -0.04;
     this.doll.rotation.x += (targetTilt - this.doll.rotation.x) * 0.06;
@@ -603,8 +688,14 @@ export class DollViewer {
     const breatheAmp = this.timerState === "focusing" ? 0.022 : 0.035;
     let basePosY = this.reducedMotion ? 0 : Math.sin(elapsed * breatheSpeed) * breatheAmp;
 
+    if (this.spinStartTime) {
+      const dt = (now - this.spinStartTime) / 1000;
+      const p = Math.min(1, dt / 0.72);
+      basePosY += Math.sin(p * Math.PI) * 0.24;
+    }
+
     if (this.bounceStartTime) {
-      const dt = (performance.now() - this.bounceStartTime) / 1000;
+      const dt = (now - this.bounceStartTime) / 1000;
       if (dt < 0.5) {
         const progress = dt / 0.5;
         const jump = Math.sin(progress * Math.PI) * 0.16;
