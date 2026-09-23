@@ -48,6 +48,7 @@ const profileDefaults = {
     cat: false,
   },
   ambientMode: "auto",
+  desktopNotifications: false,
 };
 
 const roomDefaults = {
@@ -132,6 +133,7 @@ function sanitizeProfile(value = {}) {
     generationProgress: Math.max(0, Math.min(100, Number(value.generationProgress) || 0)),
     accessories,
     ambientMode,
+    desktopNotifications: Boolean(value.desktopNotifications),
   };
 }
 

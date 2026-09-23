@@ -1,6 +1,9 @@
 import "./styles.css";
 import {
   BarChart2,
+  Bell,
+  BellOff,
+  BellRing,
   Cat,
   CheckSquare,
   ClipboardCopy,
@@ -42,12 +45,16 @@ import { BackgroundMusic } from "./services/background-music.js";
 import { CompanionSoundManager } from "./services/companion-sound.js";
 import { createCompanionAsset } from "./services/doll-generation.js";
 import { FocusTimer } from "./services/focus-timer.js";
+import { NotificationManager } from "./services/notification-manager.js";
 import { StudyStatsManager } from "./services/study-stats.js";
 import { TaskTracker } from "./services/task-tracker.js";
 import { createStore } from "./state/store.js";
 
 const icons = {
   BarChart2,
+  Bell,
+  BellOff,
+  BellRing,
   Cat,
   CheckSquare,
   ClipboardCopy,
@@ -168,6 +175,9 @@ const elements = {
   roleBadge: $("#roleBadge"),
   connectionStatus: $("#connectionStatus"),
   retryConnection: $("#retryConnection"),
+  toggleNotification: $("#toggleNotification"),
+  notificationIcon: $("#notificationIcon"),
+  notificationBtnText: $("#notificationBtnText"),
   toast: $("#toast"),
 };
 
@@ -182,6 +192,7 @@ const ambientSound = new AmbientSoundscapeManager();
 const taskTracker = new TaskTracker();
 const studyStats = new StudyStatsManager();
 const companionSound = new CompanionSoundManager(0.4);
+const notificationManager = new NotificationManager({ baseTitle: "NewWorld Study Room" });
 let viewer = null;
 let p2p = null;
 let toastTimeout = null;
@@ -458,6 +469,36 @@ function renderHeatmap() {
   });
 }
 
+function updateNotificationUI(state = store.get()) {
+  if (!elements.toggleNotification || !elements.notificationBtnText) return;
+  if (!notificationManager.isSupported()) {
+    elements.toggleNotification.disabled = true;
+    elements.notificationBtnText.textContent = "不支援桌面通知";
+    elements.toggleNotification.className = "notification-btn";
+    return;
+  }
+  const perm = notificationManager.getPermission();
+  if (perm === "denied") {
+    elements.toggleNotification.disabled = false;
+    elements.toggleNotification.className = "notification-btn blocked";
+    elements.toggleNotification.innerHTML =
+      '<i data-lucide="bell-off"></i><span id="notificationBtnText">通知已封鎖（瀏覽器設定）</span>';
+    createIcons({ icons });
+  } else if (perm === "granted" && state.desktopNotifications) {
+    elements.toggleNotification.disabled = false;
+    elements.toggleNotification.className = "notification-btn active";
+    elements.toggleNotification.innerHTML =
+      '<i data-lucide="bell-ring"></i><span id="notificationBtnText">桌面通知：已開啟</span>';
+    createIcons({ icons });
+  } else {
+    elements.toggleNotification.disabled = false;
+    elements.toggleNotification.className = "notification-btn";
+    const label = perm === "granted" ? "桌面通知：已關閉（點擊啟用）" : "開啟桌面通知";
+    elements.toggleNotification.innerHTML = `<i data-lucide="bell"></i><span id="notificationBtnText">${label}</span>`;
+    createIcons({ icons });
+  }
+}
+
 function updateAtmosphere(mode = "auto") {
   let resolved = mode;
   if (mode === "auto") {
@@ -610,6 +651,7 @@ function renderState(state) {
     viewer.setAccessories(state.accessories);
   }
   updateAtmosphere(state.ambientMode);
+  updateNotificationUI(state);
 }
 
 function makeTip(text, by = store.get().nickname) {
@@ -728,6 +770,11 @@ function bindTimer() {
       .padStart(2, "0");
     elements.timer.textContent = `${minutes}:${seconds}`;
     updateGarden(event.detail);
+    notificationManager.updateTitle({
+      remaining: event.detail,
+      isRunning: true,
+      totalSeconds: timer.minutes * 60,
+    });
   });
   timer.addEventListener("running", (event) => {
     replaceButtonIcon(elements.toggleTimer, event.detail ? "pause" : "play", event.detail ? "暫停專注" : "開始專注");
@@ -736,6 +783,17 @@ function bindTimer() {
     p2p?.sendStatus(event.detail ? "focusing" : "resting", store.get().nickname, store.get().plantType);
     if (event.detail) {
       showCompanionBubble("專注計時開始～我們一起加油！✨", 3000);
+      notificationManager.updateTitle({
+        remaining: timer.remaining,
+        isRunning: true,
+        totalSeconds: timer.minutes * 60,
+      });
+    } else {
+      notificationManager.updateTitle({
+        remaining: timer.remaining,
+        isRunning: false,
+        totalSeconds: timer.minutes * 60,
+      });
     }
   });
   timer.addEventListener("complete", () => {
@@ -743,11 +801,14 @@ function bindTimer() {
     companionSound.playCelebrationFanfare();
     showCompanionBubble("這輪專注完成了！起來活動一下筋骨，你超棒的 🎉", 5000);
     showToast("這輪完成了，留一張 Tip 給同房夥伴吧。 ");
+    notificationManager.updateTitle({ isCompleted: true });
 
     const activeTasks = taskTracker.getActiveTasks();
     let completedTaskId = null;
+    let taskTitle = "";
     if (activeTasks.length > 0) {
       completedTaskId = activeTasks[0].id;
+      taskTitle = activeTasks[0].title;
       taskTracker.incrementPomodoro(completedTaskId);
       renderTasks();
     }
@@ -757,11 +818,19 @@ function bindTimer() {
       taskId: completedTaskId,
     });
     renderStats();
+
+    if (store.get().desktopNotifications) {
+      notificationManager.notifyFocusComplete({
+        plantLabel: plantLabels[store.get().plantType],
+        taskTitle,
+      });
+    }
   });
   elements.toggleTimer.addEventListener("click", () => timer.toggle());
   elements.resetTimer.addEventListener("click", () => {
     timer.reset();
     viewer?.setTimerState("idle");
+    notificationManager.updateTitle({ remaining: null, isRunning: false });
   });
 }
 
@@ -1018,6 +1087,32 @@ function bindSettings() {
   elements.shareRoom.addEventListener("click", shareInvite);
   elements.mobileShareRoom.addEventListener("click", shareInvite);
   elements.retryConnection.addEventListener("click", () => restartP2P());
+  elements.toggleNotification?.addEventListener("click", async () => {
+    if (!notificationManager.isSupported()) {
+      showToast("您的瀏覽器不支援桌面推播通知。");
+      return;
+    }
+    const perm = notificationManager.getPermission();
+    if (perm === "denied") {
+      showToast("通知已被瀏覽器封鎖，請點擊網址列左側設定允許通知。");
+      return;
+    }
+    if (perm === "default") {
+      const res = await notificationManager.requestPermission();
+      if (res === "granted") {
+        store.update({ desktopNotifications: true });
+        showToast("桌面通知已開啟！番茄鐘結束時會提醒您 🔔");
+      } else {
+        showToast("未允許桌面通知權限。");
+      }
+      updateNotificationUI();
+      return;
+    }
+    const current = store.get().desktopNotifications;
+    store.update({ desktopNotifications: !current });
+    showToast(!current ? "桌面通知已啟用 🔔" : "桌面通知已關閉 🔕");
+    updateNotificationUI();
+  });
 }
 
 async function startP2P() {
@@ -1050,6 +1145,9 @@ async function startP2P() {
     if (store.addTip({ ...event.detail, direction: "incoming", delivery: "received" }, "incoming")) {
       showRemoteTipSignal();
       showToast(`${event.detail.by} 傳來一張 Tip。 `);
+      if (store.get().desktopNotifications) {
+        notificationManager.notifyTip({ author: event.detail.by, text: event.detail.text });
+      }
     }
   });
   p2p.addEventListener("tip-delivery", (event) => store.markTipDelivery(event.detail.id, event.detail.delivery));
