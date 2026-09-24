@@ -10,8 +10,8 @@ A cozy online study cabin with a photo-textured 3D companion, a focus timer, and
 - Interactive companion tapping with 3D squash-and-stretch bounce animations, procedural facial micro-expressions (natural blinking), triple-click 360° Happy Spin, procedural Web Audio chimes, encouraging speech bubbles, and focus timer pose synchronization.
 - Four-phase day/night atmospheric cabin lighting (auto, day, dusk, night) with procedural window raindrop canvas animations.
 - Multi-track procedural ambient soundscapes (rain, wind, campfire, tidal brown noise, 10Hz Alpha & 40Hz Gamma binaural beats) with one-click atmosphere presets and master volume control, synthesized via Web Audio API.
-- Integrated daily task checklist and focus analytics milestone panel with 28-day GitHub-style study heatmap, Pomodoro completion tags, streak tracking, plant harvest counts, and Markdown/JSON export.
-- Real WebRTC DataChannel Tip delivery, live co-focusing status broadcast, and celebration cheers through PeerJS.
+- Integrated daily task checklist and focus analytics milestone panel with customizable target Pomodoro goals, progress steppers, HTML5 drag-and-drop & keyboard reordering, 28-day study heatmap with history navigation and 4 theme palettes (Emerald, Amber, Cyber, Ocean), streak tracking, plant harvest counts, and Markdown/JSON export.
+- Real WebRTC DataChannel Tip delivery, live co-focusing status broadcast, celebration cheers, and quick emoji reactions (💡, 🔥, ☕, ✨, 💯) with animated floating bubbles and harmonic chimes through PeerJS.
 - Offline-ready Progressive Web App (PWA) with Service Worker caching and app manifest.
 - Local photo validation, center cropping, compression, and persistent texture preview.
 - Token-protected invitation links, room snapshots, an eight-member limit, presence, reconnect handling, and Tip rate limits.
