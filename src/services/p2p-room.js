@@ -245,6 +245,13 @@ export class P2PRoom extends EventTarget {
       }
       return;
     }
+    if (message.type === "peer-reaction") {
+      this.dispatchEvent(new CustomEvent("peer-reaction", { detail: message }));
+      if (this.role === "host") {
+        this.broadcast(message, source.peer);
+      }
+      return;
+    }
     if (message.type !== "tip" || !isTip(message.tip)) return;
 
     const tip = publicTip(message.tip);
@@ -331,6 +338,25 @@ export class P2PRoom extends EventTarget {
       type: "peer-celebrate",
       version: MESSAGE_VERSION,
       kind: ["clap", "tea", "highfive"].includes(kind) ? kind : "clap",
+      by: String(by || "夥伴").slice(0, 18),
+      timestamp: Date.now(),
+    };
+    if (this.role === "host") {
+      this.broadcast(msg);
+    } else {
+      const host = this.connections.get(this.hostId);
+      this.send(host, msg);
+    }
+    return msg;
+  }
+
+  sendReaction(emoji = "🔥", by = "夥伴") {
+    const allowed = ["💡", "🔥", "☕", "✨", "💯", "🌱"];
+    const cleanEmoji = allowed.includes(emoji) ? emoji : "🔥";
+    const msg = {
+      type: "peer-reaction",
+      version: MESSAGE_VERSION,
+      emoji: cleanEmoji,
       by: String(by || "夥伴").slice(0, 18),
       timestamp: Date.now(),
     };
@@ -432,4 +458,5 @@ export const p2pInternals = {
   safeRoomToken,
   roomParams,
   validIceServers,
+  REACTION_EMOJIS: ["💡", "🔥", "☕", "✨", "💯", "🌱"],
 };

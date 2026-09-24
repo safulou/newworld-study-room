@@ -49,6 +49,7 @@ const profileDefaults = {
   },
   ambientMode: "auto",
   desktopNotifications: false,
+  heatmapTheme: "emerald",
 };
 
 const roomDefaults = {
@@ -108,6 +109,9 @@ function sanitizeProfile(value = {}) {
     cat: Boolean(value.accessories?.cat),
   };
   const ambientMode = ["auto", "day", "dusk", "night"].includes(value.ambientMode) ? value.ambientMode : "auto";
+  const heatmapTheme = ["emerald", "amber", "cyber", "ocean"].includes(value.heatmapTheme)
+    ? value.heatmapTheme
+    : profileDefaults.heatmapTheme;
   return {
     nickname:
       String(value.nickname || profileDefaults.nickname)
@@ -134,6 +138,7 @@ function sanitizeProfile(value = {}) {
     accessories,
     ambientMode,
     desktopNotifications: Boolean(value.desktopNotifications),
+    heatmapTheme,
   };
 }
 

@@ -138,6 +138,7 @@
               <span>Z</span><span>z</span><span>z</span>
             </div>
             <div class="pet-hearts" id="petHearts" aria-hidden="true"></div>
+            <div class="floating-reactions" id="floatingReactions" aria-hidden="true"></div>
             <div class="companion-bubble" id="companionBubble" aria-live="polite">
               <span class="bubble-text" id="bubbleText"></span>
             </div>
@@ -177,6 +178,13 @@
             >
               <i data-lucide="hand-metal"></i>
             </button>
+            <div class="peer-reaction-tray" id="peerReactionTray" aria-label="同房夥伴互動表情">
+              <button class="reaction-chip" type="button" data-reaction="💡" title="送出靈感 💡">💡</button>
+              <button class="reaction-chip" type="button" data-reaction="🔥" title="送出熱血 🔥">🔥</button>
+              <button class="reaction-chip" type="button" data-reaction="☕" title="送出休息 ☕">☕</button>
+              <button class="reaction-chip" type="button" data-reaction="✨" title="送出閃耀 ✨">✨</button>
+              <button class="reaction-chip" type="button" data-reaction="💯" title="送出滿分 💯">💯</button>
+            </div>
           </div>
 
           <div class="ambient-bar" id="ambientBar" hidden>
@@ -354,6 +362,18 @@
                 autocomplete="off"
                 aria-label="待辦任務名稱"
               />
+              <select
+                id="taskTargetPomo"
+                class="task-target-select"
+                title="預估目標番茄鐘數"
+                aria-label="預估目標番茄鐘數"
+              >
+                <option value="1">1 🍅</option>
+                <option value="2" selected>2 🍅</option>
+                <option value="3">3 🍅</option>
+                <option value="4">4 🍅</option>
+                <option value="5">5 🍅</option>
+              </select>
               <button class="icon-btn primary" type="submit" aria-label="新增任務" title="新增任務">
                 <i data-lucide="plus"></i>
               </button>
@@ -384,9 +404,44 @@
                 <span class="stat-caption">收穫植物數</span>
               </div>
             </div>
-            <div class="heatmap-section">
+            <div class="heatmap-section" id="heatmapSection" data-theme="emerald">
               <div class="heatmap-head">
-                <span>近 28 天專注熱力</span>
+                <div class="heatmap-title-col">
+                  <span id="heatmapTitle">專注熱力圖</span>
+                  <span class="heatmap-range-label" id="heatmapRangeLabel">近 28 天</span>
+                </div>
+                <div class="heatmap-nav-group">
+                  <button
+                    class="heatmap-nav-btn"
+                    id="heatmapPrev"
+                    type="button"
+                    title="前一期 (28天)"
+                    aria-label="前一期"
+                  >
+                    <i data-lucide="chevron-left"></i>
+                  </button>
+                  <button class="heatmap-nav-btn text-nav" id="heatmapReset" type="button" title="回到當期">
+                    當期
+                  </button>
+                  <button
+                    class="heatmap-nav-btn"
+                    id="heatmapNext"
+                    type="button"
+                    title="後一期 (28天)"
+                    aria-label="後一期"
+                  >
+                    <i data-lucide="chevron-right"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="heatmap-subbar">
+                <div class="heatmap-theme-picker" id="heatmapThemeChips">
+                  <span class="theme-label">主題：</span>
+                  <button class="theme-chip active" type="button" data-theme="emerald" title="翡翠綠">綠</button>
+                  <button class="theme-chip" type="button" data-theme="amber" title="金秋橙">橙</button>
+                  <button class="theme-chip" type="button" data-theme="cyber" title="霓虹紫">紫</button>
+                  <button class="theme-chip" type="button" data-theme="ocean" title="海琉藍">藍</button>
+                </div>
                 <span class="heatmap-legend" aria-hidden="true">
                   <span class="heat-box level-0" title="0分"></span>
                   <span class="heat-box level-1" title="1-25分"></span>
@@ -395,7 +450,7 @@
                   <span class="heat-box level-4" title="120+分"></span>
                 </span>
               </div>
-              <div class="heatmap-grid" id="heatmapGrid" aria-label="近 28 天專注熱力圖"></div>
+              <div class="heatmap-grid" id="heatmapGrid" aria-label="專注熱力圖"></div>
             </div>
             <div class="stats-export-row">
               <button class="stats-action-btn" id="copyMarkdownLog" type="button" title="複製今日專注 Markdown 日誌">

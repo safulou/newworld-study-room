@@ -96,8 +96,21 @@ export class StudyStatsManager {
     return counts;
   }
 
-  getHeatmapData(days = 28) {
-    const today = new Date();
+  getHeatmapData(daysOrOptions = 28, offsetDays = 0) {
+    let days;
+    let offset;
+    if (typeof daysOrOptions === "object" && daysOrOptions !== null) {
+      days = Number(daysOrOptions.days) || 28;
+      offset = Number(daysOrOptions.offsetDays) || 0;
+    } else {
+      days = Number(daysOrOptions) || 28;
+      offset = Number(offsetDays) || 0;
+    }
+    days = Math.max(7, Math.min(120, days));
+    offset = Math.max(0, offset);
+
+    const baseTime = Date.now() - offset * 86400000;
+    const baseDate = new Date(baseTime);
     const result = [];
     const dateMinutesMap = new Map();
 
@@ -108,7 +121,7 @@ export class StudyStatsManager {
     }
 
     for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(today.getTime() - i * 86400000);
+      const d = new Date(baseDate.getTime() - i * 86400000);
       const dateStr = d.toISOString().split("T")[0];
       const minutes = dateMinutesMap.get(dateStr) || 0;
       let level = 0;
@@ -120,6 +133,18 @@ export class StudyStatsManager {
       result.push({ date: dateStr, minutes, level });
     }
     return result;
+  }
+
+  getHeatmapRange(daysOrOptions = 28, offsetDays = 0) {
+    const data = this.getHeatmapData(daysOrOptions, offsetDays);
+    if (!data.length) {
+      return { startDate: "", endDate: "", totalMinutes: 0, activeDays: 0 };
+    }
+    const startDate = data[0].date;
+    const endDate = data[data.length - 1].date;
+    const totalMinutes = data.reduce((sum, d) => sum + d.minutes, 0);
+    const activeDays = data.filter((d) => d.minutes > 0).length;
+    return { startDate, endDate, totalMinutes, activeDays };
   }
 
   exportMarkdownSummary(tasks = []) {

@@ -15,7 +15,13 @@ export class TaskTracker {
     if (!this.storage) return [];
     try {
       const raw = this.storage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed)
+        ? parsed.map((t) => ({
+            ...t,
+            targetPomodoros: Math.max(1, Math.min(20, Number(t.targetPomodoros) || 2)),
+          }))
+        : [];
     } catch {
       return [];
     }
@@ -28,21 +34,58 @@ export class TaskTracker {
     } catch {}
   }
 
-  addTask(title) {
+  addTask(title, targetPomodoros = 2) {
     const trimmed = (title || "").trim();
     if (!trimmed) return null;
 
+    const target = Math.max(1, Math.min(20, Math.round(Number(targetPomodoros)) || 2));
     const task = {
       id: "task_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7),
       title: trimmed,
       completed: false,
       pomodoros: 0,
+      targetPomodoros: target,
       createdAt: new Date().toISOString(),
     };
 
     this.tasks.push(task);
     this.saveTasks();
     return task;
+  }
+
+  setTargetPomodoros(id, target) {
+    const task = this.tasks.find((t) => t.id === id);
+    if (!task) return null;
+    task.targetPomodoros = Math.max(1, Math.min(20, Math.round(Number(target)) || 1));
+    this.saveTasks();
+    return task.targetPomodoros;
+  }
+
+  moveTask(id, direction = "up") {
+    const index = this.tasks.findIndex((t) => t.id === id);
+    if (index === -1) return false;
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= this.tasks.length) return false;
+    const [task] = this.tasks.splice(index, 1);
+    this.tasks.splice(targetIndex, 0, task);
+    this.saveTasks();
+    return true;
+  }
+
+  reorderTasks(orderedIds) {
+    if (!Array.isArray(orderedIds)) return false;
+    const idMap = new Map(this.tasks.map((t) => [t.id, t]));
+    const reordered = [];
+    for (const id of orderedIds) {
+      if (idMap.has(id)) {
+        reordered.push(idMap.get(id));
+        idMap.delete(id);
+      }
+    }
+    idMap.forEach((task) => reordered.push(task));
+    this.tasks = reordered;
+    this.saveTasks();
+    return true;
   }
 
   toggleTask(id) {
@@ -83,11 +126,13 @@ export class TaskTracker {
     const total = this.tasks.length;
     const completed = this.getCompletedTasks().length;
     const totalPomodoros = this.tasks.reduce((sum, t) => sum + (t.pomodoros || 0), 0);
+    const totalTargetPomodoros = this.tasks.reduce((sum, t) => sum + (t.targetPomodoros || 1), 0);
     return {
       total,
       completed,
       pending: total - completed,
       totalPomodoros,
+      totalTargetPomodoros,
       completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
     };
   }
@@ -100,7 +145,10 @@ export class TaskTracker {
     try {
       const parsed = JSON.parse(jsonString);
       if (Array.isArray(parsed)) {
-        this.tasks = parsed;
+        this.tasks = parsed.map((t) => ({
+          ...t,
+          targetPomodoros: Math.max(1, Math.min(20, Number(t.targetPomodoros) || 2)),
+        }));
         this.saveTasks();
         return true;
       }

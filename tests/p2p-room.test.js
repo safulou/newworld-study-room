@@ -15,4 +15,11 @@ describe("P2P protocol validation", () => {
     expect(p2pInternals.safeRoomToken(token)).toBe(token);
     expect(p2pInternals.safeRoomToken("short")).toBe("");
   });
+
+  it("defines standard list of peer reaction emojis", () => {
+    expect(p2pInternals.REACTION_EMOJIS).toContain("💡");
+    expect(p2pInternals.REACTION_EMOJIS).toContain("🔥");
+    expect(p2pInternals.REACTION_EMOJIS).toContain("☕");
+    expect(p2pInternals.REACTION_EMOJIS.length).toBeGreaterThanOrEqual(5);
+  });
 });

@@ -28,8 +28,11 @@ describe("CompanionSoundManager", () => {
     expect(manager.muted).toBe(false);
   });
 
-  it("gracefully executes playTapChime and playCelebrationFanfare without errors", () => {
+  it("gracefully executes audio effects without errors", () => {
     expect(() => manager.playTapChime()).not.toThrow();
     expect(() => manager.playCelebrationFanfare()).not.toThrow();
+    expect(() => manager.playPettingPurr()).not.toThrow();
+    expect(() => manager.playReactionChime("🔥")).not.toThrow();
+    expect(() => manager.playReactionChime("💡")).not.toThrow();
   });
 });

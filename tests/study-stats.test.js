@@ -71,6 +71,18 @@ describe("StudyStatsManager Service", () => {
     expect(todayData.level).toBe(2);
   });
 
+  it("supports heatmap offset pagination and date range summary", () => {
+    stats.recordSession({ durationMinutes: 30 });
+    const currentRange = stats.getHeatmapRange(28, 0);
+    expect(currentRange.totalMinutes).toBe(30);
+    expect(currentRange.activeDays).toBe(1);
+    expect(currentRange.startDate).toBeDefined();
+    expect(currentRange.endDate).toBeDefined();
+
+    const previousPage = stats.getHeatmapData(28, 28);
+    expect(previousPage.length).toBe(28);
+  });
+
   it("exports formatted markdown study log", () => {
     stats.recordSession({ durationMinutes: 25, plantHarvested: "rose" });
     const md = stats.exportMarkdownSummary([{ title: "撰寫代碼", completed: true, pomodoros: 1 }]);

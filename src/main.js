@@ -7,6 +7,10 @@ import {
   BookOpen,
   Cat,
   CheckSquare,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
   ClipboardCopy,
   CloudRain,
   Coffee,
@@ -16,6 +20,7 @@ import {
   Download,
   Flame,
   Glasses,
+  GripVertical,
   HandMetal,
   House,
   ImagePlus,
@@ -66,6 +71,10 @@ const icons = {
   BookOpen,
   Cat,
   CheckSquare,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
   ClipboardCopy,
   CloudRain,
   Coffee,
@@ -75,6 +84,7 @@ const icons = {
   Download,
   Flame,
   Glasses,
+  GripVertical,
   HandMetal,
   House,
   ImagePlus,
@@ -144,6 +154,9 @@ const elements = {
   celebrateBanner: $("#celebrateBanner"),
   celebrateText: $("#celebrateText"),
   sendCheer: $("#sendCheer"),
+  peerReactionTray: $("#peerReactionTray"),
+  reactionChips: [...document.querySelectorAll(".reaction-chip")],
+  floatingReactions: $("#floatingReactions"),
   ambientBar: $("#ambientBar"),
   ambientVolume: $("#ambientVolume"),
   ambientVolumeValue: $("#ambientVolumeValue"),
@@ -152,6 +165,7 @@ const elements = {
   taskPanel: $("#taskPanel"),
   taskForm: $("#taskForm"),
   taskInput: $("#taskInput"),
+  taskTargetPomo: $("#taskTargetPomo"),
   taskList: $("#taskList"),
   taskSummaryBadge: $("#taskSummaryBadge"),
   statsPanel: $("#statsPanel"),
@@ -160,6 +174,12 @@ const elements = {
   statTotalHours: $("#statTotalHours"),
   statCompletedSessions: $("#statCompletedSessions"),
   statTotalHarvest: $("#statTotalHarvest"),
+  heatmapSection: $("#heatmapSection"),
+  heatmapRangeLabel: $("#heatmapRangeLabel"),
+  heatmapPrev: $("#heatmapPrev"),
+  heatmapReset: $("#heatmapReset"),
+  heatmapNext: $("#heatmapNext"),
+  heatmapThemeChips: [...document.querySelectorAll(".heatmap-theme-picker .theme-chip")],
   heatmapGrid: $("#heatmapGrid"),
   copyMarkdownLog: $("#copyMarkdownLog"),
   exportBackupJson: $("#exportBackupJson"),
@@ -417,7 +437,7 @@ function renderTips(tips) {
 function renderTasks() {
   elements.taskList.replaceChildren();
   const summary = taskTracker.getSummary();
-  elements.taskSummaryBadge.textContent = `${summary.completed}/${summary.total}`;
+  elements.taskSummaryBadge.textContent = `${summary.completed}/${summary.total} (🍅 ${summary.totalPomodoros}/${summary.totalTargetPomodoros})`;
 
   if (!taskTracker.tasks.length) {
     const empty = document.createElement("div");
@@ -431,6 +451,49 @@ function renderTasks() {
     const item = document.createElement("div");
     item.className = `task-item ${task.completed ? "completed" : ""}`.trim();
     item.dataset.taskId = task.id;
+    item.draggable = true;
+
+    // Drag handle
+    const handle = document.createElement("span");
+    handle.className = "task-drag-handle";
+    handle.title = "按住拖曳排序";
+    const gripIcon = document.createElement("i");
+    gripIcon.setAttribute("data-lucide", "grip-vertical");
+    handle.append(gripIcon);
+
+    // Reorder buttons for accessibility / mobile
+    const moveBtns = document.createElement("div");
+    moveBtns.className = "task-move-btns";
+    const upBtn = document.createElement("button");
+    upBtn.type = "button";
+    upBtn.className = "task-move-btn up";
+    upBtn.title = "上移任務";
+    upBtn.setAttribute("aria-label", `上移任務「${task.title}」`);
+    const upIcon = document.createElement("i");
+    upIcon.setAttribute("data-lucide", "chevron-up");
+    upBtn.append(upIcon);
+    upBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (taskTracker.moveTask(task.id, "up")) {
+        renderTasks();
+      }
+    });
+
+    const downBtn = document.createElement("button");
+    downBtn.type = "button";
+    downBtn.className = "task-move-btn down";
+    downBtn.title = "下移任務";
+    downBtn.setAttribute("aria-label", `下移任務「${task.title}」`);
+    const downIcon = document.createElement("i");
+    downIcon.setAttribute("data-lucide", "chevron-down");
+    downBtn.append(downIcon);
+    downBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (taskTracker.moveTask(task.id, "down")) {
+        renderTasks();
+      }
+    });
+    moveBtns.append(upBtn, downBtn);
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
@@ -443,15 +506,40 @@ function renderTasks() {
     title.textContent = task.title;
     title.title = task.title;
 
-    item.append(checkbox, title);
+    // Pomodoro progress stepper
+    const pomoProg = document.createElement("div");
+    pomoProg.className = "task-pomo-progress";
+    pomoProg.title = `累計 ${task.pomodoros} / 目標 ${task.targetPomodoros || 1} 個番茄鐘`;
 
-    if (task.pomodoros > 0) {
-      const pomo = document.createElement("span");
-      pomo.className = "task-pomo-badge";
-      pomo.textContent = `🍅 ${task.pomodoros}`;
-      pomo.title = `累計 ${task.pomodoros} 個番茄鐘`;
-      item.append(pomo);
-    }
+    const decBtn = document.createElement("button");
+    decBtn.type = "button";
+    decBtn.className = "pomo-step-btn dec";
+    decBtn.textContent = "-";
+    decBtn.title = "減少目標番茄鐘數";
+    decBtn.setAttribute("aria-label", `減少「${task.title}」目標番茄鐘數`);
+    decBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      taskTracker.setTargetPomodoros(task.id, (task.targetPomodoros || 1) - 1);
+      renderTasks();
+    });
+
+    const pomoText = document.createElement("span");
+    pomoText.className = "task-pomo-text";
+    pomoText.textContent = `🍅 ${task.pomodoros}/${task.targetPomodoros || 1}`;
+
+    const incBtn = document.createElement("button");
+    incBtn.type = "button";
+    incBtn.className = "pomo-step-btn inc";
+    incBtn.textContent = "+";
+    incBtn.title = "增加目標番茄鐘數";
+    incBtn.setAttribute("aria-label", `增加「${task.title}」目標番茄鐘數`);
+    incBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      taskTracker.setTargetPomodoros(task.id, (task.targetPomodoros || 1) + 1);
+      renderTasks();
+    });
+
+    pomoProg.append(decBtn, pomoText, incBtn);
 
     const delBtn = document.createElement("button");
     delBtn.type = "button";
@@ -461,7 +549,40 @@ function renderTasks() {
     const trashIcon = document.createElement("i");
     trashIcon.setAttribute("data-lucide", "trash-2");
     delBtn.append(trashIcon);
-    item.append(delBtn);
+
+    item.append(handle, moveBtns, checkbox, title, pomoProg, delBtn);
+
+    // HTML5 Drag and drop listeners
+    item.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/plain", task.id);
+      item.classList.add("dragging");
+    });
+    item.addEventListener("dragend", () => {
+      item.classList.remove("dragging");
+      elements.taskList.querySelectorAll(".task-item").forEach((el) => el.classList.remove("drag-over"));
+    });
+    item.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      item.classList.add("drag-over");
+    });
+    item.addEventListener("dragleave", () => {
+      item.classList.remove("drag-over");
+    });
+    item.addEventListener("drop", (e) => {
+      e.preventDefault();
+      item.classList.remove("drag-over");
+      const sourceId = e.dataTransfer.getData("text/plain");
+      if (!sourceId || sourceId === task.id) return;
+      const currentIds = taskTracker.tasks.map((t) => t.id);
+      const sourceIdx = currentIds.indexOf(sourceId);
+      const targetIdx = currentIds.indexOf(task.id);
+      if (sourceIdx !== -1 && targetIdx !== -1) {
+        currentIds.splice(sourceIdx, 1);
+        currentIds.splice(targetIdx, 0, sourceId);
+        taskTracker.reorderTasks(currentIds);
+        renderTasks();
+      }
+    });
 
     elements.taskList.append(item);
   });
@@ -485,10 +606,29 @@ function renderStats() {
   renderHeatmap();
 }
 
+let heatmapOffsetDays = 0;
+
 function renderHeatmap() {
   if (!elements.heatmapGrid) return;
+  const currentTheme = store.get().heatmapTheme || "emerald";
+  if (elements.heatmapSection) {
+    elements.heatmapSection.dataset.theme = currentTheme;
+  }
+  elements.heatmapThemeChips?.forEach((chip) => {
+    chip.classList.toggle("active", chip.dataset.theme === currentTheme);
+  });
+
+  const range = studyStats.getHeatmapRange(28, heatmapOffsetDays);
+  if (elements.heatmapRangeLabel) {
+    if (heatmapOffsetDays === 0) {
+      elements.heatmapRangeLabel.textContent = `近 28 天 (${range.startDate} ~ ${range.endDate})`;
+    } else {
+      elements.heatmapRangeLabel.textContent = `前 ${heatmapOffsetDays} 天 (${range.startDate} ~ ${range.endDate})`;
+    }
+  }
+
   elements.heatmapGrid.replaceChildren();
-  const data = studyStats.getHeatmapData(28);
+  const data = studyStats.getHeatmapData(28, heatmapOffsetDays);
   data.forEach((day) => {
     const cell = document.createElement("div");
     cell.className = `heatmap-cell heat-box level-${day.level}`;
@@ -998,6 +1138,29 @@ function bindAccessories() {
   });
 }
 
+function spawnFloatingReaction(emoji, author = "夥伴") {
+  if (!elements.floatingReactions) return;
+  const bubble = document.createElement("div");
+  bubble.className = "floating-reaction-bubble";
+  const drift = (Math.random() - 0.5) * 120;
+  bubble.style.setProperty("--drift-x", `${drift}px`);
+
+  const emojiSpan = document.createElement("span");
+  emojiSpan.className = "reaction-bubble-emoji";
+  emojiSpan.textContent = emoji;
+
+  const authorSpan = document.createElement("span");
+  authorSpan.className = "reaction-bubble-author";
+  authorSpan.textContent = author;
+
+  bubble.append(emojiSpan, authorSpan);
+  elements.floatingReactions.append(bubble);
+
+  window.setTimeout(() => {
+    bubble.remove();
+  }, 2800);
+}
+
 function bindP2PCheer() {
   elements.sendCheer?.addEventListener("click", () => {
     const res = p2p?.sendCelebration("clap", store.get().nickname);
@@ -1007,6 +1170,41 @@ function bindP2PCheer() {
     } else {
       showToast("喝采拍手已準備，連線後夥伴會收到。");
     }
+  });
+
+  elements.reactionChips?.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const emoji = btn.dataset.reaction;
+      if (!emoji) return;
+      companionSound.playReactionChime(emoji);
+      spawnFloatingReaction(emoji, "你");
+      p2p?.sendReaction(emoji, store.get().nickname);
+      showToast(`已送出表情 ${emoji} 給同房夥伴！`);
+    });
+  });
+}
+
+function bindHeatmapControls() {
+  elements.heatmapPrev?.addEventListener("click", () => {
+    heatmapOffsetDays += 28;
+    renderHeatmap();
+  });
+  elements.heatmapReset?.addEventListener("click", () => {
+    heatmapOffsetDays = 0;
+    renderHeatmap();
+  });
+  elements.heatmapNext?.addEventListener("click", () => {
+    heatmapOffsetDays = Math.max(0, heatmapOffsetDays - 28);
+    renderHeatmap();
+  });
+  elements.heatmapThemeChips?.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const theme = chip.dataset.theme;
+      if (theme) {
+        store.update({ heatmapTheme: theme });
+        renderHeatmap();
+      }
+    });
   });
 }
 
@@ -1040,7 +1238,8 @@ function bindTasks() {
     event.preventDefault();
     const title = elements.taskInput.value.trim();
     if (!title) return;
-    taskTracker.addTask(title);
+    const target = Number(elements.taskTargetPomo?.value) || 2;
+    taskTracker.addTask(title, target);
     elements.taskInput.value = "";
     renderTasks();
   });
@@ -1206,6 +1405,12 @@ async function startP2P() {
       }, 4500);
     }
     showToast(`🎉 ${detail.by || "夥伴"} 為你送上喝采！`);
+  });
+  p2p.addEventListener("peer-reaction", (event) => {
+    const detail = event.detail;
+    companionSound.playReactionChime(detail.emoji);
+    spawnFloatingReaction(detail.emoji, detail.by || "同房夥伴");
+    showToast(`${detail.by || "夥伴"} 送來了表情反應 ${detail.emoji}！`);
   });
   p2p.addEventListener("peer-status", (event) => {
     const detail = event.detail;
@@ -1506,6 +1711,7 @@ function init() {
   bindP2PCheer();
   bindTasks();
   bindExports();
+  bindHeatmapControls();
   renderStats();
   bindTips();
   bindTipSignal();

@@ -83,4 +83,41 @@ describe("TaskTracker Service", () => {
     expect(newTracker.tasks.length).toBe(2);
     expect(newTracker.tasks[0].title).toBe("Task A");
   });
+
+  it("supports target pomodoros configuration and summary", () => {
+    const t = tracker.addTask("Task with target", 4);
+    expect(t.targetPomodoros).toBe(4);
+    expect(tracker.setTargetPomodoros(t.id, 6)).toBe(6);
+    expect(t.targetPomodoros).toBe(6);
+
+    const summary = tracker.getSummary();
+    expect(summary.totalTargetPomodoros).toBe(6);
+  });
+
+  it("supports moving tasks up and down", () => {
+    const t1 = tracker.addTask("Task 1");
+    const t2 = tracker.addTask("Task 2");
+    const t3 = tracker.addTask("Task 3");
+
+    expect(tracker.moveTask(t2.id, "up")).toBe(true);
+    expect(tracker.tasks[0].id).toBe(t2.id);
+    expect(tracker.tasks[1].id).toBe(t1.id);
+
+    expect(tracker.moveTask(t2.id, "up")).toBe(false); // Already at top
+
+    expect(tracker.moveTask(t2.id, "down")).toBe(true);
+    expect(tracker.tasks[1].id).toBe(t2.id);
+
+    expect(tracker.moveTask(t3.id, "down")).toBe(false); // Already at bottom
+  });
+
+  it("supports reordering tasks with custom id sequence", () => {
+    const t1 = tracker.addTask("Task 1");
+    const t2 = tracker.addTask("Task 2");
+    const t3 = tracker.addTask("Task 3");
+
+    const ok = tracker.reorderTasks([t3.id, t1.id, t2.id]);
+    expect(ok).toBe(true);
+    expect(tracker.tasks.map((t) => t.id)).toEqual([t3.id, t1.id, t2.id]);
+  });
 });
