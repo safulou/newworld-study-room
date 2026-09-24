@@ -2,19 +2,22 @@ import { describe, it, expect } from "vitest";
 import { AmbientSoundscapeManager, AMBIENT_SOUND_TYPES, SOUNDSCAPE_PRESETS } from "../src/services/ambient-sound.js";
 
 describe("AmbientSoundscapeManager", () => {
-  it("exposes valid ambient sound types including binaural beats", () => {
+  it("exposes valid ambient sound types including binaural beats and ASMR", () => {
     expect(AMBIENT_SOUND_TYPES).toContain("rain");
     expect(AMBIENT_SOUND_TYPES).toContain("wind");
     expect(AMBIENT_SOUND_TYPES).toContain("campfire");
     expect(AMBIENT_SOUND_TYPES).toContain("brown_noise");
     expect(AMBIENT_SOUND_TYPES).toContain("binaural_alpha");
     expect(AMBIENT_SOUND_TYPES).toContain("binaural_gamma");
+    expect(AMBIENT_SOUND_TYPES).toContain("keyboard");
+    expect(AMBIENT_SOUND_TYPES).toContain("pencil");
   });
 
   it("exposes soundscape presets", () => {
     expect(SOUNDSCAPE_PRESETS.cozy_fireplace).toBeDefined();
     expect(SOUNDSCAPE_PRESETS.forest_breeze).toBeDefined();
     expect(SOUNDSCAPE_PRESETS.deep_flow).toBeDefined();
+    expect(SOUNDSCAPE_PRESETS.study_library).toBeDefined();
   });
 
   it("initializes with default settings", () => {

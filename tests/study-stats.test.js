@@ -78,4 +78,22 @@ describe("StudyStatsManager Service", () => {
     expect(md).toContain("玫瑰 x1");
     expect(md).toContain("[x] 撰寫代碼 (🍅 1)");
   });
+
+  it("returns botanical herbarium and badge unlocking progress", () => {
+    stats.recordSession({ durationMinutes: 25, plantHarvested: "rose" });
+    const herbarium = stats.getHerbarium();
+    expect(herbarium.length).toBe(5);
+
+    const rose = herbarium.find((p) => p.id === "rose");
+    expect(rose.unlocked).toBe(true);
+    expect(rose.harvestCount).toBe(1);
+
+    const tulip = herbarium.find((p) => p.id === "tulip");
+    expect(tulip.unlocked).toBe(false);
+
+    const badges = stats.getBadges();
+    expect(badges.length).toBe(5);
+    const firstSprout = badges.find((b) => b.id === "first_sprout");
+    expect(firstSprout.unlocked).toBe(true);
+  });
 });

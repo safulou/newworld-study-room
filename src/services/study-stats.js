@@ -173,4 +173,102 @@ export class StudyStatsManager {
       harvestCounts: this.getHarvestCounts(),
     };
   }
+
+  getHerbarium() {
+    const counts = this.getHarvestCounts();
+    return Object.entries(PLANT_BOTANICAL_SPECIES).map(([key, meta]) => {
+      const count = counts[key] || 0;
+      const historyItem = this.history.find((h) => h.plantHarvested === key);
+      const firstDate = historyItem ? historyItem.date : null;
+      return {
+        ...meta,
+        unlocked: count > 0,
+        harvestCount: count,
+        firstUnlockedDate: firstDate,
+      };
+    });
+  }
+
+  getBadges() {
+    const totalHarvest = Object.values(this.getHarvestCounts()).reduce((a, b) => a + b, 0);
+    const streak = this.getCurrentStreakDays();
+    const uniquePlants = Object.keys(this.getHarvestCounts()).length;
+    const totalMinutes = this.getTotalMinutes();
+
+    return [
+      {
+        id: "first_sprout",
+        title: "萌芽初綻",
+        icon: "🌱",
+        description: "完成第一次專注並收穫第 1 株植物",
+        unlocked: totalHarvest >= 1,
+      },
+      {
+        id: "botanist",
+        title: "木屋植物學家",
+        icon: "🌸",
+        description: "培育收穫全部 5 種不同的專注植物",
+        unlocked: uniquePlants >= 5,
+      },
+      {
+        id: "streak_master",
+        title: "連貫心流",
+        icon: "🔥",
+        description: "保持連續 3 天專注陪伴",
+        unlocked: streak >= 3,
+      },
+      {
+        id: "golden_gardener",
+        title: "黃金七天紀律",
+        icon: "👑",
+        description: "達成連續 7 天專注，解鎖黃金花盆榮耀",
+        unlocked: streak >= 7,
+      },
+      {
+        id: "master_hour",
+        title: "百刻求索",
+        icon: "⏳",
+        description: "累計專注時間突破 10 小時（600 分鐘）",
+        unlocked: totalMinutes >= 600,
+      },
+    ];
+  }
 }
+
+export const PLANT_BOTANICAL_SPECIES = {
+  rose: {
+    id: "rose",
+    name: "緋紅玫瑰",
+    icon: "🌹",
+    flowerLanguage: "熱情、堅持不懈與自我超越",
+    rarity: "common",
+  },
+  tulip: {
+    id: "tulip",
+    name: "明黃鬱金香",
+    icon: "🌷",
+    flowerLanguage: "博學、沈靜心靈與永恆專注",
+    rarity: "common",
+  },
+  cactus: {
+    id: "cactus",
+    name: "翡翠仙人掌",
+    icon: "🌵",
+    flowerLanguage: "堅毅頑強、抵禦外界干擾",
+    rarity: "uncommon",
+  },
+  succulent: {
+    id: "succulent",
+    name: "碧玉多肉",
+    icon: "🪴",
+    flowerLanguage: "踏實累積、生生不息的微小進步",
+    rarity: "uncommon",
+  },
+  pine: {
+    id: "pine",
+    name: "雪嶺冷杉",
+    icon: "🌲",
+    flowerLanguage: "歲月深沈、經久不衰的自律品格",
+    rarity: "rare",
+  },
+};

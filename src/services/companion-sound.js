@@ -100,4 +100,38 @@ export class CompanionSoundManager {
       osc.stop(now + delay + dur + 0.05);
     });
   }
+
+  /**
+   * Play a gentle soothing purr / chime when the doll is stroked / petted
+   */
+  playPettingPurr() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const notes = [
+      { freq: 698.46, delay: 0.0, dur: 0.18 }, // F5
+      { freq: 880.0, delay: 0.06, dur: 0.22 }, // A5
+      { freq: 1046.5, delay: 0.12, dur: 0.35 }, // C6
+    ];
+
+    notes.forEach(({ freq, delay, dur }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + delay);
+
+      const peakGain = 0.14 * this.volume;
+      gain.gain.setValueAtTime(0.0001, now + delay);
+      gain.gain.exponentialRampToValueAtTime(peakGain, now + delay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now + delay);
+      osc.stop(now + delay + dur + 0.05);
+    });
+  }
 }

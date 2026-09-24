@@ -5,7 +5,16 @@
  * Requires 0 external audio assets.
  */
 
-export const AMBIENT_SOUND_TYPES = ["rain", "wind", "campfire", "brown_noise", "binaural_alpha", "binaural_gamma"];
+export const AMBIENT_SOUND_TYPES = [
+  "rain",
+  "wind",
+  "campfire",
+  "brown_noise",
+  "binaural_alpha",
+  "binaural_gamma",
+  "keyboard",
+  "pencil",
+];
 
 export const SOUNDSCAPE_PRESETS = {
   cozy_fireplace: {
@@ -25,6 +34,12 @@ export const SOUNDSCAPE_PRESETS = {
     name: "深度心流",
     icon: "sparkles",
     tracks: { binaural_alpha: 0.22, rain: 0.2 },
+  },
+  study_library: {
+    id: "study_library",
+    name: "圖書館自習",
+    icon: "book-open",
+    tracks: { keyboard: 0.28, pencil: 0.25, rain: 0.15 },
   },
 };
 
@@ -116,6 +131,70 @@ export class AmbientSoundscapeManager {
       return true;
     }
 
+    // Procedural ASMR Mechanical Keyboard Typing Track
+    if (name === "keyboard") {
+      let active = true;
+      const playKey = () => {
+        if (!active) return;
+        this.playSingleKeyPress(trackGain);
+        const isPause = Math.random() < 0.12;
+        const delay = isPause ? 600 + Math.random() * 500 : 90 + Math.random() * 140;
+        timerId = window.setTimeout(playKey, delay);
+      };
+      let timerId = window.setTimeout(playKey, 120);
+
+      this.nodes.set(name, {
+        timerId,
+        stopTimer: () => {
+          active = false;
+          window.clearTimeout(timerId);
+        },
+        gain: trackGain,
+        volume,
+      });
+      return true;
+    }
+
+    // Procedural ASMR Pencil Sketching / Writing Track
+    if (name === "pencil") {
+      const noiseBuffer = this.createNoiseBuffer(3);
+      if (!noiseBuffer) return false;
+      const noiseSource = ctx.createBufferSource();
+      noiseSource.buffer = noiseBuffer;
+      noiseSource.loop = true;
+
+      const hpFilter = ctx.createBiquadFilter();
+      hpFilter.type = "highpass";
+      hpFilter.frequency.setValueAtTime(2200, ctx.currentTime);
+
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
+      lfo.frequency.setValueAtTime(2.6, ctx.currentTime);
+      lfoGain.gain.setValueAtTime(0.5, ctx.currentTime);
+
+      const strokeGain = ctx.createGain();
+      strokeGain.gain.setValueAtTime(0.5, ctx.currentTime);
+
+      lfo.connect(lfoGain);
+      lfoGain.connect(strokeGain.gain);
+
+      noiseSource.connect(hpFilter);
+      hpFilter.connect(strokeGain);
+      strokeGain.connect(trackGain);
+
+      noiseSource.start();
+      lfo.start();
+
+      this.nodes.set(name, {
+        source: noiseSource,
+        lfo,
+        filter: hpFilter,
+        gain: trackGain,
+        volume,
+      });
+      return true;
+    }
+
     // Procedural Noise-based Ambient Sound Synthesis
     const noiseBuffer = this.createNoiseBuffer(4);
     if (!noiseBuffer) return false;
@@ -165,6 +244,13 @@ export class AmbientSoundscapeManager {
     if (!track) return false;
 
     try {
+      if (track.stopTimer) {
+        track.stopTimer();
+      }
+      if (track.lfo) {
+        track.lfo.stop();
+        track.lfo.disconnect();
+      }
       if (track.source) {
         track.source.stop();
         track.source.disconnect();
@@ -181,6 +267,37 @@ export class AmbientSoundscapeManager {
 
     this.nodes.delete(name);
     return true;
+  }
+
+  playSingleKeyPress(targetGain = null) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const clickFilter = ctx.createBiquadFilter();
+
+      const freq = 1200 + Math.random() * 800;
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.exponentialRampToValueAtTime(180, now + 0.035);
+
+      clickFilter.type = "bandpass";
+      clickFilter.frequency.setValueAtTime(1400, now);
+      clickFilter.Q.setValueAtTime(1.5, now);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.18, now + 0.004);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
+
+      osc.connect(clickFilter);
+      clickFilter.connect(gain);
+      gain.connect(targetGain || this.masterGain);
+
+      osc.start(now);
+      osc.stop(now + 0.045);
+    } catch {}
   }
 
   setTrackVolume(name, volume) {

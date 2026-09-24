@@ -4,6 +4,7 @@ import {
   Bell,
   BellOff,
   BellRing,
+  BookOpen,
   Cat,
   CheckSquare,
   ClipboardCopy,
@@ -18,10 +19,15 @@ import {
   HandMetal,
   House,
   ImagePlus,
+  Keyboard,
+  Maximize2,
+  Minimize2,
   MessageCircleHeart,
+  Music,
   Music2,
   Pause,
   PanelTop,
+  Pencil,
   Play,
   Plus,
   RefreshCw,
@@ -37,6 +43,7 @@ import {
   Wand2,
   Waves,
   Wind,
+  X,
   Zap,
   createIcons,
 } from "lucide";
@@ -45,6 +52,7 @@ import { BackgroundMusic } from "./services/background-music.js";
 import { CompanionSoundManager } from "./services/companion-sound.js";
 import { createCompanionAsset } from "./services/doll-generation.js";
 import { FocusTimer } from "./services/focus-timer.js";
+import { LofiGenerator } from "./services/lofi-generator.js";
 import { NotificationManager } from "./services/notification-manager.js";
 import { StudyStatsManager } from "./services/study-stats.js";
 import { TaskTracker } from "./services/task-tracker.js";
@@ -55,6 +63,7 @@ const icons = {
   Bell,
   BellOff,
   BellRing,
+  BookOpen,
   Cat,
   CheckSquare,
   ClipboardCopy,
@@ -69,10 +78,15 @@ const icons = {
   HandMetal,
   House,
   ImagePlus,
+  Keyboard,
+  Maximize2,
+  Minimize2,
   MessageCircleHeart,
+  Music,
   Music2,
   Pause,
   PanelTop,
+  Pencil,
   Play,
   Plus,
   RefreshCw,
@@ -88,6 +102,7 @@ const icons = {
   Wand2,
   Waves,
   Wind,
+  X,
   Zap,
 };
 createIcons({ icons });
@@ -178,6 +193,18 @@ const elements = {
   toggleNotification: $("#toggleNotification"),
   notificationIcon: $("#notificationIcon"),
   notificationBtnText: $("#notificationBtnText"),
+  toggleZen: $("#toggleZen"),
+  exitZenBtn: $("#exitZenBtn"),
+  openHerbarium: $("#openHerbarium"),
+  herbariumModal: $("#herbariumModal"),
+  closeHerbarium: $("#closeHerbarium"),
+  tabPlants: $("#tabPlants"),
+  tabBadges: $("#tabBadges"),
+  plantsView: $("#plantsView"),
+  badgesView: $("#badgesView"),
+  sleepBubble: $("#sleepBubble"),
+  petHearts: $("#petHearts"),
+  lofiChip: $("#lofiChip"),
   toast: $("#toast"),
 };
 
@@ -189,6 +216,7 @@ const store = createStore({
 const timer = new FocusTimer(store.get().minutes);
 const music = new BackgroundMusic(store.get().musicVolume);
 const ambientSound = new AmbientSoundscapeManager();
+const lofiGenerator = new LofiGenerator();
 const taskTracker = new TaskTracker();
 const studyStats = new StudyStatsManager();
 const companionSound = new CompanionSoundManager(0.4);
@@ -872,6 +900,12 @@ function bindAmbientSound() {
   elements.ambientChips.forEach((chip) => {
     chip.addEventListener("click", () => {
       const sound = chip.dataset.sound;
+      if (sound === "lofi") {
+        const isRunning = lofiGenerator.toggle();
+        chip.classList.toggle("active", isRunning);
+        chip.setAttribute("aria-pressed", String(isRunning));
+        return;
+      }
       const isPlaying = chip.classList.contains("active");
       if (isPlaying) {
         ambientSound.stopTrack(sound);
@@ -887,9 +921,18 @@ function bindAmbientSound() {
     });
   });
 
+  const onKeyType = () => {
+    if (ambientSound.tracks && "keyboard" in ambientSound.tracks) {
+      ambientSound.playSingleKeyPress(ambientSound.masterVolume * 0.35);
+    }
+  };
+  elements.taskInput?.addEventListener("keydown", onKeyType);
+  elements.noteInput?.addEventListener("keydown", onKeyType);
+
   elements.ambientVolume.addEventListener("input", () => {
     const volume = Number(elements.ambientVolume.value) / 100;
     ambientSound.setMasterVolume(volume);
+    lofiGenerator.setVolume(volume);
     elements.ambientVolumeValue.value = `${elements.ambientVolume.value}%`;
   });
 }
@@ -903,6 +946,7 @@ function bindPresets() {
       ambientSound.applyPreset(presetId);
       elements.ambientChips.forEach((chip) => {
         const sound = chip.dataset.sound;
+        if (sound === "lofi") return;
         const isPlaying = sound in preset.tracks;
         chip.classList.toggle("active", isPlaying);
         chip.setAttribute("aria-pressed", String(isPlaying));
@@ -1202,6 +1246,213 @@ function bindMobileNavigation() {
   });
 }
 
+function spawnPetHearts(x = 115, y = 70) {
+  if (!elements.petHearts) return;
+  const hearts = ["❤️", "💖", "💕", "✨", "🌸"];
+  for (let i = 0; i < 4; i++) {
+    const heart = document.createElement("span");
+    heart.className = "pet-heart";
+    heart.textContent = hearts[Math.floor(Math.random() * hearts.length)];
+    const dx = (Math.random() - 0.5) * 50;
+    const dy = (Math.random() - 0.5) * 20;
+    const rot = (Math.random() - 0.5) * 40;
+    heart.style.left = `${Math.max(10, Math.min(220, x + dx))}px`;
+    heart.style.top = `${Math.max(10, Math.min(200, y + dy))}px`;
+    heart.style.setProperty("--dx", `${(Math.random() - 0.5) * 40}px`);
+    heart.style.setProperty("--rot", `${rot}deg`);
+    elements.petHearts.appendChild(heart);
+    setTimeout(() => heart.remove(), 1200);
+  }
+}
+
+let idleSleepTimer = null;
+let isDollSleeping = false;
+
+function wakeUpDoll() {
+  if (isDollSleeping) {
+    isDollSleeping = false;
+    viewer?.setSleeping(false);
+    if (elements.sleepBubble) elements.sleepBubble.hidden = true;
+  }
+}
+
+function bindIdleSleep() {
+  const resetIdle = () => {
+    wakeUpDoll();
+    clearTimeout(idleSleepTimer);
+    idleSleepTimer = setTimeout(
+      () => {
+        const isTimerRunning = elements.focusGarden?.classList.contains("growing");
+        if (!isTimerRunning) {
+          isDollSleeping = true;
+          viewer?.setSleeping(true);
+          if (elements.sleepBubble) elements.sleepBubble.hidden = false;
+        }
+      },
+      10 * 60 * 1000,
+    );
+  };
+
+  window.addEventListener("pointermove", resetIdle);
+  window.addEventListener("pointerdown", resetIdle);
+  window.addEventListener("keydown", resetIdle);
+  resetIdle();
+}
+
+function bindZenMode() {
+  let zenInactivityTimer = null;
+
+  const showZenControls = () => {
+    if (!document.body.classList.contains("zen-mode")) return;
+    document.body.classList.remove("zen-inactive");
+    clearTimeout(zenInactivityTimer);
+    zenInactivityTimer = setTimeout(() => {
+      if (document.body.classList.contains("zen-mode")) {
+        document.body.classList.add("zen-inactive");
+      }
+    }, 3000);
+  };
+
+  const enterZen = () => {
+    document.body.classList.add("zen-mode");
+    if (elements.exitZenBtn) elements.exitZenBtn.hidden = false;
+    showToast("已進入極簡禪意模式（按 Esc 或 Z 退出）");
+    try {
+      if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    } catch {
+      // Optional fullscreen
+    }
+    showZenControls();
+  };
+
+  const exitZen = () => {
+    document.body.classList.remove("zen-mode", "zen-inactive");
+    if (elements.exitZenBtn) elements.exitZenBtn.hidden = true;
+    clearTimeout(zenInactivityTimer);
+    try {
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    } catch {
+      // Ignore
+    }
+    showToast("已退出禪意模式");
+  };
+
+  const toggleZen = () => {
+    if (document.body.classList.contains("zen-mode")) {
+      exitZen();
+    } else {
+      enterZen();
+    }
+  };
+
+  elements.toggleZen?.addEventListener("click", toggleZen);
+  elements.exitZenBtn?.addEventListener("click", exitZen);
+
+  window.addEventListener("mousemove", showZenControls);
+  window.addEventListener("pointerdown", showZenControls);
+
+  window.addEventListener("keydown", (e) => {
+    const activeTag = document.activeElement?.tagName?.toLowerCase();
+    if (activeTag === "input" || activeTag === "textarea" || document.activeElement?.isContentEditable) {
+      return;
+    }
+
+    if (e.key === "z" || e.key === "Z") {
+      e.preventDefault();
+      toggleZen();
+    } else if (e.key === "Escape" && document.body.classList.contains("zen-mode")) {
+      e.preventDefault();
+      exitZen();
+    }
+  });
+}
+
+function renderHerbarium() {
+  if (!elements.plantsView || !elements.badgesView) return;
+  const plants = studyStats.getHerbarium();
+  elements.plantsView.innerHTML = `
+    <div class="plant-grid">
+      ${plants
+        .map(
+          (p) => `
+        <div class="plant-card ${p.unlocked ? "unlocked" : "locked"}">
+          <div class="plant-card-icon">${p.icon}</div>
+          <div class="plant-card-body">
+            <div class="plant-card-title-row">
+              <span class="plant-card-name">${p.name}</span>
+              <span class="plant-card-status">${p.unlocked ? "已綻放" : "未解鎖"}</span>
+            </div>
+            <div class="plant-card-lang">花語：${p.language}</div>
+            <div class="plant-card-desc">${p.description}</div>
+            <div class="plant-card-stats">
+              <span>採收次數：<strong>${p.harvestCount}</strong> 次</span>
+              ${p.firstUnlockedAt ? `<span>初次綻放：${new Date(p.firstUnlockedAt).toLocaleDateString()}</span>` : ""}
+            </div>
+          </div>
+        </div>
+      `,
+        )
+        .join("")}
+    </div>
+  `;
+
+  const badges = studyStats.getBadges();
+  elements.badgesView.innerHTML = `
+    <div class="badge-grid">
+      ${badges
+        .map(
+          (b) => `
+        <div class="badge-card ${b.unlocked ? "unlocked" : "locked"}">
+          <div class="badge-icon">${b.icon}</div>
+          <div class="badge-body">
+            <div class="badge-title-row">
+              <span class="badge-name">${b.name}</span>
+              <span class="badge-rarity ${b.rarity}">${b.rarity}</span>
+            </div>
+            <div class="badge-desc">${b.description}</div>
+            ${b.unlocked && b.unlockedAt ? `<div class="badge-meta">達成時間：${new Date(b.unlockedAt).toLocaleDateString()}</div>` : ""}
+          </div>
+        </div>
+      `,
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function bindHerbarium() {
+  elements.openHerbarium?.addEventListener("click", () => {
+    renderHerbarium();
+    elements.herbariumModal?.showModal();
+  });
+  elements.closeHerbarium?.addEventListener("click", () => {
+    elements.herbariumModal?.close();
+  });
+  elements.herbariumModal?.addEventListener("click", (e) => {
+    if (e.target === elements.herbariumModal) {
+      elements.herbariumModal.close();
+    }
+  });
+
+  elements.tabPlants?.addEventListener("click", () => {
+    elements.tabPlants.classList.add("active");
+    elements.tabBadges.classList.remove("active");
+    elements.plantsView.hidden = false;
+    elements.badgesView.hidden = true;
+  });
+
+  elements.tabBadges?.addEventListener("click", () => {
+    elements.tabBadges.classList.add("active");
+    elements.tabPlants.classList.remove("active");
+    elements.badgesView.hidden = false;
+    elements.plantsView.hidden = true;
+  });
+}
+
 async function startViewer() {
   try {
     const { DollViewer } = await import("./services/doll-viewer.js");
@@ -1217,6 +1468,19 @@ async function startViewer() {
       companionSound.playCelebrationFanfare();
       showCompanionBubble("哇～旋轉大跳躍！今天的精神滿分！💫🌟", 3600);
       showToast("解鎖伴讀玩偶 360° 開心旋轉！🎉");
+    };
+    viewer.onPet = (x, y) => {
+      companionSound.playPettingPurr();
+      spawnPetHearts(x, y);
+      wakeUpDoll();
+      const petQuotes = [
+        "好舒服呀～摸摸頭最治癒了！(｡♥‿♥｡)",
+        "咕嚕咕嚕... 充滿能量，繼續陪你專注！✨",
+        "有你摸摸頭，今天的任務一定能順利完成！🌸",
+        "摸摸～頭腦清醒了！一起加油吧！💪",
+      ];
+      const quote = petQuotes[Math.floor(Math.random() * petQuotes.length)];
+      showCompanionBubble(quote, 2800);
     };
     renderState(store.get());
   } catch {
@@ -1236,6 +1500,9 @@ function init() {
   bindMusic();
   bindAmbientSound();
   bindPresets();
+  bindZenMode();
+  bindHerbarium();
+  bindIdleSleep();
   bindP2PCheer();
   bindTasks();
   bindExports();
@@ -1251,6 +1518,7 @@ function init() {
   timer.emitTick();
   startViewer();
   restartP2P();
+  createIcons({ icons });
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
   }
@@ -1259,6 +1527,7 @@ function init() {
     viewer?.dispose();
     music.destroy();
     ambientSound.stopAll();
+    lofiGenerator.stop();
     stopWindowRain();
   });
 }

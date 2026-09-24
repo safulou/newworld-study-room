@@ -2094,6 +2094,520 @@ input::placeholder {
   .toast {
     bottom: 82px;
   }
+  .herbarium-modal {
+    width: 95vw;
+  }
+  .herbarium-dialog-card {
+    padding: 16px;
+  }
+  .plant-grid,
+  .badge-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Herbarium Button */
+.herbarium-btn {
+  position: absolute;
+  right: 10px;
+  bottom: -22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(246, 200, 81, 0.35);
+  background: rgba(18, 26, 39, 0.88);
+  color: var(--gold-soft);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(6px);
+}
+.herbarium-btn:hover {
+  background: rgba(30, 42, 60, 0.95);
+  border-color: var(--gold);
+  transform: translateY(-1px);
+}
+.herbarium-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Pet Hearts */
+.pet-hearts {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 12;
+}
+.pet-heart {
+  position: absolute;
+  font-size: 18px;
+  line-height: 1;
+  animation: pet-heart-rise 1.2s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
+  pointer-events: none;
+  user-select: none;
+}
+@keyframes pet-heart-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.5) rotate(0deg);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -20px) scale(1.2) rotate(var(--rot, -10deg));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx, 15px)), -80px) scale(0.8) rotate(var(--rot, 15deg));
+  }
+}
+
+/* Sleep Bubble */
+.sleep-bubble {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-weight: 800;
+  color: #a5c7eb;
+  z-index: 11;
+  pointer-events: none;
+  animation: zzz-float 2.4s ease-in-out infinite;
+  text-shadow: 0 0 8px rgba(165, 199, 235, 0.6);
+}
+.sleep-bubble span:nth-child(1) {
+  font-size: 20px;
+  animation: zzz-bounce 2.4s 0s ease-in-out infinite;
+}
+.sleep-bubble span:nth-child(2) {
+  font-size: 15px;
+  animation: zzz-bounce 2.4s 0.3s ease-in-out infinite;
+}
+.sleep-bubble span:nth-child(3) {
+  font-size: 11px;
+  animation: zzz-bounce 2.4s 0.6s ease-in-out infinite;
+}
+
+@keyframes zzz-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+@keyframes zzz-bounce {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+/* Zen Ambient Screen Mode */
+body.zen-mode .topbar,
+body.zen-mode .sidebar,
+body.zen-mode .mobile-nav,
+body.zen-mode #dollPanel,
+body.zen-mode .stars,
+body.zen-mode .peer-status-bar,
+body.zen-mode .celebrate-banner {
+  display: none !important;
+}
+
+body.zen-mode .app {
+  padding: 0;
+  max-width: none;
+  width: 100vw;
+  height: 100vh;
+}
+
+body.zen-mode .shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+body.zen-mode .stage {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.zen-mode .avatar-zone {
+  bottom: 24vh;
+  transform: translateX(-50%) scale(1.15);
+}
+
+body.zen-mode .focus-garden {
+  bottom: 22vh;
+  right: 12vw;
+  transform: scale(1.1);
+}
+
+body.zen-mode .focus-bar {
+  bottom: 6vh;
+  padding: 14px 28px;
+  background: rgba(14, 22, 33, 0.75);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  transition: opacity 0.5s ease;
+}
+
+body.zen-mode .timer {
+  font-size: clamp(3.2rem, 7vw, 5.5rem);
+  text-shadow: 0 0 25px rgba(246, 200, 81, 0.35);
+  letter-spacing: 2px;
+}
+
+.exit-zen-btn {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(18, 26, 39, 0.85);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s ease;
+}
+.exit-zen-btn:hover {
+  background: rgba(30, 42, 60, 0.95);
+  border-color: var(--gold-soft);
+  color: var(--gold-soft);
+  transform: translateY(-2px);
+}
+.exit-zen-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Zen inactivity auto-hide */
+body.zen-mode.zen-inactive,
+body.zen-mode.zen-inactive * {
+  cursor: none !important;
+}
+
+body.zen-mode.zen-inactive .exit-zen-btn,
+body.zen-mode.zen-inactive .focus-bar .icon-btn,
+body.zen-mode.zen-inactive .herbarium-btn {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Botanical Herbarium & Badges Modal */
+.herbarium-modal {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  max-width: 640px;
+  width: min(92vw, 640px);
+  margin: auto;
+  border-radius: 16px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+  color: var(--text);
+  z-index: 110;
+}
+.herbarium-modal::backdrop {
+  background: rgba(7, 11, 18, 0.8);
+  backdrop-filter: blur(8px);
+}
+
+.herbarium-dialog-card {
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(175deg, #182233 0%, #0d1522 100%);
+  border: 1px solid rgba(246, 200, 81, 0.35);
+  border-radius: 16px;
+  padding: 24px;
+  max-height: 85vh;
+  overflow: hidden;
+}
+
+.herbarium-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.herbarium-title-group h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--gold-soft);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.herbarium-subtitle {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+  display: block;
+}
+
+.herbarium-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+  margin-bottom: 16px;
+}
+
+.tab-btn {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.tab-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+.tab-btn.active {
+  color: var(--gold-soft);
+  background: rgba(246, 200, 81, 0.15);
+  border: 1px solid rgba(246, 200, 81, 0.3);
+}
+
+.herbarium-content {
+  overflow-y: auto;
+  max-height: calc(85vh - 140px);
+  padding-right: 4px;
+}
+
+.herbarium-content::-webkit-scrollbar {
+  width: 6px;
+}
+.herbarium-content::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 3px;
+}
+
+.plant-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.plant-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(22, 31, 46, 0.7);
+  border: 1px solid var(--line);
+  transition: all 0.2s ease;
+}
+
+.plant-card.unlocked {
+  border-color: rgba(246, 200, 81, 0.3);
+  background: rgba(22, 31, 46, 0.9);
+}
+
+.plant-card.locked {
+  opacity: 0.6;
+  filter: grayscale(0.6);
+}
+
+.plant-card-icon {
+  font-size: 2.2rem;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.plant-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.plant-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.plant-card-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.plant-card-status {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+}
+.plant-card.unlocked .plant-card-status {
+  background: rgba(72, 187, 120, 0.2);
+  color: #68d391;
+  border: 1px solid rgba(72, 187, 120, 0.3);
+}
+
+.plant-card-lang {
+  font-size: 11px;
+  color: var(--gold-soft);
+  font-style: italic;
+  margin-bottom: 4px;
+}
+
+.plant-card-desc {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.35;
+  margin-bottom: 6px;
+}
+
+.plant-card-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 10px;
+  color: var(--faint);
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  padding-top: 4px;
+}
+
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.badge-card {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(22, 31, 46, 0.7);
+  border: 1px solid var(--line);
+  transition: all 0.2s ease;
+}
+
+.badge-card.unlocked {
+  border-color: rgba(246, 200, 81, 0.4);
+  background: linear-gradient(145deg, rgba(32, 45, 68, 0.9), rgba(20, 28, 42, 0.9));
+  box-shadow: 0 4px 14px rgba(246, 200, 81, 0.12);
+}
+
+.badge-card.locked {
+  opacity: 0.5;
+  filter: grayscale(0.8);
+}
+
+.badge-icon {
+  font-size: 2.2rem;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.badge-body {
+  flex: 1;
+}
+
+.badge-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.badge-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.badge-rarity {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+.badge-rarity.common {
+  background: rgba(160, 174, 192, 0.2);
+  color: #cbd5e0;
+}
+.badge-rarity.rare {
+  background: rgba(66, 153, 225, 0.2);
+  color: #63b3ed;
+}
+.badge-rarity.epic {
+  background: rgba(159, 122, 234, 0.25);
+  color: #b794f4;
+}
+.badge-rarity.legendary {
+  background: rgba(236, 201, 75, 0.25);
+  color: #f6e05e;
+  border: 1px solid rgba(236, 201, 75, 0.4);
+}
+
+.badge-desc {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.badge-meta {
+  font-size: 10px;
+  color: var(--gold-soft);
+  margin-top: 4px;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -32,6 +32,15 @@
             <i data-lucide="sun-moon"></i>
           </button>
           <button
+            class="icon-btn subtle"
+            id="toggleZen"
+            type="button"
+            aria-label="極簡禪意模式"
+            title="進入極簡禪意專注全螢幕（快捷鍵：Z）"
+          >
+            <i data-lucide="maximize-2"></i>
+          </button>
+          <button
             class="icon-btn share-room"
             id="shareRoom"
             type="button"
@@ -112,9 +121,23 @@
             </div>
             <span class="garden-ground" aria-hidden="true"></span>
             <span class="garden-status" id="gardenStatus" aria-live="polite">玫瑰 · 種子</span>
+            <button
+              class="herbarium-btn"
+              id="openHerbarium"
+              type="button"
+              aria-label="打開植物溫室圖鑑"
+              title="查看植物溫室圖鑑與成就徽章"
+            >
+              <i data-lucide="book-open"></i>
+              <span>圖鑑</span>
+            </button>
           </div>
 
           <div class="avatar-zone" id="avatarZone">
+            <div class="sleep-bubble" id="sleepBubble" hidden aria-hidden="true">
+              <span>Z</span><span>z</span><span>z</span>
+            </div>
+            <div class="pet-hearts" id="petHearts" aria-hidden="true"></div>
             <div class="companion-bubble" id="companionBubble" aria-live="polite">
               <span class="bubble-text" id="bubbleText"></span>
             </div>
@@ -162,6 +185,7 @@
               <button class="preset-btn" type="button" data-preset="cozy_fireplace">🌧️ 雨夜壁爐</button>
               <button class="preset-btn" type="button" data-preset="forest_breeze">🌲 林間微風</button>
               <button class="preset-btn" type="button" data-preset="deep_flow">🧘 深度心流</button>
+              <button class="preset-btn" type="button" data-preset="study_library">📚 圖書館自習</button>
             </div>
             <div class="ambient-chips">
               <button class="ambient-chip" type="button" data-sound="rain" aria-pressed="false">
@@ -179,6 +203,18 @@
               <button class="ambient-chip" type="button" data-sound="brown_noise" aria-pressed="false">
                 <i data-lucide="waves"></i>
                 <span>潮汐</span>
+              </button>
+              <button class="ambient-chip" type="button" data-sound="keyboard" aria-pressed="false">
+                <i data-lucide="keyboard"></i>
+                <span>機械鍵盤</span>
+              </button>
+              <button class="ambient-chip" type="button" data-sound="pencil" aria-pressed="false">
+                <i data-lucide="pencil"></i>
+                <span>鉛筆書寫</span>
+              </button>
+              <button class="ambient-chip" type="button" data-sound="lofi" id="lofiChip" aria-pressed="false">
+                <i data-lucide="music"></i>
+                <span>Lo-Fi琴弦</span>
               </button>
               <button class="ambient-chip" type="button" data-sound="binaural_alpha" aria-pressed="false">
                 <i data-lucide="sparkles"></i>
@@ -460,6 +496,33 @@
         <i data-lucide="share-2"></i>
       </button>
     </nav>
+
+    <button class="exit-zen-btn" id="exitZenBtn" type="button" aria-label="退出禪意模式" hidden>
+      <i data-lucide="minimize-2"></i>
+      <span>退出禪意 (Esc)</span>
+    </button>
+
+    <dialog class="herbarium-modal" id="herbariumModal">
+      <div class="herbarium-dialog-card">
+        <div class="herbarium-header">
+          <div class="herbarium-title-group">
+            <h2>🌿 植物溫室圖鑑與成就</h2>
+            <span class="herbarium-subtitle">記錄你的每顆專注種子與心流里程</span>
+          </div>
+          <button class="icon-btn subtle close-btn" id="closeHerbarium" type="button" aria-label="關閉圖鑑">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="herbarium-tabs">
+          <button class="tab-btn active" id="tabPlants" type="button" data-tab="plants">植物圖鑑</button>
+          <button class="tab-btn" id="tabBadges" type="button" data-tab="badges">成就徽章</button>
+        </div>
+        <div class="herbarium-content" id="herbariumContent">
+          <div class="herbarium-view plants-view" id="plantsView"></div>
+          <div class="herbarium-view badges-view" id="badgesView" hidden></div>
+        </div>
+      </div>
+    </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script type="module" src="/src/main.js"></script>

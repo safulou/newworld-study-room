@@ -1,6 +1,10 @@
 import * as THREE from "three";
 
-function drawDollFace(context, eyesClosed = false) {
+function drawDollFace(context, mode = "open") {
+  const isClosed = mode === true || mode === "closed";
+  const isJoy = mode === "joy" || mode === "petting";
+  const isSleep = mode === "sleep";
+
   context.clearRect(0, 0, 512, 512);
   context.fillStyle = "#f2d7b6";
   context.fillRect(0, 0, 512, 512);
@@ -8,7 +12,53 @@ function drawDollFace(context, eyesClosed = false) {
   context.fillStyle = "#30261f";
   context.strokeStyle = "#30261f";
 
-  if (eyesClosed) {
+  if (isJoy) {
+    // Joyful squinting curved eyes (^ ^)
+    context.lineWidth = 16;
+    context.lineCap = "round";
+    context.beginPath();
+    context.arc(166, 252, 28, Math.PI * 1.15, Math.PI * 1.85);
+    context.stroke();
+    context.beginPath();
+    context.arc(346, 252, 28, Math.PI * 1.15, Math.PI * 1.85);
+    context.stroke();
+
+    // Rosy blushing cheeks
+    context.fillStyle = "rgba(240, 115, 130, 0.45)";
+    context.beginPath();
+    context.arc(130, 285, 24, 0, Math.PI * 2);
+    context.arc(382, 285, 24, 0, Math.PI * 2);
+    context.fill();
+
+    // Big happy smile
+    context.strokeStyle = "#30261f";
+    context.lineWidth = 18;
+    context.beginPath();
+    context.arc(256, 285, 90, 0.2, Math.PI - 0.2);
+    context.stroke();
+    return;
+  }
+
+  if (isSleep) {
+    // Peaceful sleepy closed curves
+    context.lineWidth = 13;
+    context.lineCap = "round";
+    context.beginPath();
+    context.arc(166, 256, 24, Math.PI * 1.1, Math.PI * 1.9);
+    context.stroke();
+    context.beginPath();
+    context.arc(346, 256, 24, Math.PI * 1.1, Math.PI * 1.9);
+    context.stroke();
+
+    // Small gentle peaceful smile
+    context.lineWidth = 12;
+    context.beginPath();
+    context.arc(256, 305, 50, 0.25, Math.PI - 0.25);
+    context.stroke();
+    return;
+  }
+
+  if (isClosed) {
     context.lineWidth = 14;
     context.lineCap = "round";
     context.beginPath();
@@ -117,6 +167,14 @@ export class DollViewer {
     this.spinStartTime = 0;
     this.lastSpinAngle = 0;
     this.onJoySpin = null;
+    this.isPetting = false;
+    this.petEndTime = 0;
+    this.petStrokeCount = 0;
+    this.lastPetX = 0;
+    this.onPet = null;
+    this.isSleeping = false;
+    this.lastFaceMode = "open";
+    this.studyBook = null;
     this.init();
   }
 
@@ -359,6 +417,24 @@ export class DollViewer {
     this.customAccessories.add(this.glassesGroup, this.crownGroup, this.coffeeGroup, this.catGroup);
     this.doll.add(this.customAccessories);
 
+    // Procedural Study Book in doll's hands (visible during focus)
+    this.studyBook = new THREE.Group();
+    const bookCoverMat = new THREE.MeshStandardMaterial({ color: 0x2e4a6d, roughness: 0.6 });
+    const bookPageMat = new THREE.MeshStandardMaterial({ color: 0xfffae6, roughness: 0.8 });
+    const leftPage = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.035, 0.44), bookPageMat);
+    leftPage.position.set(-0.16, 0, 0);
+    leftPage.rotation.z = 0.18;
+    const rightPage = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.035, 0.44), bookPageMat);
+    rightPage.position.set(0.16, 0, 0);
+    rightPage.rotation.z = -0.18;
+    const spine = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.02, 0.46), bookCoverMat);
+    spine.position.set(0, -0.02, 0);
+    this.studyBook.add(leftPage, rightPage, spine);
+    this.studyBook.position.set(0, 0.12, 0.58);
+    this.studyBook.rotation.x = 0.62;
+    this.studyBook.visible = false;
+    this.doll.add(this.studyBook);
+
     this.scanMaterial = new THREE.MeshBasicMaterial({ color: 0xffe0a3, transparent: true, opacity: 0.75 });
     this.scanRing = new THREE.Mesh(new THREE.TorusGeometry(0.92, 0.025, 8, 64), this.scanMaterial);
     this.scanRing.rotation.x = Math.PI / 2;
@@ -455,6 +531,8 @@ export class DollViewer {
       this.pointerDownX = event.clientX;
       this.pointerDownY = event.clientY;
       this.pointerDownTime = performance.now();
+      this.petStrokeCount = 0;
+      this.lastPetX = event.clientX;
       this.canvas.setPointerCapture(event.pointerId);
     });
     this.canvas.addEventListener("pointermove", (event) => {
@@ -463,6 +541,21 @@ export class DollViewer {
       this.targetRotation = this.userRotation;
       this.pointerX = event.clientX;
       this.lastInteraction = performance.now();
+
+      // Petting detection: horizontal strokes on upper head area
+      const rect = this.canvas.getBoundingClientRect();
+      const relY = (event.clientY - rect.top) / rect.height;
+      if (relY < 0.52) {
+        const strokeDx = Math.abs(event.clientX - this.lastPetX);
+        if (strokeDx > 12) {
+          this.petStrokeCount = (this.petStrokeCount || 0) + 1;
+          this.lastPetX = event.clientX;
+          if (this.petStrokeCount >= 3) {
+            this.petStrokeCount = 0;
+            this.pet();
+          }
+        }
+      }
     });
     const stop = (event) => {
       if (this.dragging) {
@@ -494,6 +587,17 @@ export class DollViewer {
     this.canvas.addEventListener("pointercancel", stop);
   }
 
+  pet() {
+    this.isPetting = true;
+    this.petEndTime = performance.now() + 1400;
+    this.triggerBounce();
+    this.onPet?.();
+  }
+
+  setSleeping(isSleeping) {
+    this.isSleeping = Boolean(isSleeping);
+  }
+
   triggerBounce() {
     this.bounceStartTime = performance.now();
   }
@@ -506,6 +610,9 @@ export class DollViewer {
 
   setTimerState(state) {
     this.timerState = state;
+    if (this.studyBook) {
+      this.studyBook.visible = state === "focusing";
+    }
     if (state === "completed") {
       this.celebrationStartTime = performance.now();
       this.triggerBounce();
@@ -727,19 +834,50 @@ export class DollViewer {
     const elapsed = this.clock.getElapsed();
     const now = performance.now();
 
-    // Procedural eye blinking (for default face)
+    // Procedural facial expressions: petting / joy, sleeping, blinking, or open
     if (!this.currentPhoto && this.faceContext && !this.reducedMotion) {
-      if (!this.isBlinking && now > this.nextBlinkTime) {
+      if (this.isPetting && now < this.petEndTime) {
+        if (this.lastFaceMode !== "joy") {
+          drawDollFace(this.faceContext, "joy");
+          this.defaultTexture.needsUpdate = true;
+          this.lastFaceMode = "joy";
+        }
+      } else if (this.isSleeping) {
+        if (this.lastFaceMode !== "sleep") {
+          drawDollFace(this.faceContext, "sleep");
+          this.defaultTexture.needsUpdate = true;
+          this.lastFaceMode = "sleep";
+        }
+      } else if (!this.isBlinking && now > this.nextBlinkTime) {
         this.isBlinking = true;
         this.blinkEndTime = now + 140;
-        drawDollFace(this.faceContext, true);
+        drawDollFace(this.faceContext, "closed");
         this.defaultTexture.needsUpdate = true;
+        this.lastFaceMode = "closed";
       } else if (this.isBlinking && now > this.blinkEndTime) {
         this.isBlinking = false;
         this.nextBlinkTime = now + 3200 + Math.random() * 3200;
-        drawDollFace(this.faceContext, false);
+        drawDollFace(this.faceContext, "open");
         this.defaultTexture.needsUpdate = true;
+        this.lastFaceMode = "open";
+      } else if (
+        this.lastFaceMode !== "open" &&
+        (!this.isPetting || now >= this.petEndTime) &&
+        !this.isSleeping &&
+        !this.isBlinking
+      ) {
+        this.isPetting = false;
+        drawDollFace(this.faceContext, "open");
+        this.defaultTexture.needsUpdate = true;
+        this.lastFaceMode = "open";
       }
+    }
+
+    // Petting gentle body wiggle
+    if (this.isPetting && now < this.petEndTime && !this.reducedMotion) {
+      this.doll.rotation.z = Math.sin(now * 0.015) * 0.06;
+    } else if (this.doll.rotation.z !== 0 && !this.spinStartTime) {
+      this.doll.rotation.z = 0;
     }
 
     if (!this.dragging && now - this.lastInteraction > 5000) {
