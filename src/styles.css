@@ -1068,6 +1068,109 @@ h1 {
   backdrop-filter: blur(10px);
 }
 
+.timer-mode-bar {
+  position: absolute;
+  bottom: 68px;
+  left: 18px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  transition: opacity 0.3s ease;
+}
+
+.timer-mode-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 4px;
+  border-radius: 20px;
+  background: rgba(13, 21, 32, 0.88);
+  border: 1px solid rgba(255, 224, 163, 0.22);
+  backdrop-filter: blur(10px);
+}
+
+.timer-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.timer-mode-pill:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.timer-mode-pill.active {
+  background: rgba(105, 200, 189, 0.2);
+  border-color: rgba(105, 200, 189, 0.45);
+  color: var(--teal);
+  font-weight: 600;
+}
+
+.cycle-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 5px;
+  border-radius: 10px;
+  background: rgba(105, 200, 189, 0.25);
+  color: var(--teal);
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.zen-mindfulness-tray {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px;
+  border-radius: 20px;
+  background: rgba(13, 21, 32, 0.88);
+  border: 1px solid rgba(255, 224, 163, 0.22);
+  backdrop-filter: blur(10px);
+}
+
+.zen-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--gold-soft);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.zen-tool-btn:hover {
+  background: rgba(255, 224, 163, 0.12);
+  border-color: rgba(255, 224, 163, 0.28);
+  transform: translateY(-1px);
+}
+
+.zen-tool-btn:active {
+  transform: scale(0.92);
+}
+
+.zen-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
 .timer {
   min-width: 76px;
   color: var(--gold-soft);
@@ -1078,7 +1181,7 @@ h1 {
 
 .ambient-bar {
   position: absolute;
-  bottom: 80px;
+  bottom: 116px;
   left: 18px;
   z-index: 8;
   display: flex;
@@ -1948,6 +2051,82 @@ h1 {
   transform: scale(1.2);
 }
 
+.hourly-distribution-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(17, 28, 43, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hourly-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hourly-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.peak-flow-badge {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: rgba(255, 224, 163, 0.15);
+  border: 1px solid rgba(255, 224, 163, 0.3);
+  color: var(--gold-soft);
+  font-weight: 500;
+}
+
+.hourly-chart-container {
+  width: 100%;
+  height: 54px;
+  position: relative;
+  background: rgba(10, 16, 26, 0.5);
+  border-radius: 4px;
+  padding: 4px 6px;
+  box-sizing: border-box;
+}
+
+.hourly-chart-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.hourly-bar {
+  fill: rgba(105, 200, 189, 0.4);
+  transition: all 0.2s ease;
+  rx: 1;
+}
+
+.hourly-bar:hover {
+  fill: rgba(105, 200, 189, 0.9);
+  cursor: pointer;
+}
+
+.hourly-bar.peak {
+  fill: var(--gold-soft);
+  filter: drop-shadow(0 0 4px rgba(255, 224, 163, 0.5));
+}
+
+.hourly-x-axis {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 4px;
+  font-size: 10px;
+  color: var(--faint);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
 .stats-export-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -2279,9 +2458,15 @@ input::placeholder {
     left: 12px;
     justify-content: space-between;
   }
+  .timer-mode-bar {
+    right: 12px;
+    bottom: 64px;
+    left: 12px;
+    justify-content: space-between;
+  }
   .ambient-bar {
     right: 12px;
-    bottom: 76px;
+    bottom: 112px;
     left: 12px;
     min-width: 0;
   }
@@ -2511,6 +2696,11 @@ body.zen-mode .focus-bar {
   transition: opacity 0.5s ease;
 }
 
+body.zen-mode .timer-mode-bar {
+  bottom: calc(6vh + 74px);
+  transition: opacity 0.5s ease;
+}
+
 body.zen-mode .timer {
   font-size: clamp(3.2rem, 7vw, 5.5rem);
   text-shadow: 0 0 25px rgba(246, 200, 81, 0.35);
@@ -2555,6 +2745,7 @@ body.zen-mode.zen-inactive * {
 }
 
 body.zen-mode.zen-inactive .exit-zen-btn,
+body.zen-mode.zen-inactive .timer-mode-bar,
 body.zen-mode.zen-inactive .focus-bar .icon-btn,
 body.zen-mode.zen-inactive .herbarium-btn {
   opacity: 0;
@@ -2930,6 +3121,86 @@ body.zen-mode.zen-inactive .herbarium-btn {
   100% {
     opacity: 0;
     transform: translate(calc(-50% + var(--drift-x, 0px)), -130px) scale(0.8);
+  }
+}
+
+/* Zen Sparks & Ripples */
+.zen-sparks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 16;
+}
+
+.zen-spark-bubble {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: rgba(18, 30, 48, 0.92);
+  border: 1px solid var(--gold-soft);
+  border-radius: 20px;
+  color: var(--gold-soft);
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(255, 224, 163, 0.3);
+  backdrop-filter: blur(8px);
+  animation: floatUpZenSpark 2.2s cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+}
+
+@keyframes floatUpZenSpark {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 15px) scale(0.7);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.05);
+  }
+  30% {
+    transform: translate(-50%, -10px) scale(1);
+  }
+  75% {
+    opacity: 0.9;
+    transform: translate(calc(-50% + var(--drift-x, 0px)), -50px) scale(0.95);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--drift-x, 0px)), -75px) scale(0.8);
+  }
+}
+
+.zen-ripple {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 224, 163, 0.6);
+  transform: translate(-50%, -50%) scale(0.2);
+  pointer-events: none;
+  animation: expandRipple 2.2s cubic-bezier(0.1, 0.7, 0.1, 1) forwards;
+}
+
+@keyframes expandRipple {
+  0% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(0.3);
+    border-color: rgba(255, 224, 163, 0.8);
+  }
+  50% {
+    opacity: 0.5;
+    border-color: rgba(105, 200, 189, 0.5);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(4.5);
+    border-color: rgba(105, 200, 189, 0);
   }
 }
 

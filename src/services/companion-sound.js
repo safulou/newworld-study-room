@@ -174,4 +174,80 @@ export class CompanionSoundManager {
       osc.stop(now + delay + dur + 0.05);
     });
   }
+
+  /**
+   * Play an authentic hollow wooden fish (木魚) temple strike
+   * Synthesizes rapid pitch drop and cavity resonance bandpass filtering.
+   */
+  playWoodenFish() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const dur = 0.16;
+
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(860, now);
+    osc.frequency.exponentialRampToValueAtTime(460, now + 0.028);
+    osc.frequency.exponentialRampToValueAtTime(320, now + dur);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(560, now);
+    filter.Q.setValueAtTime(4.2, now);
+
+    const gain = ctx.createGain();
+    const peakGain = 0.42 * this.volume;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(peakGain, now + 0.003);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + dur + 0.02);
+  }
+
+  /**
+   * Play a deep, resonant Tibetan Singing Bowl (西藏頌缽) meditative chime
+   * Multi-frequency harmonic beating with a 3.8s peaceful reverberation envelope.
+   */
+  playSingingBowl() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const dur = 3.8;
+
+    const partials = [
+      { freq: 216.0, gainMult: 0.32 },
+      { freq: 217.6, gainMult: 0.28 },
+      { freq: 594.0, gainMult: 0.14 },
+      { freq: 596.2, gainMult: 0.11 },
+      { freq: 1040.0, gainMult: 0.05 },
+      { freq: 1520.0, gainMult: 0.02 },
+    ];
+
+    partials.forEach(({ freq, gainMult }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now);
+
+      const peakGain = gainMult * this.volume;
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(peakGain, now + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + dur + 0.05);
+    });
+  }
 }

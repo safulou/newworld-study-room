@@ -108,4 +108,13 @@ describe("StudyStatsManager Service", () => {
     const firstSprout = badges.find((b) => b.id === "first_sprout");
     expect(firstSprout.unlocked).toBe(true);
   });
+
+  it("calculates 24-hour focus distribution and peak flow window", () => {
+    stats.recordSession({ durationMinutes: 50 });
+    const dist = stats.getHourlyDistribution();
+    expect(dist.hours.length).toBe(24);
+    expect(dist.totalMinutes).toBe(50);
+    expect(dist.peakHour).not.toBeNull();
+    expect(dist.peakMinutes).toBe(50);
+  });
 });

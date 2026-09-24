@@ -147,6 +147,37 @@ export class StudyStatsManager {
     return { startDate, endDate, totalMinutes, activeDays };
   }
 
+  getHourlyDistribution() {
+    const hours = new Array(24).fill(0);
+    for (const entry of this.history) {
+      if (entry.timestamp) {
+        const d = new Date(entry.timestamp);
+        const h = d.getHours();
+        if (h >= 0 && h < 24) {
+          hours[h] += entry.durationMinutes || 0;
+        }
+      }
+    }
+
+    let maxVal = 0;
+    let peakHour = null;
+    hours.forEach((mins, h) => {
+      if (mins > maxVal) {
+        maxVal = mins;
+        peakHour = h;
+      }
+    });
+
+    const totalMinutes = hours.reduce((a, b) => a + b, 0);
+
+    return {
+      hours,
+      peakHour,
+      peakMinutes: maxVal,
+      totalMinutes,
+    };
+  }
+
   exportMarkdownSummary(tasks = []) {
     const summary = this.getExecutiveSummary();
     const today = new Date().toISOString().split("T")[0];

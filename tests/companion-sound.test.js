@@ -34,5 +34,7 @@ describe("CompanionSoundManager", () => {
     expect(() => manager.playPettingPurr()).not.toThrow();
     expect(() => manager.playReactionChime("🔥")).not.toThrow();
     expect(() => manager.playReactionChime("💡")).not.toThrow();
+    expect(() => manager.playWoodenFish()).not.toThrow();
+    expect(() => manager.playSingingBowl()).not.toThrow();
   });
 });

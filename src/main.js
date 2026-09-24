@@ -141,6 +141,12 @@ const elements = {
   focusGarden: $("#focusGarden"),
   gardenStatus: $("#gardenStatus"),
   timer: $("#timer"),
+  timerModeBar: $("#timerModeBar"),
+  timerModePills: [...document.querySelectorAll(".timer-mode-pill")],
+  cycleCountBadge: $("#cycleCountBadge"),
+  btnWoodenFish: $("#btnWoodenFish"),
+  btnSingingBowl: $("#btnSingingBowl"),
+  zenSparks: $("#zenSparks"),
   toggleTimer: $("#toggleTimer"),
   resetTimer: $("#resetTimer"),
   toggleMusic: $("#toggleMusic"),
@@ -181,6 +187,9 @@ const elements = {
   heatmapNext: $("#heatmapNext"),
   heatmapThemeChips: [...document.querySelectorAll(".heatmap-theme-picker .theme-chip")],
   heatmapGrid: $("#heatmapGrid"),
+  hourlySection: $("#hourlySection"),
+  peakFlowBadge: $("#peakFlowBadge"),
+  hourlyChartSvg: $("#hourlyChartSvg"),
   copyMarkdownLog: $("#copyMarkdownLog"),
   exportBackupJson: $("#exportBackupJson"),
   photoInput: $("#photoInput"),
@@ -604,6 +613,7 @@ function renderStats() {
   elements.statCompletedSessions.textContent = String(summary.totalSessions);
   elements.statTotalHarvest.textContent = String(totalHarvest);
   renderHeatmap();
+  renderHourlyDistribution();
 }
 
 let heatmapOffsetDays = 0;
@@ -635,6 +645,39 @@ function renderHeatmap() {
     cell.title = `${day.date}：專注 ${day.minutes} 分鐘`;
     elements.heatmapGrid.append(cell);
   });
+}
+
+function renderHourlyDistribution() {
+  if (!elements.hourlyChartSvg) return;
+  const dist = studyStats.getHourlyDistribution();
+
+  if (dist.totalMinutes === 0 || dist.peakMinutes === 0) {
+    if (elements.peakFlowBadge) {
+      elements.peakFlowBadge.textContent = "尚無專注記錄";
+    }
+  } else if (elements.peakFlowBadge) {
+    const startHourStr = String(dist.peakHour).padStart(2, "0");
+    const endHourStr = String((dist.peakHour + 1) % 24).padStart(2, "0");
+    elements.peakFlowBadge.textContent = `心流高峰：${startHourStr}:00 - ${endHourStr}:00 (${dist.peakMinutes}分)`;
+  }
+
+  const maxVal = Math.max(...dist.hours, 1);
+  const chartHeight = 44;
+
+  const rects = dist.hours
+    .map((minutes, h) => {
+      const isPeak = dist.peakMinutes > 0 && h === dist.peakHour;
+      const barHeight = minutes > 0 ? Math.max(4, Math.round((minutes / maxVal) * chartHeight)) : 2;
+      const x = h * 10 + 1.5;
+      const y = 50 - barHeight;
+      const hourLabel = `${String(h).padStart(2, "0")}:00`;
+      const tooltip = `${hourLabel} - ${minutes} 分鐘專注`;
+      const cls = isPeak ? "hourly-bar peak" : "hourly-bar";
+      return `<rect class="${cls}" x="${x}" y="${y}" width="7" height="${barHeight}" rx="1.5"><title>${tooltip}</title></rect>`;
+    })
+    .join("");
+
+  elements.hourlyChartSvg.innerHTML = rects;
 }
 
 function updateNotificationUI(state = store.get()) {
@@ -928,6 +971,18 @@ function bindDollStyle() {
   });
 }
 
+function updateTimerModeUI(mode, cycleRound) {
+  elements.timerModePills?.forEach((pill) => {
+    const pillMode = pill.getAttribute("data-mode");
+    const isActive = pillMode === mode;
+    pill.classList.toggle("active", isActive);
+    pill.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+  if (elements.cycleCountBadge) {
+    elements.cycleCountBadge.textContent = `${cycleRound}/4`;
+  }
+}
+
 function bindTimer() {
   timer.addEventListener("tick", (event) => {
     const minutes = Math.floor(event.detail / 60)
@@ -944,13 +999,33 @@ function bindTimer() {
       totalSeconds: timer.minutes * 60,
     });
   });
+
+  timer.addEventListener("modechange", (event) => {
+    updateTimerModeUI(event.detail.mode, event.detail.cycleRound);
+  });
+
   timer.addEventListener("running", (event) => {
-    replaceButtonIcon(elements.toggleTimer, event.detail ? "pause" : "play", event.detail ? "暫停專注" : "開始專注");
-    elements.focusGarden.classList.toggle("growing", event.detail);
-    viewer?.setTimerState(event.detail ? "focusing" : "idle");
-    p2p?.sendStatus(event.detail ? "focusing" : "resting", store.get().nickname, store.get().plantType);
+    const isFocus = timer.mode === "focus";
+    const playTitle = isFocus ? "開始專注" : "開始休息";
+    const pauseTitle = isFocus ? "暫停專注" : "暫停休息";
+    replaceButtonIcon(elements.toggleTimer, event.detail ? "pause" : "play", event.detail ? pauseTitle : playTitle);
+
+    if (isFocus) {
+      elements.focusGarden.classList.toggle("growing", event.detail);
+      viewer?.setTimerState(event.detail ? "focusing" : "idle");
+      p2p?.sendStatus(event.detail ? "focusing" : "resting", store.get().nickname, store.get().plantType);
+    } else {
+      elements.focusGarden.classList.remove("growing");
+      viewer?.setTimerState(event.detail ? "resting" : "idle");
+      p2p?.sendStatus("resting", store.get().nickname, store.get().plantType);
+    }
+
     if (event.detail) {
-      showCompanionBubble("專注計時開始～我們一起加油！✨", 3000);
+      if (isFocus) {
+        showCompanionBubble("專注計時開始～我們一起加油！✨", 3000);
+      } else {
+        showCompanionBubble("休息時間開始，放鬆一下眼睛與肩膀～🍵", 3000);
+      }
       notificationManager.updateTitle({
         remaining: timer.remaining,
         isRunning: true,
@@ -964,36 +1039,73 @@ function bindTimer() {
       });
     }
   });
+
   timer.addEventListener("complete", () => {
-    viewer?.setTimerState("completed");
-    companionSound.playCelebrationFanfare();
-    showCompanionBubble("這輪專注完成了！起來活動一下筋骨，你超棒的 🎉", 5000);
-    showToast("這輪完成了，留一張 Tip 給同房夥伴吧。 ");
     notificationManager.updateTitle({ isCompleted: true });
 
-    const activeTasks = taskTracker.getActiveTasks();
-    let completedTaskId = null;
-    let taskTitle = "";
-    if (activeTasks.length > 0) {
-      completedTaskId = activeTasks[0].id;
-      taskTitle = activeTasks[0].title;
-      taskTracker.incrementPomodoro(completedTaskId);
-      renderTasks();
-    }
-    studyStats.recordSession({
-      durationMinutes: store.get().minutes,
-      plantHarvested: store.get().plantType,
-      taskId: completedTaskId,
-    });
-    renderStats();
+    if (timer.mode === "focus") {
+      viewer?.setTimerState("completed");
+      companionSound.playCelebrationFanfare();
 
-    if (store.get().desktopNotifications) {
-      notificationManager.notifyFocusComplete({
-        plantLabel: plantLabels[store.get().plantType],
-        taskTitle,
+      const activeTasks = taskTracker.getActiveTasks();
+      let completedTaskId = null;
+      let taskTitle = "";
+      if (activeTasks.length > 0) {
+        completedTaskId = activeTasks[0].id;
+        taskTitle = activeTasks[0].title;
+        taskTracker.incrementPomodoro(completedTaskId);
+        renderTasks();
+      }
+      studyStats.recordSession({
+        durationMinutes: timer.focusMinutes,
+        plantHarvested: store.get().plantType,
+        taskId: completedTaskId,
       });
+      renderStats();
+
+      if (store.get().desktopNotifications) {
+        notificationManager.notifyFocusComplete({
+          plantLabel: plantLabels[store.get().plantType],
+          taskTitle,
+        });
+      }
+
+      const nextMode = timer.advanceMode();
+      if (nextMode === "longBreak") {
+        showCompanionBubble(`太棒了！連續達成 4 輪番茄鐘！進入 ${timer.longBreakMinutes} 分鐘深度長休 🌴`, 7000);
+        showToast(`達成 4 輪番茄鐘！進入 ${timer.longBreakMinutes} 分鐘深度長休 🌴`);
+      } else {
+        showCompanionBubble(
+          `第 ${timer.cycleRound}/4 輪專注完成！進入 ${timer.shortBreakMinutes} 分鐘短休，喝口水吧 ☕`,
+          6000,
+        );
+        showToast(`專注完成！進入 ${timer.shortBreakMinutes} 分鐘短休 ☕`);
+      }
+    } else {
+      companionSound.playSingingBowl();
+      viewer?.setTimerState("idle");
+      timer.advanceMode();
+      showCompanionBubble(`休息結束囉！準備好開始第 ${timer.cycleRound}/4 輪專注了嗎？🎯`, 5000);
+      showToast(`休息結束，進入第 ${timer.cycleRound}/4 輪專注 🎯`);
     }
   });
+
+  elements.timerModePills?.forEach((pill) => {
+    pill.addEventListener("click", () => {
+      const mode = pill.getAttribute("data-mode");
+      if (mode && mode !== timer.mode) {
+        timer.setMode(mode);
+        if (mode === "focus") {
+          showCompanionBubble(`切換至專注模式（${timer.focusMinutes} 分鐘）🎯`, 2500);
+        } else if (mode === "shortBreak") {
+          showCompanionBubble(`切換至短休（${timer.shortBreakMinutes} 分鐘），喝杯水吧 ☕`, 2500);
+        } else if (mode === "longBreak") {
+          showCompanionBubble(`切換至深度長休（${timer.longBreakMinutes} 分鐘），伸展一下 🌴`, 2500);
+        }
+      }
+    });
+  });
+
   elements.toggleTimer.addEventListener("click", () => timer.toggle());
   elements.resetTimer.addEventListener("click", () => {
     timer.reset();
@@ -1576,6 +1688,39 @@ function bindZenMode() {
   });
 }
 
+function spawnZenSpark(text) {
+  if (!elements.zenSparks) return;
+  const bubble = document.createElement("div");
+  bubble.className = "zen-spark-bubble";
+  bubble.textContent = text;
+  const drift = (Math.random() - 0.5) * 40;
+  bubble.style.setProperty("--drift-x", `${drift}px`);
+  elements.zenSparks.append(bubble);
+  window.setTimeout(() => bubble.remove(), 2200);
+}
+
+function spawnZenRipple() {
+  if (!elements.zenSparks) return;
+  const ripple = document.createElement("div");
+  ripple.className = "zen-ripple";
+  elements.zenSparks.append(ripple);
+  window.setTimeout(() => ripple.remove(), 2200);
+}
+
+function bindZenTools() {
+  elements.btnWoodenFish?.addEventListener("click", () => {
+    companionSound.playWoodenFish();
+    spawnZenSpark("✨ 專注 +1");
+    viewer?.triggerBounce();
+  });
+
+  elements.btnSingingBowl?.addEventListener("click", () => {
+    companionSound.playSingingBowl();
+    spawnZenRipple();
+    spawnZenSpark("🧘 靜心凝神");
+  });
+}
+
 function renderHerbarium() {
   if (!elements.plantsView || !elements.badgesView) return;
   const plants = studyStats.getHerbarium();
@@ -1706,6 +1851,7 @@ function init() {
   bindAmbientSound();
   bindPresets();
   bindZenMode();
+  bindZenTools();
   bindHerbarium();
   bindIdleSleep();
   bindP2PCheer();
@@ -1721,6 +1867,7 @@ function init() {
     viewer?.triggerBounce();
     viewer?.onTap?.();
   });
+  updateTimerModeUI(timer.mode, timer.cycleRound);
   timer.emitTick();
   startViewer();
   restartP2P();

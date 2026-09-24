@@ -139,6 +139,7 @@
             </div>
             <div class="pet-hearts" id="petHearts" aria-hidden="true"></div>
             <div class="floating-reactions" id="floatingReactions" aria-hidden="true"></div>
+            <div class="zen-sparks" id="zenSparks" aria-hidden="true"></div>
             <div class="companion-bubble" id="companionBubble" aria-live="polite">
               <span class="bubble-text" id="bubbleText"></span>
             </div>
@@ -146,6 +147,31 @@
             <div class="avatar-fallback" id="avatarFallback" aria-hidden="true">
               <div class="fallback-head">•‿•</div>
               <div class="fallback-body"></div>
+            </div>
+          </div>
+
+          <div class="timer-mode-bar" id="timerModeBar">
+            <div class="timer-mode-pills" id="timerModePills" role="tablist" aria-label="番茄鐘模式">
+              <button class="timer-mode-pill active" type="button" data-mode="focus" role="tab" aria-selected="true">
+                <span>🎯 專注</span>
+                <span class="cycle-count" id="cycleCountBadge">1/4</span>
+              </button>
+              <button class="timer-mode-pill" type="button" data-mode="shortBreak" role="tab" aria-selected="false">
+                <span>☕ 短休 5m</span>
+              </button>
+              <button class="timer-mode-pill" type="button" data-mode="longBreak" role="tab" aria-selected="false">
+                <span>🌴 長休 15m</span>
+              </button>
+            </div>
+            <div class="zen-mindfulness-tray" id="zenMindfulnessTray" aria-label="禪意木魚與頌缽">
+              <button class="zen-tool-btn" id="btnWoodenFish" type="button" title="敲擊木魚（專注 +1）">
+                <span class="zen-icon">🪵</span>
+                <span>木魚</span>
+              </button>
+              <button class="zen-tool-btn" id="btnSingingBowl" type="button" title="敲擊西藏頌缽（心流平靜）">
+                <span class="zen-icon">🧘</span>
+                <span>頌缽</span>
+              </button>
             </div>
           </div>
 
@@ -452,6 +478,30 @@
               </div>
               <div class="heatmap-grid" id="heatmapGrid" aria-label="專注熱力圖"></div>
             </div>
+
+            <div class="hourly-distribution-section" id="hourlySection">
+              <div class="hourly-head">
+                <span class="hourly-title">24 小時心流時段分佈</span>
+                <span class="peak-flow-badge" id="peakFlowBadge">心流高峰：--</span>
+              </div>
+              <div class="hourly-chart-container" id="hourlyChartContainer">
+                <svg
+                  class="hourly-chart-svg"
+                  id="hourlyChartSvg"
+                  viewBox="0 0 240 54"
+                  preserveAspectRatio="none"
+                  aria-label="24小時專注時段分佈圖"
+                ></svg>
+              </div>
+              <div class="hourly-x-axis" aria-hidden="true">
+                <span>00h</span>
+                <span>06h</span>
+                <span>12h</span>
+                <span>18h</span>
+                <span>23h</span>
+              </div>
+            </div>
+
             <div class="stats-export-row">
               <button class="stats-action-btn" id="copyMarkdownLog" type="button" title="複製今日專注 Markdown 日誌">
                 <i data-lucide="clipboard-copy"></i>
