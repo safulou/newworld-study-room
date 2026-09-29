@@ -41,5 +41,9 @@ describe("CompanionSoundManager", () => {
     expect(() => manager.playCompletionChime("bowl")).not.toThrow();
     expect(() => manager.playCompletionChime("wooden_fish")).not.toThrow();
     expect(() => manager.playCompletionChime("wind_chime")).not.toThrow();
+    expect(() => manager.playBreathingCue("inhale")).not.toThrow();
+    expect(() => manager.playBreathingCue("hold")).not.toThrow();
+    expect(() => manager.playBreathingCue("exhale")).not.toThrow();
+    expect(() => manager.playBreathingCue("rest")).not.toThrow();
   });
 });

@@ -184,6 +184,15 @@
                 <span class="zen-icon">🧘</span>
                 <span>頌缽</span>
               </button>
+              <button
+                class="zen-tool-btn"
+                id="btnBreathingGuide"
+                type="button"
+                title="開啟深呼吸心流引導儀 (快捷鍵: 3)"
+              >
+                <span class="zen-icon">🌬️</span>
+                <span>呼吸</span>
+              </button>
             </div>
             <div class="category-picker" id="categoryPicker" role="radiogroup" aria-label="專注領域">
               <button class="category-chip active" type="button" data-category="dev" role="radio" aria-checked="true">
@@ -249,6 +258,14 @@
               <button class="preset-btn" type="button" data-preset="forest_breeze">🌲 林間微風</button>
               <button class="preset-btn" type="button" data-preset="deep_flow">🧘 深度心流</button>
               <button class="preset-btn" type="button" data-preset="study_library">📚 圖書館自習</button>
+            </div>
+            <div class="custom-presets-row" id="customPresetsRow">
+              <span class="custom-preset-label">自訂混音：</span>
+              <div class="custom-presets-list" id="customPresetsList"></div>
+              <button class="add-preset-btn" id="saveCustomPresetBtn" type="button" title="將當前音量設定存為新預設">
+                <i data-lucide="bookmark-plus"></i>
+                <span>存為預設</span>
+              </button>
             </div>
             <div class="ambient-chips">
               <button class="ambient-chip" type="button" data-sound="rain" aria-pressed="false">
@@ -546,6 +563,14 @@
               <div class="category-breakdown-list" id="categoryBreakdownList"></div>
             </div>
 
+            <div class="session-timeline-section" id="sessionTimelineSection">
+              <div class="session-timeline-head">
+                <span class="session-timeline-title">今日專注時序記錄</span>
+                <span class="session-timeline-count" id="sessionTimelineCount">0 次完成</span>
+              </div>
+              <div class="session-timeline-list" id="sessionTimelineList" aria-label="今日專注歷史列表"></div>
+            </div>
+
             <div class="stats-export-row">
               <button class="stats-action-btn" id="copyMarkdownLog" type="button" title="複製今日專注 Markdown 日誌">
                 <i data-lucide="clipboard-copy"></i>
@@ -738,6 +763,10 @@
             <kbd class="shortcut-kbd">2</kbd>
           </div>
           <div class="shortcut-row">
+            <span class="shortcut-desc">開啟深呼吸心流引導</span>
+            <kbd class="shortcut-kbd">3</kbd>
+          </div>
+          <div class="shortcut-row">
             <span class="shortcut-desc">跳轉至待辦任務清單</span>
             <kbd class="shortcut-kbd">T</kbd>
           </div>
@@ -753,6 +782,49 @@
             <span class="shortcut-desc">關閉彈窗 / 退出禪意</span>
             <kbd class="shortcut-kbd">Esc</kbd>
           </div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="breathing-modal" id="breathingModal">
+      <div class="breathing-dialog-card">
+        <div class="breathing-header">
+          <div class="breathing-title-group">
+            <h2>🌬️ 深呼吸心流引導儀</h2>
+            <span class="breathing-subtitle">調整呼吸節奏，平復身心雜念</span>
+          </div>
+          <button class="icon-btn subtle close-btn" id="closeBreathing" type="button" aria-label="關閉呼吸引導">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="breathing-modes" role="tablist" aria-label="呼吸模式選擇">
+          <button class="breathing-mode-pill active" id="modeBoxBreathing" type="button" data-mode="box">
+            <span>箱式呼吸 4-4-4-4</span>
+            <small>深度穩定</small>
+          </button>
+          <button class="breathing-mode-pill" id="modeRelaxBreathing" type="button" data-mode="relax">
+            <span>放鬆呼吸 4-7-8</span>
+            <small>平靜解壓</small>
+          </button>
+          <button class="breathing-mode-pill" id="modeAwakeBreathing" type="button" data-mode="awake">
+            <span>提神呼吸 4-2-4-2</span>
+            <small>思緒煥發</small>
+          </button>
+        </div>
+        <div class="breathing-visual-container">
+          <div class="breathing-halo-outer" id="breathingHaloOuter">
+            <div class="breathing-halo-inner" id="breathingHaloInner">
+              <span class="breathing-phase-text" id="breathingPhaseText">準備開始</span>
+              <span class="breathing-seconds-text" id="breathingSecondsText">--</span>
+            </div>
+          </div>
+        </div>
+        <div class="breathing-controls">
+          <button class="breathing-action-btn primary" id="btnToggleBreathing" type="button">
+            <i data-lucide="play" id="breathingPlayIcon"></i>
+            <span id="breathingPlayText">開始呼吸</span>
+          </button>
+          <span class="breathing-cycle-badge" id="breathingCycleBadge">已完成 0 循環</span>
         </div>
       </div>
     </dialog>

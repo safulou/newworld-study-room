@@ -4,6 +4,7 @@ import {
   Bell,
   BellOff,
   BellRing,
+  BookmarkPlus,
   BookOpen,
   Cat,
   CheckSquare,
@@ -68,6 +69,7 @@ const icons = {
   Bell,
   BellOff,
   BellRing,
+  BookmarkPlus,
   BookOpen,
   Cat,
   CheckSquare,
@@ -149,6 +151,7 @@ const elements = {
   pillLongBreakText: $("#pillLongBreakText"),
   btnWoodenFish: $("#btnWoodenFish"),
   btnSingingBowl: $("#btnSingingBowl"),
+  btnBreathingGuide: $("#btnBreathingGuide"),
   zenSparks: $("#zenSparks"),
   categoryPicker: $("#categoryPicker"),
   categoryChips: [...document.querySelectorAll(".category-chip")],
@@ -176,6 +179,9 @@ const elements = {
   ambientMixerCount: $("#ambientMixerCount"),
   ambientMixerTracks: $("#ambientMixerTracks"),
   presetButtons: [...document.querySelectorAll(".preset-btn")],
+  customPresetsRow: $("#customPresetsRow"),
+  customPresetsList: $("#customPresetsList"),
+  saveCustomPresetBtn: $("#saveCustomPresetBtn"),
   taskPanel: $("#taskPanel"),
   taskForm: $("#taskForm"),
   taskInput: $("#taskInput"),
@@ -201,6 +207,9 @@ const elements = {
   categorySection: $("#categorySection"),
   categoryLeadBadge: $("#categoryLeadBadge"),
   categoryBreakdownList: $("#categoryBreakdownList"),
+  sessionTimelineSection: $("#sessionTimelineSection"),
+  sessionTimelineCount: $("#sessionTimelineCount"),
+  sessionTimelineList: $("#sessionTimelineList"),
   copyMarkdownLog: $("#copyMarkdownLog"),
   exportBackupJson: $("#exportBackupJson"),
   photoInput: $("#photoInput"),
@@ -250,6 +259,19 @@ const elements = {
   tabBadges: $("#tabBadges"),
   plantsView: $("#plantsView"),
   badgesView: $("#badgesView"),
+  breathingModal: $("#breathingModal"),
+  closeBreathing: $("#closeBreathing"),
+  modeBoxBreathing: $("#modeBoxBreathing"),
+  modeRelaxBreathing: $("#modeRelaxBreathing"),
+  modeAwakeBreathing: $("#modeAwakeBreathing"),
+  breathingModePills: [...document.querySelectorAll(".breathing-mode-pill")],
+  breathingHaloOuter: $("#breathingHaloOuter"),
+  breathingPhaseText: $("#breathingPhaseText"),
+  breathingSecondsText: $("#breathingSecondsText"),
+  btnToggleBreathing: $("#btnToggleBreathing"),
+  breathingPlayIcon: $("#breathingPlayIcon"),
+  breathingPlayText: $("#breathingPlayText"),
+  breathingCycleBadge: $("#breathingCycleBadge"),
   sleepBubble: $("#sleepBubble"),
   petHearts: $("#petHearts"),
   lofiChip: $("#lofiChip"),
@@ -638,6 +660,7 @@ function renderStats() {
   renderHeatmap();
   renderHourlyDistribution();
   renderCategoryBreakdown();
+  renderSessionTimeline();
 }
 
 function renderCategoryBreakdown() {
@@ -670,6 +693,76 @@ function renderCategoryBreakdown() {
       `;
     })
     .join("");
+}
+
+function renderSessionTimeline() {
+  if (!elements.sessionTimelineList) return;
+  const todaySessions = studyStats.getTodaySessions();
+  if (elements.sessionTimelineCount) {
+    elements.sessionTimelineCount.textContent = `${todaySessions.length} 次完成`;
+  }
+  if (todaySessions.length === 0) {
+    elements.sessionTimelineList.innerHTML = `<div class="session-timeline-empty">今日尚無完成的番茄鐘記錄，開始專注來播種吧！🌱</div>`;
+    return;
+  }
+
+  const categoryConfigs = {
+    dev: { label: "開發", icon: "💻", bg: "rgba(56, 189, 248, 0.2)", color: "#38bdf8" },
+    read: { label: "閱讀", icon: "📚", bg: "rgba(52, 211, 153, 0.2)", color: "#34d399" },
+    write: { label: "寫作", icon: "✍️", bg: "rgba(251, 191, 36, 0.2)", color: "#fbbf24" },
+    design: { label: "設計", icon: "🎨", bg: "rgba(244, 114, 182, 0.2)", color: "#f472b6" },
+    review: { label: "複習", icon: "🧠", bg: "rgba(167, 139, 250, 0.2)", color: "#a78bfa" },
+  };
+
+  const plantEmojis = {
+    rose: "🌹",
+    sunflower: "🌻",
+    lavender: "🪻",
+    tulip: "🌷",
+    cactus: "🌵",
+    pine: "🌲",
+  };
+
+  elements.sessionTimelineList.innerHTML = "";
+  todaySessions.forEach((session) => {
+    const item = document.createElement("div");
+    item.className = "session-timeline-item";
+
+    const timeStr = session.timestamp ? new Date(session.timestamp).toTimeString().slice(0, 5) : "--:--";
+    const cat = categoryConfigs[session.category] || categoryConfigs.dev;
+    const plantEmoji = plantEmojis[session.plantHarvested] || "🌱";
+
+    item.innerHTML = `
+      <span class="timeline-time">${timeStr}</span>
+      <span class="timeline-category-badge" style="background: ${cat.bg}; color: ${cat.color};">
+        <span>${cat.icon}</span>
+        <span>${cat.label}</span>
+      </span>
+      <span class="timeline-task-title" title="${session.taskTitle || "自主專注"}">${session.taskTitle || "自主專注"}</span>
+      <span class="timeline-duration">${session.durationMinutes}m</span>
+      <span class="timeline-plant" title="收穫 ${session.plantHarvested || "植物"}">${plantEmoji}</span>
+    `;
+
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "timeline-del-btn";
+    delBtn.title = "刪除此筆專注記錄";
+    delBtn.setAttribute("aria-label", "刪除此筆記錄");
+    delBtn.innerHTML = "&times;";
+    delBtn.addEventListener("click", () => {
+      const removed = studyStats.deleteSession(session.id);
+      if (removed) {
+        renderStats();
+        if (elements.herbariumModal?.open) {
+          renderHerbarium();
+        }
+        showToast("已刪除該次專注記錄。");
+      }
+    });
+
+    item.append(delBtn);
+    elements.sessionTimelineList.append(item);
+  });
 }
 
 let heatmapOffsetDays = 0;
@@ -949,6 +1042,7 @@ function renderState(state) {
   }
   updateAtmosphere(state.ambientMode);
   updateNotificationUI(state);
+  renderCustomPresets();
 }
 
 function makeTip(text, by = store.get().nickname) {
@@ -1386,6 +1480,88 @@ function bindPresets() {
       renderAmbientMixer();
       showToast(`已套用「${preset.name}」音景預設。`);
     });
+  });
+}
+
+function renderCustomPresets() {
+  if (!elements.customPresetsList) return;
+  elements.customPresetsList.innerHTML = "";
+  const customPresets = store.get().customPresets || [];
+  customPresets.forEach((preset) => {
+    const chip = document.createElement("div");
+    chip.className = "custom-preset-chip";
+
+    const nameBtn = document.createElement("button");
+    nameBtn.type = "button";
+    nameBtn.style.background = "transparent";
+    nameBtn.style.border = "none";
+    nameBtn.style.color = "inherit";
+    nameBtn.style.cursor = "pointer";
+    nameBtn.style.padding = "0";
+    nameBtn.textContent = preset.name;
+    nameBtn.title = `套用「${preset.name}」混音`;
+
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "preset-del-btn";
+    delBtn.title = `刪除「${preset.name}」預設`;
+    delBtn.setAttribute("aria-label", `刪除預設 ${preset.name}`);
+    delBtn.innerHTML = "&times;";
+
+    nameBtn.addEventListener("click", () => {
+      ambientSound.applyTrackMix(preset.tracks);
+      elements.ambientChips.forEach((chipEl) => {
+        const sound = chipEl.dataset.sound;
+        if (sound === "lofi") return;
+        const isPlaying = sound in preset.tracks && preset.tracks[sound] > 0;
+        chipEl.classList.toggle("active", isPlaying);
+        chipEl.setAttribute("aria-pressed", String(isPlaying));
+      });
+      if ("rain" in preset.tracks && preset.tracks.rain > 0) {
+        startWindowRain();
+      } else {
+        stopWindowRain();
+      }
+      renderAmbientMixer();
+      showToast(`已套用自訂預設「${preset.name}」。`);
+    });
+
+    delBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const updated = (store.get().customPresets || []).filter((p) => p.id !== preset.id);
+      store.update({ customPresets: updated });
+      renderCustomPresets();
+      showToast(`已刪除「${preset.name}」自訂預設。`);
+    });
+
+    chip.append(nameBtn, delBtn);
+    elements.customPresetsList.append(chip);
+  });
+}
+
+function bindCustomPresets() {
+  elements.saveCustomPresetBtn?.addEventListener("click", () => {
+    const activeTracks = ambientSound.getActiveTracks();
+    if (activeTracks.length === 0) {
+      showToast("請先開啟至少一種白噪音軌道。");
+      return;
+    }
+    const count = (store.get().customPresets || []).length;
+    const defaultName = `心流混音 ${count + 1}`;
+    const inputName = window.prompt("請輸入自訂音景預設名稱：", defaultName);
+    if (!inputName) return;
+    const trimmed = inputName.trim().slice(0, 16);
+    if (!trimmed) return;
+    const currentMix = ambientSound.getCurrentTrackMix();
+    const newPreset = {
+      id: crypto.randomUUID(),
+      name: trimmed,
+      tracks: currentMix,
+    };
+    const currentPresets = store.get().customPresets || [];
+    store.update({ customPresets: [...currentPresets, newPreset] });
+    renderCustomPresets();
+    showToast(`已儲存「${trimmed}」自訂音景！⭐`);
   });
 }
 
@@ -1994,6 +2170,12 @@ function bindShortcuts() {
       return;
     }
 
+    if (e.key === "3") {
+      e.preventDefault();
+      elements.btnBreathingGuide?.click();
+      return;
+    }
+
     if (e.key === "t" || e.key === "T") {
       e.preventDefault();
       elements.taskPanel?.scrollIntoView({ behavior: "smooth" });
@@ -2039,6 +2221,147 @@ function bindZenTools() {
     companionSound.playSingingBowl();
     spawnZenRipple();
     spawnZenSpark("🧘 靜心凝神");
+  });
+
+  elements.btnBreathingGuide?.addEventListener("click", () => {
+    elements.breathingModal?.showModal();
+  });
+}
+
+const BREATHING_MODES = {
+  box: {
+    name: "箱式呼吸 4-4-4-4",
+    phases: [
+      { name: "吸氣 Inhale", cue: "inhale", seconds: 4, cls: "inhale" },
+      { name: "屏息 Hold", cue: "hold", seconds: 4, cls: "hold" },
+      { name: "呼氣 Exhale", cue: "exhale", seconds: 4, cls: "exhale" },
+      { name: "屏息 Rest", cue: "rest", seconds: 4, cls: "rest" },
+    ],
+  },
+  relax: {
+    name: "放鬆呼吸 4-7-8",
+    phases: [
+      { name: "吸氣 Inhale", cue: "inhale", seconds: 4, cls: "inhale" },
+      { name: "屏息 Hold", cue: "hold", seconds: 7, cls: "hold" },
+      { name: "呼氣 Exhale", cue: "exhale", seconds: 8, cls: "exhale" },
+    ],
+  },
+  awake: {
+    name: "提神呼吸 4-2-4-2",
+    phases: [
+      { name: "吸氣 Inhale", cue: "inhale", seconds: 4, cls: "inhale" },
+      { name: "屏息 Hold", cue: "hold", seconds: 2, cls: "hold" },
+      { name: "呼氣 Exhale", cue: "exhale", seconds: 4, cls: "exhale" },
+      { name: "屏息 Rest", cue: "rest", seconds: 2, cls: "rest" },
+    ],
+  },
+};
+
+const breathingState = {
+  running: false,
+  mode: "box",
+  phaseIndex: 0,
+  secondsRemaining: 4,
+  completedCycles: 0,
+  timerInterval: null,
+};
+
+function updateBreathingVisual() {
+  if (!elements.breathingHaloOuter) return;
+  const currentMode = BREATHING_MODES[breathingState.mode] || BREATHING_MODES.box;
+  const currentPhase = currentMode.phases[breathingState.phaseIndex];
+
+  if (!breathingState.running) {
+    elements.breathingHaloOuter.className = "breathing-halo-outer";
+    if (elements.breathingPhaseText) elements.breathingPhaseText.textContent = "準備開始";
+    if (elements.breathingSecondsText) elements.breathingSecondsText.textContent = "--";
+    if (elements.btnToggleBreathing) {
+      elements.btnToggleBreathing.classList.remove("active");
+      if (elements.breathingPlayText) elements.breathingPlayText.textContent = "開始呼吸";
+      replaceButtonIcon(elements.btnToggleBreathing, "play", "開始呼吸");
+    }
+    return;
+  }
+
+  elements.breathingHaloOuter.className = `breathing-halo-outer ${currentPhase.cls}`;
+  if (elements.breathingPhaseText) elements.breathingPhaseText.textContent = currentPhase.name;
+  if (elements.breathingSecondsText) elements.breathingSecondsText.textContent = `${breathingState.secondsRemaining}s`;
+
+  if (elements.btnToggleBreathing) {
+    elements.btnToggleBreathing.classList.add("active");
+    if (elements.breathingPlayText) elements.breathingPlayText.textContent = "暫停引導";
+    replaceButtonIcon(elements.btnToggleBreathing, "pause", "暫停引導");
+  }
+}
+
+function stopBreathingGuide() {
+  if (breathingState.timerInterval) {
+    clearInterval(breathingState.timerInterval);
+    breathingState.timerInterval = null;
+  }
+  breathingState.running = false;
+  updateBreathingVisual();
+}
+
+function startBreathingGuide() {
+  stopBreathingGuide();
+  breathingState.running = true;
+  const currentMode = BREATHING_MODES[breathingState.mode] || BREATHING_MODES.box;
+  const currentPhase = currentMode.phases[breathingState.phaseIndex];
+  breathingState.secondsRemaining = currentPhase.seconds;
+
+  companionSound.playBreathingCue(currentPhase.cue);
+  updateBreathingVisual();
+
+  breathingState.timerInterval = setInterval(() => {
+    breathingState.secondsRemaining--;
+    if (breathingState.secondsRemaining <= 0) {
+      const modeConfig = BREATHING_MODES[breathingState.mode] || BREATHING_MODES.box;
+      breathingState.phaseIndex = (breathingState.phaseIndex + 1) % modeConfig.phases.length;
+      if (breathingState.phaseIndex === 0) {
+        breathingState.completedCycles++;
+        if (elements.breathingCycleBadge) {
+          elements.breathingCycleBadge.textContent = `已完成 ${breathingState.completedCycles} 循環`;
+        }
+      }
+      const nextPhase = modeConfig.phases[breathingState.phaseIndex];
+      breathingState.secondsRemaining = nextPhase.seconds;
+      companionSound.playBreathingCue(nextPhase.cue);
+    }
+    updateBreathingVisual();
+  }, 1000);
+}
+
+function bindBreathingGuide() {
+  elements.closeBreathing?.addEventListener("click", () => {
+    stopBreathingGuide();
+    elements.breathingModal?.close();
+  });
+  elements.breathingModal?.addEventListener("click", (e) => {
+    const dialogCard = e.target.closest(".breathing-dialog-card");
+    if (!dialogCard && elements.breathingModal.open) {
+      stopBreathingGuide();
+      elements.breathingModal.close();
+    }
+  });
+
+  elements.breathingModePills?.forEach((pill) => {
+    pill.addEventListener("click", () => {
+      const mode = pill.dataset.mode;
+      if (!mode || !BREATHING_MODES[mode]) return;
+      breathingState.mode = mode;
+      breathingState.phaseIndex = 0;
+      elements.breathingModePills.forEach((p) => p.classList.toggle("active", p === pill));
+      stopBreathingGuide();
+    });
+  });
+
+  elements.btnToggleBreathing?.addEventListener("click", () => {
+    if (breathingState.running) {
+      stopBreathingGuide();
+    } else {
+      startBreathingGuide();
+    }
   });
 }
 
@@ -2174,8 +2497,11 @@ function init() {
   bindAmbientSound();
   renderAmbientMixer();
   bindPresets();
+  bindCustomPresets();
+  renderCustomPresets();
   bindZenMode();
   bindZenTools();
+  bindBreathingGuide();
   bindHerbarium();
   bindIdleSleep();
   bindP2PCheer();
@@ -2206,6 +2532,7 @@ function init() {
     ambientSound.stopAll();
     lofiGenerator.stop();
     stopWindowRain();
+    stopBreathingGuide();
   });
 }
 

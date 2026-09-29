@@ -43,6 +43,20 @@ export class StudyStatsManager {
     return entry;
   }
 
+  getTodaySessions(todayDate = new Date().toISOString().split("T")[0]) {
+    return this.history
+      .filter((h) => h.date === todayDate)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+
+  deleteSession(sessionId) {
+    const index = this.history.findIndex((h) => h.id === sessionId);
+    if (index === -1) return null;
+    const [removed] = this.history.splice(index, 1);
+    this.saveHistory();
+    return removed;
+  }
+
   getTotalMinutes() {
     return this.history.reduce((sum, h) => sum + (h.durationMinutes || 0), 0);
   }

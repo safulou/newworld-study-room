@@ -142,4 +142,20 @@ describe("StudyStatsManager Service", () => {
     expect(md).toContain("專注類別分佈");
     expect(md).toContain("開發: 75分 (75%)");
   });
+
+  it("retrieves and deletes today's focus session timeline items", () => {
+    const s1 = stats.recordSession({ durationMinutes: 25, category: "dev", plantHarvested: "rose" });
+    const s2 = stats.recordSession({ durationMinutes: 50, category: "write", plantHarvested: "tulip" });
+
+    const todaySessions = stats.getTodaySessions();
+    expect(todaySessions.length).toBe(2);
+    expect(todaySessions[0].id).toBe(s2.id); // Newest first
+
+    const deleted = stats.deleteSession(s1.id);
+    expect(deleted.id).toBe(s1.id);
+    expect(stats.getTodaySessions().length).toBe(1);
+    expect(stats.getTotalMinutes()).toBe(50);
+
+    expect(stats.deleteSession("non_existent_id")).toBeNull();
+  });
 });

@@ -113,4 +113,24 @@ describe("room-scoped store", () => {
     store.update({ focusCategory: "invalid_category" });
     expect(store.get().focusCategory).toBe("dev");
   });
+
+  it("validates and sanitizes customPresets", () => {
+    const store = createStore({ roomId: "room-a", includeStarterTips: false });
+    expect(store.get().customPresets).toEqual([]);
+
+    store.update({
+      customPresets: [
+        { id: "preset-1", name: "  深夜寫碼  ", tracks: { rain: 0.8, cafe: 1.5, fireplace: -0.2 } },
+        { id: "invalid-preset" }, // missing name or tracks
+      ],
+    });
+
+    const presets = store.get().customPresets;
+    expect(presets).toHaveLength(1);
+    expect(presets[0].id).toBe("preset-1");
+    expect(presets[0].name).toBe("深夜寫碼");
+    expect(presets[0].tracks.rain).toBe(0.8);
+    expect(presets[0].tracks.cafe).toBe(1); // clamped to 1
+    expect(presets[0].tracks.fireplace).toBe(0); // clamped to 0
+  });
 });

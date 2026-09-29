@@ -2341,6 +2341,121 @@ h1 {
   transition: width 0.3s ease;
 }
 
+/* Session Timeline Section */
+.session-timeline-section {
+  background: rgba(14, 25, 38, 0.5);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 12px;
+}
+
+.session-timeline-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.session-timeline-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.session-timeline-count {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(45, 212, 191, 0.12);
+  color: var(--teal);
+  font-weight: 600;
+}
+
+.session-timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.session-timeline-empty {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+  padding: 12px 0;
+}
+
+.session-timeline-item {
+  display: grid;
+  grid-template-columns: 46px 68px 1fr auto auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 12px;
+  transition: background 0.15s ease;
+}
+
+.session-timeline-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.timeline-time {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.timeline-category-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.timeline-task-title {
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px;
+}
+
+.timeline-duration {
+  font-size: 11px;
+  color: var(--gold-soft);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.timeline-plant {
+  font-size: 12px;
+}
+
+.timeline-del-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+
+.timeline-del-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+}
+
 .stats-export-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -3352,6 +3467,304 @@ body.zen-mode.zen-inactive .herbarium-btn {
   border: 1px solid rgba(255, 224, 163, 0.3);
   border-radius: 5px;
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Custom Presets Row */
+.custom-presets-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: rgba(14, 25, 38, 0.45);
+  border: 1px dashed rgba(88, 113, 138, 0.4);
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.custom-preset-label {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.custom-presets-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.custom-preset-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface-raised);
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.custom-preset-chip:hover {
+  border-color: var(--teal);
+  background: rgba(45, 212, 191, 0.1);
+}
+
+.custom-preset-chip.active {
+  border-color: var(--teal);
+  background: rgba(45, 212, 191, 0.2);
+  color: var(--teal);
+  font-weight: 600;
+}
+
+.preset-del-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.preset-del-btn:hover {
+  color: #f87171;
+}
+
+.add-preset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: 12px;
+  border: 1px dashed var(--gold-soft);
+  background: rgba(255, 224, 163, 0.08);
+  color: var(--gold-soft);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.add-preset-btn:hover {
+  background: rgba(255, 224, 163, 0.18);
+  transform: translateY(-1px);
+}
+
+/* Breathing Modal & Halo */
+.breathing-modal {
+  border: none;
+  background: transparent;
+  padding: 0;
+  max-width: 440px;
+  width: 90vw;
+  margin: auto;
+}
+
+.breathing-modal::backdrop {
+  background: rgba(4, 9, 16, 0.8);
+  backdrop-filter: blur(8px);
+}
+
+.breathing-dialog-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.breathing-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.breathing-title-group h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--teal);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breathing-subtitle {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+  display: block;
+}
+
+.breathing-modes {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+.breathing-mode-pill {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 6px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-raised);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.breathing-mode-pill span {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.breathing-mode-pill small {
+  font-size: 10px;
+  opacity: 0.75;
+  margin-top: 2px;
+}
+
+.breathing-mode-pill.active {
+  border-color: var(--teal);
+  background: rgba(45, 212, 191, 0.12);
+  color: var(--teal);
+}
+
+.breathing-visual-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 220px;
+  height: 220px;
+  margin: 12px 0 24px;
+  position: relative;
+}
+
+.breathing-halo-outer {
+  width: 190px;
+  height: 190px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(circle, rgba(45, 212, 191, 0.15) 0%, rgba(45, 212, 191, 0.03) 70%, transparent 100%);
+  border: 2px solid rgba(45, 212, 191, 0.35);
+  box-shadow: 0 0 35px rgba(45, 212, 191, 0.2);
+  transition:
+    transform 1s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 1s ease,
+    box-shadow 1s ease;
+  transform: scale(0.9);
+}
+
+.breathing-halo-outer.inhale {
+  transform: scale(1.32);
+  border-color: rgba(45, 212, 191, 0.85);
+  box-shadow: 0 0 50px rgba(45, 212, 191, 0.45);
+}
+
+.breathing-halo-outer.hold {
+  transform: scale(1.32);
+  border-color: rgba(255, 224, 163, 0.85);
+  box-shadow: 0 0 50px rgba(255, 224, 163, 0.45);
+}
+
+.breathing-halo-outer.exhale {
+  transform: scale(0.85);
+  border-color: rgba(96, 165, 250, 0.75);
+  box-shadow: 0 0 30px rgba(96, 165, 250, 0.35);
+}
+
+.breathing-halo-outer.rest {
+  transform: scale(0.85);
+  border-color: rgba(148, 163, 184, 0.4);
+  box-shadow: 0 0 20px rgba(148, 163, 184, 0.2);
+}
+
+.breathing-halo-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.breathing-phase-text {
+  font-size: 18px;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: 1px;
+}
+
+.breathing-seconds-text {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--teal);
+  font-weight: 600;
+}
+
+.breathing-controls {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.breathing-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 28px;
+  border-radius: 24px;
+  border: 1px solid var(--teal);
+  background: var(--teal);
+  color: #0b1320;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(45, 212, 191, 0.35);
+}
+
+.breathing-action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(45, 212, 191, 0.5);
+}
+
+.breathing-action-btn.active {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+  color: #fca5a5;
+  box-shadow: none;
+}
+
+.breathing-cycle-badge {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Peer Reaction Tray */

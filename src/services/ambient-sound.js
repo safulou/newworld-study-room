@@ -341,16 +341,32 @@ export class AmbientSoundscapeManager {
     return Array.from(this.nodes.keys());
   }
 
+  getCurrentTrackMix() {
+    const mix = {};
+    for (const name of this.getActiveTracks()) {
+      mix[name] = this.getTrackVolume(name);
+    }
+    return mix;
+  }
+
+  applyTrackMix(tracksObj) {
+    if (!tracksObj || typeof tracksObj !== "object") return [];
+    this.stopAll();
+    for (const [trackName, vol] of Object.entries(tracksObj)) {
+      const numVol = Number(vol);
+      if (Number.isFinite(numVol) && numVol > 0) {
+        this.trackVolumes[trackName] = Math.max(0, Math.min(1, numVol));
+        this.startTrack(trackName, this.trackVolumes[trackName]);
+      }
+    }
+    return this.getActiveTracks();
+  }
+
   applyPreset(presetId) {
     const preset = SOUNDSCAPE_PRESETS[presetId];
     if (!preset) return [];
 
-    this.stopAll();
-    for (const [trackName, vol] of Object.entries(preset.tracks)) {
-      this.trackVolumes[trackName] = vol;
-      this.startTrack(trackName, vol);
-    }
-    return this.getActiveTracks();
+    return this.applyTrackMix(preset.tracks);
   }
 
   stopAll() {

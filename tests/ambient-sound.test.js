@@ -57,4 +57,14 @@ describe("AmbientSoundscapeManager", () => {
     manager.setTrackVolume("campfire", -0.5);
     expect(manager.getTrackVolume("campfire")).toBe(0.0);
   });
+
+  it("applies and retrieves custom track mixes", () => {
+    const manager = new AmbientSoundscapeManager();
+    const mix = { rain: 0.65, campfire: 0.45 };
+    manager.applyTrackMix(mix);
+
+    expect(manager.getTrackVolume("rain")).toBe(0.65);
+    expect(manager.getTrackVolume("campfire")).toBe(0.45);
+    expect(manager.applyTrackMix(null)).toEqual([]);
+  });
 });

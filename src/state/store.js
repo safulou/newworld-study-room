@@ -55,6 +55,7 @@ const profileDefaults = {
   completionChime: "fanfare",
   syncWithHostTimer: false,
   focusCategory: "dev",
+  customPresets: [],
 };
 
 const roomDefaults = {
@@ -153,6 +154,20 @@ function sanitizeProfile(value = {}) {
     focusCategory: ["dev", "read", "write", "design", "review"].includes(value.focusCategory)
       ? value.focusCategory
       : profileDefaults.focusCategory,
+    customPresets: Array.isArray(value.customPresets)
+      ? value.customPresets
+          .filter((p) => p && typeof p.name === "string" && typeof p.tracks === "object" && p.tracks !== null)
+          .slice(0, 12)
+          .map((p) => ({
+            id: String(p.id || crypto.randomUUID()).slice(0, 64),
+            name: String(p.name).trim().slice(0, 16) || "自訂音景",
+            tracks: Object.fromEntries(
+              Object.entries(p.tracks)
+                .filter(([k, v]) => typeof k === "string" && Number.isFinite(Number(v)))
+                .map(([k, v]) => [k, Math.max(0, Math.min(1, Number(v)))]),
+            ),
+          }))
+      : [],
   };
 }
 

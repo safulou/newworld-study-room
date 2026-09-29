@@ -306,4 +306,70 @@ export class CompanionSoundManager {
         break;
     }
   }
+
+  /**
+   * Play procedural sound cue for mindful breathing phases
+   * @param {"inhale" | "hold" | "exhale" | "rest"} phase
+   */
+  playBreathingCue(phase = "inhale") {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+
+    if (phase === "inhale") {
+      // Gentle ascending swell
+      const dur = 1.0;
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.exponentialRampToValueAtTime(329.63, now + 0.8);
+      const peakGain = 0.16 * this.volume;
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(peakGain, now + 0.3);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + dur + 0.05);
+    } else if (phase === "hold") {
+      // Gentle calm bell / harmonic tone
+      const dur = 0.8;
+      osc.frequency.setValueAtTime(392.0, now); // G4
+      const peakGain = 0.14 * this.volume;
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(peakGain, now + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + dur + 0.05);
+    } else if (phase === "exhale") {
+      // Gentle descending release swell
+      const dur = 1.2;
+      osc.frequency.setValueAtTime(329.63, now);
+      osc.frequency.exponentialRampToValueAtTime(220, now + 0.9);
+      const peakGain = 0.15 * this.volume;
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(peakGain, now + 0.2);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + dur + 0.05);
+    } else {
+      // Rest phase
+      const dur = 0.7;
+      osc.frequency.setValueAtTime(196.0, now); // G3
+      const peakGain = 0.12 * this.volume;
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(peakGain, now + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + dur + 0.05);
+    }
+  }
 }
