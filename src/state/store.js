@@ -54,6 +54,7 @@ const profileDefaults = {
   longBreakMinutes: 15,
   completionChime: "fanfare",
   syncWithHostTimer: false,
+  focusCategory: "dev",
 };
 
 const roomDefaults = {
@@ -149,6 +150,9 @@ function sanitizeProfile(value = {}) {
       ? value.completionChime
       : profileDefaults.completionChime,
     syncWithHostTimer: Boolean(value.syncWithHostTimer),
+    focusCategory: ["dev", "read", "write", "design", "review"].includes(value.focusCategory)
+      ? value.focusCategory
+      : profileDefaults.focusCategory,
   };
 }
 

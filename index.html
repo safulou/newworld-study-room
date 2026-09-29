@@ -41,6 +41,15 @@
             <i data-lucide="maximize-2"></i>
           </button>
           <button
+            class="icon-btn subtle"
+            id="openShortcuts"
+            type="button"
+            aria-label="快捷鍵導覽"
+            title="快捷鍵導覽 (按 ?)"
+          >
+            <i data-lucide="keyboard"></i>
+          </button>
+          <button
             class="icon-btn share-room"
             id="shareRoom"
             type="button"
@@ -176,6 +185,23 @@
                 <span>頌缽</span>
               </button>
             </div>
+            <div class="category-picker" id="categoryPicker" role="radiogroup" aria-label="專注領域">
+              <button class="category-chip active" type="button" data-category="dev" role="radio" aria-checked="true">
+                <span>💻 開發</span>
+              </button>
+              <button class="category-chip" type="button" data-category="read" role="radio" aria-checked="false">
+                <span>📚 閱讀</span>
+              </button>
+              <button class="category-chip" type="button" data-category="write" role="radio" aria-checked="false">
+                <span>✍️ 寫作</span>
+              </button>
+              <button class="category-chip" type="button" data-category="design" role="radio" aria-checked="false">
+                <span>🎨 設計</span>
+              </button>
+              <button class="category-chip" type="button" data-category="review" role="radio" aria-checked="false">
+                <span>🧠 複習</span>
+              </button>
+            </div>
           </div>
 
           <div class="focus-bar">
@@ -261,6 +287,13 @@
                 <i data-lucide="zap"></i>
                 <span>Gamma波</span>
               </button>
+            </div>
+            <div class="ambient-mixer" id="ambientMixer" hidden>
+              <div class="ambient-mixer-head">
+                <span class="ambient-mixer-title">🎚️ 獨立軌道混音</span>
+                <span class="ambient-mixer-sub" id="ambientMixerCount">0 軌運行中</span>
+              </div>
+              <div class="ambient-mixer-tracks" id="ambientMixerTracks"></div>
             </div>
             <div class="ambient-volume-row">
               <span class="ambient-label">白噪音量</span>
@@ -505,6 +538,14 @@
               </div>
             </div>
 
+            <div class="category-distribution-section" id="categorySection">
+              <div class="category-head">
+                <span class="category-title">心流領域時數分佈</span>
+                <span class="category-lead-badge" id="categoryLeadBadge">主領域：💻 開發</span>
+              </div>
+              <div class="category-breakdown-list" id="categoryBreakdownList"></div>
+            </div>
+
             <div class="stats-export-row">
               <button class="stats-action-btn" id="copyMarkdownLog" type="button" title="複製今日專注 Markdown 日誌">
                 <i data-lucide="clipboard-copy"></i>
@@ -652,6 +693,66 @@
         <div class="herbarium-content" id="herbariumContent">
           <div class="herbarium-view plants-view" id="plantsView"></div>
           <div class="herbarium-view badges-view" id="badgesView" hidden></div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="shortcuts-modal" id="shortcutsModal">
+      <div class="shortcuts-dialog-card">
+        <div class="shortcuts-header">
+          <div class="shortcuts-title-group">
+            <h2>⌨️ 全域鍵盤快捷鍵</h2>
+            <span class="shortcuts-subtitle">極速掌控伴讀節奏與心流工具</span>
+          </div>
+          <button class="icon-btn subtle close-btn" id="closeShortcuts" type="button" aria-label="關閉快捷鍵導覽">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="shortcuts-list">
+          <div class="shortcut-row">
+            <span class="shortcut-desc">開始 / 暫停番茄鐘</span>
+            <kbd class="shortcut-kbd">Space</kbd>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">重設計時器</span>
+            <kbd class="shortcut-kbd">R</kbd>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">播放 / 暫停背景音樂</span>
+            <kbd class="shortcut-kbd">M</kbd>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">開關白噪音混音面板</span>
+            <kbd class="shortcut-kbd">A</kbd>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">切換極簡禪意模式</span>
+            <kbd class="shortcut-kbd">Z</kbd>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">敲擊禪意木魚</span>
+            <kbd class="shortcut-kbd">1</kbd>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">敲擊西藏頌缽</span>
+            <kbd class="shortcut-kbd">2</kbd>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">跳轉至待辦任務清單</span>
+            <kbd class="shortcut-kbd">T</kbd>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">跳轉至專注里程碑統計</span>
+            <kbd class="shortcut-kbd">S</kbd>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">打開 / 關閉快捷鍵導覽</span>
+            <kbd class="shortcut-kbd">?</kbd>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">關閉彈窗 / 退出禪意</span>
+            <kbd class="shortcut-kbd">Esc</kbd>
+          </div>
         </div>
       </div>
     </dialog>

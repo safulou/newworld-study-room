@@ -43,4 +43,18 @@ describe("AmbientSoundscapeManager", () => {
     manager.setMasterVolume(-0.2);
     expect(manager.masterVolume).toBe(0.0);
   });
+
+  it("manages individual track volumes with clamping and presets", () => {
+    const manager = new AmbientSoundscapeManager();
+    expect(manager.getTrackVolume("rain")).toBe(0.3);
+
+    manager.setTrackVolume("rain", 0.85);
+    expect(manager.getTrackVolume("rain")).toBe(0.85);
+
+    manager.setTrackVolume("wind", 1.5);
+    expect(manager.getTrackVolume("wind")).toBe(1.0);
+
+    manager.setTrackVolume("campfire", -0.5);
+    expect(manager.getTrackVolume("campfire")).toBe(0.0);
+  });
 });

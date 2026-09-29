@@ -102,4 +102,15 @@ describe("room-scoped store", () => {
     expect(store.get().longBreakMinutes).toBe(60);
     expect(store.get().completionChime).toBe("fanfare");
   });
+
+  it("validates and defaults focusCategory", () => {
+    const store = createStore({ roomId: "room-a", includeStarterTips: false });
+    expect(store.get().focusCategory).toBe("dev");
+
+    store.update({ focusCategory: "read" });
+    expect(store.get().focusCategory).toBe("read");
+
+    store.update({ focusCategory: "invalid_category" });
+    expect(store.get().focusCategory).toBe("dev");
+  });
 });

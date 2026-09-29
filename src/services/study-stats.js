@@ -27,7 +27,8 @@ export class StudyStatsManager {
     } catch {}
   }
 
-  recordSession({ durationMinutes = 25, plantHarvested = "rose", taskId = null }) {
+  recordSession({ durationMinutes = 25, plantHarvested = "rose", taskId = null, category = "dev" }) {
+    const validCategory = FOCUS_CATEGORIES[category] ? category : "dev";
     const entry = {
       id: "session_" + Date.now(),
       timestamp: new Date().toISOString(),
@@ -35,6 +36,7 @@ export class StudyStatsManager {
       durationMinutes,
       plantHarvested,
       taskId,
+      category: validCategory,
     };
     this.history.push(entry);
     this.saveHistory();
@@ -178,6 +180,48 @@ export class StudyStatsManager {
     };
   }
 
+  getCategoryBreakdown() {
+    const categoryMinutes = {};
+    for (const key of Object.keys(FOCUS_CATEGORIES)) {
+      categoryMinutes[key] = 0;
+    }
+
+    for (const entry of this.history) {
+      const cat = entry.category && FOCUS_CATEGORIES[entry.category] ? entry.category : "dev";
+      categoryMinutes[cat] = (categoryMinutes[cat] || 0) + (entry.durationMinutes || 0);
+    }
+
+    const totalMinutes = Object.values(categoryMinutes).reduce((sum, m) => sum + m, 0);
+
+    const categories = Object.entries(FOCUS_CATEGORIES).map(([id, meta]) => {
+      const minutes = categoryMinutes[id] || 0;
+      const percent = totalMinutes > 0 ? Math.round((minutes / totalMinutes) * 100) : 0;
+      return {
+        id,
+        label: meta.label,
+        icon: meta.icon,
+        color: meta.color,
+        minutes,
+        percent,
+      };
+    });
+
+    let topCategory = null;
+    let maxMinutes = -1;
+    for (const cat of categories) {
+      if (cat.minutes > maxMinutes && cat.minutes > 0) {
+        maxMinutes = cat.minutes;
+        topCategory = cat;
+      }
+    }
+
+    return {
+      categories,
+      totalMinutes,
+      topCategory,
+    };
+  }
+
   exportMarkdownSummary(tasks = []) {
     const summary = this.getExecutiveSummary();
     const today = new Date().toISOString().split("T")[0];
@@ -193,7 +237,19 @@ export class StudyStatsManager {
     const harvestStr = Object.entries(summary.harvestCounts)
       .map(([k, v]) => `${plantNames[k] || k} x${v}`)
       .join("、 ");
-    md += `- 🌱 收穫植物成果：${harvestStr || "尚未收穫"}\n\n`;
+    md += `- 🌱 收穫植物成果：${harvestStr || "尚未收穫"}\n`;
+
+    const breakdown = this.getCategoryBreakdown();
+    if (breakdown.totalMinutes > 0) {
+      const catStr = breakdown.categories
+        .filter((c) => c.minutes > 0)
+        .map((c) => `${c.icon} ${c.label}: ${c.minutes}分 (${c.percent}%)`)
+        .join("、 ");
+      if (catStr) {
+        md += `- 🏷️ 專注類別分佈：${catStr}\n`;
+      }
+    }
+    md += `\n`;
 
     if (tasks && tasks.length) {
       md += `### 📋 今日任務執行清單\n\n`;
@@ -326,5 +382,38 @@ export const PLANT_BOTANICAL_SPECIES = {
     icon: "🌲",
     flowerLanguage: "歲月深沈、經久不衰的自律品格",
     rarity: "rare",
+  },
+};
+
+export const FOCUS_CATEGORIES = {
+  dev: {
+    id: "dev",
+    label: "開發",
+    icon: "💻",
+    color: "#38bdf8",
+  },
+  read: {
+    id: "read",
+    label: "閱讀",
+    icon: "📚",
+    color: "#4ade80",
+  },
+  write: {
+    id: "write",
+    label: "寫作",
+    icon: "✍️",
+    color: "#fbbf24",
+  },
+  design: {
+    id: "design",
+    label: "設計",
+    icon: "🎨",
+    color: "#f472b6",
+  },
+  review: {
+    id: "review",
+    label: "複習",
+    icon: "🧠",
+    color: "#a78bfa",
   },
 };

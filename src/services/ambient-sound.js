@@ -50,6 +50,7 @@ export class AmbientSoundscapeManager {
     this.nodes = new Map();
     this.isMuted = false;
     this.masterVolume = 0.5;
+    this.trackVolumes = {};
   }
 
   ensureContext() {
@@ -90,8 +91,11 @@ export class AmbientSoundscapeManager {
     if (!ctx) return false;
     if (this.nodes.has(name)) return true;
 
+    const initialVolume = this.trackVolumes[name] !== undefined ? this.trackVolumes[name] : volume;
+    this.trackVolumes[name] = initialVolume;
+
     const trackGain = ctx.createGain();
-    trackGain.gain.setValueAtTime(volume, ctx.currentTime);
+    trackGain.gain.setValueAtTime(initialVolume, ctx.currentTime);
     trackGain.connect(this.masterGain);
 
     // Procedural Binaural Beat Synthesis (Alpha 10Hz or Gamma 40Hz)
@@ -301,11 +305,21 @@ export class AmbientSoundscapeManager {
   }
 
   setTrackVolume(name, volume) {
+    const clamped = Math.max(0, Math.min(1, volume));
+    this.trackVolumes[name] = clamped;
     const track = this.nodes.get(name);
-    if (!track || !this.audioCtx) return false;
-    track.volume = Math.max(0, Math.min(1, volume));
-    track.gain.gain.setValueAtTime(track.volume, this.audioCtx.currentTime);
+    if (!track || !this.audioCtx) return true;
+    track.volume = clamped;
+    track.gain.gain.setValueAtTime(clamped, this.audioCtx.currentTime);
     return true;
+  }
+
+  getTrackVolume(name) {
+    if (this.trackVolumes[name] !== undefined) {
+      return this.trackVolumes[name];
+    }
+    const track = this.nodes.get(name);
+    return track ? track.volume : 0.3;
   }
 
   setMasterVolume(volume) {
@@ -333,6 +347,7 @@ export class AmbientSoundscapeManager {
 
     this.stopAll();
     for (const [trackName, vol] of Object.entries(preset.tracks)) {
+      this.trackVolumes[trackName] = vol;
       this.startTrack(trackName, vol);
     }
     return this.getActiveTracks();

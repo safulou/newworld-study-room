@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { StudyStatsManager } from "../src/services/study-stats.js";
+import { StudyStatsManager, FOCUS_CATEGORIES } from "../src/services/study-stats.js";
 
 class MockStorage {
   constructor() {
@@ -116,5 +116,30 @@ describe("StudyStatsManager Service", () => {
     expect(dist.totalMinutes).toBe(50);
     expect(dist.peakHour).not.toBeNull();
     expect(dist.peakMinutes).toBe(50);
+  });
+
+  it("calculates focus category breakdown analytics and percentage share", () => {
+    expect(FOCUS_CATEGORIES.dev).toBeDefined();
+    expect(FOCUS_CATEGORIES.read).toBeDefined();
+
+    stats.recordSession({ durationMinutes: 50, category: "dev" });
+    stats.recordSession({ durationMinutes: 25, category: "read" });
+    stats.recordSession({ durationMinutes: 25, category: "dev" });
+
+    const breakdown = stats.getCategoryBreakdown();
+    expect(breakdown.totalMinutes).toBe(100);
+    expect(breakdown.topCategory.id).toBe("dev");
+
+    const devCat = breakdown.categories.find((c) => c.id === "dev");
+    expect(devCat.minutes).toBe(75);
+    expect(devCat.percent).toBe(75);
+
+    const readCat = breakdown.categories.find((c) => c.id === "read");
+    expect(readCat.minutes).toBe(25);
+    expect(readCat.percent).toBe(25);
+
+    const md = stats.exportMarkdownSummary();
+    expect(md).toContain("專注類別分佈");
+    expect(md).toContain("開發: 75分 (75%)");
   });
 });

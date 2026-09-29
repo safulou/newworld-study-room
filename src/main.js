@@ -150,6 +150,8 @@ const elements = {
   btnWoodenFish: $("#btnWoodenFish"),
   btnSingingBowl: $("#btnSingingBowl"),
   zenSparks: $("#zenSparks"),
+  categoryPicker: $("#categoryPicker"),
+  categoryChips: [...document.querySelectorAll(".category-chip")],
   toggleTimer: $("#toggleTimer"),
   resetTimer: $("#resetTimer"),
   toggleMusic: $("#toggleMusic"),
@@ -170,6 +172,9 @@ const elements = {
   ambientVolume: $("#ambientVolume"),
   ambientVolumeValue: $("#ambientVolumeValue"),
   ambientChips: [...document.querySelectorAll(".ambient-chip")],
+  ambientMixer: $("#ambientMixer"),
+  ambientMixerCount: $("#ambientMixerCount"),
+  ambientMixerTracks: $("#ambientMixerTracks"),
   presetButtons: [...document.querySelectorAll(".preset-btn")],
   taskPanel: $("#taskPanel"),
   taskForm: $("#taskForm"),
@@ -193,6 +198,9 @@ const elements = {
   hourlySection: $("#hourlySection"),
   peakFlowBadge: $("#peakFlowBadge"),
   hourlyChartSvg: $("#hourlyChartSvg"),
+  categorySection: $("#categorySection"),
+  categoryLeadBadge: $("#categoryLeadBadge"),
+  categoryBreakdownList: $("#categoryBreakdownList"),
   copyMarkdownLog: $("#copyMarkdownLog"),
   exportBackupJson: $("#exportBackupJson"),
   photoInput: $("#photoInput"),
@@ -232,6 +240,9 @@ const elements = {
   notificationBtnText: $("#notificationBtnText"),
   toggleZen: $("#toggleZen"),
   exitZenBtn: $("#exitZenBtn"),
+  openShortcuts: $("#openShortcuts"),
+  shortcutsModal: $("#shortcutsModal"),
+  closeShortcuts: $("#closeShortcuts"),
   openHerbarium: $("#openHerbarium"),
   herbariumModal: $("#herbariumModal"),
   closeHerbarium: $("#closeHerbarium"),
@@ -626,6 +637,39 @@ function renderStats() {
   elements.statTotalHarvest.textContent = String(totalHarvest);
   renderHeatmap();
   renderHourlyDistribution();
+  renderCategoryBreakdown();
+}
+
+function renderCategoryBreakdown() {
+  if (!elements.categoryBreakdownList) return;
+  const breakdown = studyStats.getCategoryBreakdown();
+
+  if (elements.categoryLeadBadge) {
+    if (breakdown.topCategory) {
+      elements.categoryLeadBadge.textContent = `主領域：${breakdown.topCategory.icon} ${breakdown.topCategory.label} (${breakdown.topCategory.percent}%)`;
+    } else {
+      elements.categoryLeadBadge.textContent = "尚無領域記錄";
+    }
+  }
+
+  elements.categoryBreakdownList.innerHTML = breakdown.categories
+    .map((cat) => {
+      return `
+        <div class="category-breakdown-row">
+          <div class="category-row-meta">
+            <span class="category-row-label">
+              <span>${cat.icon}</span>
+              <span>${cat.label}</span>
+            </span>
+            <span class="category-row-stats">${cat.minutes} 分鐘 · ${cat.percent}%</span>
+          </div>
+          <div class="category-bar-bg">
+            <div class="category-bar-fill" style="width: ${cat.percent}%; background: ${cat.color};"></div>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
 }
 
 let heatmapOffsetDays = 0;
@@ -865,6 +909,11 @@ function renderState(state) {
     const active = button.dataset.companionMode === state.companionMode;
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", String(active));
+  });
+  elements.categoryChips.forEach((chip) => {
+    const active = chip.dataset.category === (state.focusCategory || "dev");
+    chip.classList.toggle("active", active);
+    chip.setAttribute("aria-checked", String(active));
   });
   renderGeneration(state);
   renderTips(state.tips);
@@ -1110,6 +1159,7 @@ function bindTimer() {
         durationMinutes: timer.focusMinutes,
         plantHarvested: store.get().plantType,
         taskId: completedTaskId,
+        category: store.get().focusCategory || "dev",
       });
       renderStats();
 
@@ -1194,6 +1244,65 @@ function bindMusic() {
   });
 }
 
+function bindCategoryPicker() {
+  elements.categoryChips.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const cat = chip.dataset.category;
+      if (!cat) return;
+      store.update({ focusCategory: cat });
+    });
+  });
+}
+
+const TRACK_METAS = {
+  rain: { name: "雨聲", icon: "cloud-rain" },
+  wind: { name: "微風", icon: "wind" },
+  campfire: { name: "營火", icon: "flame" },
+  brown_noise: { name: "潮汐", icon: "waves" },
+  keyboard: { name: "機械鍵盤", icon: "keyboard" },
+  pencil: { name: "鉛筆書寫", icon: "pencil" },
+  binaural_alpha: { name: "Alpha波", icon: "sparkles" },
+  binaural_gamma: { name: "Gamma波", icon: "zap" },
+};
+
+function renderAmbientMixer() {
+  if (!elements.ambientMixer || !elements.ambientMixerTracks) return;
+  const activeTracks = ambientSound.getActiveTracks();
+  if (activeTracks.length === 0) {
+    elements.ambientMixer.hidden = true;
+    return;
+  }
+
+  elements.ambientMixer.hidden = false;
+  if (elements.ambientMixerCount) {
+    elements.ambientMixerCount.textContent = `${activeTracks.length} 軌運行中`;
+  }
+
+  const activeElement = document.activeElement;
+  const activeTrackAttr = activeElement?.closest?.(".ambient-mixer-track")?.dataset.track;
+
+  elements.ambientMixerTracks.innerHTML = activeTracks
+    .map((name) => {
+      const meta = TRACK_METAS[name] || { name, icon: "volume-2" };
+      const vol = Math.round(ambientSound.getTrackVolume(name) * 100);
+      return `
+        <div class="ambient-mixer-track" data-track="${name}">
+          <span class="mixer-track-name" title="${meta.name}">${meta.name}</span>
+          <input class="mixer-track-slider" type="range" min="0" max="100" step="1" value="${vol}" aria-label="${meta.name} 軌道音量" />
+          <span class="mixer-track-value">${vol}%</span>
+        </div>
+      `;
+    })
+    .join("");
+
+  if (activeTrackAttr) {
+    const restoredSlider = elements.ambientMixerTracks.querySelector(
+      `[data-track="${activeTrackAttr}"] .mixer-track-slider`,
+    );
+    restoredSlider?.focus();
+  }
+}
+
 function bindAmbientSound() {
   elements.toggleAmbient.addEventListener("click", () => {
     const isHidden = elements.ambientBar.hidden;
@@ -1223,7 +1332,20 @@ function bindAmbientSound() {
         chip.setAttribute("aria-pressed", "true");
         if (sound === "rain") startWindowRain();
       }
+      renderAmbientMixer();
     });
+  });
+
+  elements.ambientMixerTracks?.addEventListener("input", (e) => {
+    const slider = e.target.closest(".mixer-track-slider");
+    if (!slider) return;
+    const trackRow = slider.closest(".ambient-mixer-track");
+    const trackName = trackRow?.dataset.track;
+    if (!trackName) return;
+    const vol = Number(slider.value);
+    ambientSound.setTrackVolume(trackName, vol / 100);
+    const valueLabel = trackRow.querySelector(".mixer-track-value");
+    if (valueLabel) valueLabel.textContent = `${vol}%`;
   });
 
   const onKeyType = () => {
@@ -1261,6 +1383,7 @@ function bindPresets() {
       } else {
         stopWindowRain();
       }
+      renderAmbientMixer();
       showToast(`已套用「${preset.name}」音景預設。`);
     });
   });
@@ -1786,12 +1909,102 @@ function bindZenMode() {
       return;
     }
 
-    if (e.key === "z" || e.key === "Z") {
-      e.preventDefault();
-      toggleZen();
-    } else if (e.key === "Escape" && document.body.classList.contains("zen-mode")) {
+    if (e.key === "Escape" && document.body.classList.contains("zen-mode")) {
       e.preventDefault();
       exitZen();
+    }
+  });
+}
+
+function bindShortcuts() {
+  elements.openShortcuts?.addEventListener("click", () => {
+    elements.shortcutsModal?.showModal();
+  });
+  elements.closeShortcuts?.addEventListener("click", () => {
+    elements.shortcutsModal?.close();
+  });
+  elements.shortcutsModal?.addEventListener("click", (e) => {
+    const dialogCard = e.target.closest(".shortcuts-dialog-card");
+    if (!dialogCard && elements.shortcutsModal.open) {
+      elements.shortcutsModal.close();
+    }
+  });
+
+  window.addEventListener("keydown", (e) => {
+    const target = e.target;
+    const isEditing =
+      target &&
+      (target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT" ||
+        target.isContentEditable);
+    if (isEditing) return;
+
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+    if (e.key === "?") {
+      e.preventDefault();
+      if (elements.shortcutsModal?.open) {
+        elements.shortcutsModal.close();
+      } else {
+        elements.shortcutsModal?.showModal();
+      }
+      return;
+    }
+
+    if (e.key === " ") {
+      e.preventDefault();
+      elements.toggleTimer?.click();
+      return;
+    }
+
+    if (e.key === "r" || e.key === "R") {
+      e.preventDefault();
+      elements.resetTimer?.click();
+      return;
+    }
+
+    if (e.key === "m" || e.key === "M") {
+      e.preventDefault();
+      elements.toggleMusic?.click();
+      return;
+    }
+
+    if (e.key === "a" || e.key === "A") {
+      e.preventDefault();
+      elements.toggleAmbient?.click();
+      return;
+    }
+
+    if (e.key === "z" || e.key === "Z") {
+      e.preventDefault();
+      elements.toggleZen?.click();
+      return;
+    }
+
+    if (e.key === "1") {
+      e.preventDefault();
+      elements.btnWoodenFish?.click();
+      return;
+    }
+
+    if (e.key === "2") {
+      e.preventDefault();
+      elements.btnSingingBowl?.click();
+      return;
+    }
+
+    if (e.key === "t" || e.key === "T") {
+      e.preventDefault();
+      elements.taskPanel?.scrollIntoView({ behavior: "smooth" });
+      elements.taskInput?.focus();
+      return;
+    }
+
+    if (e.key === "s" || e.key === "S") {
+      e.preventDefault();
+      elements.statsPanel?.scrollIntoView({ behavior: "smooth" });
+      return;
     }
   });
 }
@@ -1956,7 +2169,10 @@ function init() {
   bindAtmosphere();
   bindTimer();
   bindMusic();
+  bindCategoryPicker();
+  bindShortcuts();
   bindAmbientSound();
+  renderAmbientMixer();
   bindPresets();
   bindZenMode();
   bindZenTools();
