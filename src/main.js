@@ -144,6 +144,9 @@ const elements = {
   timerModeBar: $("#timerModeBar"),
   timerModePills: [...document.querySelectorAll(".timer-mode-pill")],
   cycleCountBadge: $("#cycleCountBadge"),
+  timerSyncBadge: $("#timerSyncBadge"),
+  pillShortBreakText: $("#pillShortBreakText"),
+  pillLongBreakText: $("#pillLongBreakText"),
   btnWoodenFish: $("#btnWoodenFish"),
   btnSingingBowl: $("#btnSingingBowl"),
   zenSparks: $("#zenSparks"),
@@ -211,6 +214,11 @@ const elements = {
   roomName: $("#roomName"),
   nickname: $("#nickname"),
   minutes: $("#minutes"),
+  shortBreakMinutes: $("#shortBreakMinutes"),
+  longBreakMinutes: $("#longBreakMinutes"),
+  completionChime: $("#completionChime"),
+  syncWithHostTimer: $("#syncWithHostTimer"),
+  p2pSyncRow: $("#p2pSyncRow"),
   plantType: $("#plantType"),
   musicVolume: $("#musicVolume"),
   musicVolumeValue: $("#musicVolumeValue"),
@@ -243,6 +251,10 @@ const store = createStore({
   migrateLegacy: !initialHostId,
 });
 const timer = new FocusTimer(store.get().minutes);
+timer.setBreakDurations({
+  shortBreak: store.get().shortBreakMinutes || 5,
+  longBreak: store.get().longBreakMinutes || 15,
+});
 const music = new BackgroundMusic(store.get().musicVolume);
 const ambientSound = new AmbientSoundscapeManager();
 const lofiGenerator = new LofiGenerator();
@@ -806,6 +818,31 @@ function renderState(state) {
   if (document.activeElement !== elements.roomName) elements.roomName.value = state.roomName;
   if (document.activeElement !== elements.nickname) elements.nickname.value = state.nickname;
   if (document.activeElement !== elements.minutes) elements.minutes.value = state.minutes;
+  if (elements.shortBreakMinutes && document.activeElement !== elements.shortBreakMinutes) {
+    elements.shortBreakMinutes.value = state.shortBreakMinutes;
+  }
+  if (elements.longBreakMinutes && document.activeElement !== elements.longBreakMinutes) {
+    elements.longBreakMinutes.value = state.longBreakMinutes;
+  }
+  if (elements.completionChime && document.activeElement !== elements.completionChime) {
+    elements.completionChime.value = state.completionChime;
+  }
+  if (elements.syncWithHostTimer && document.activeElement !== elements.syncWithHostTimer) {
+    elements.syncWithHostTimer.checked = Boolean(state.syncWithHostTimer);
+  }
+  if (elements.pillShortBreakText) {
+    elements.pillShortBreakText.textContent = `☕ 短休 ${state.shortBreakMinutes}m`;
+  }
+  if (elements.pillLongBreakText) {
+    elements.pillLongBreakText.textContent = `🌴 長休 ${state.longBreakMinutes}m`;
+  }
+  const isGuest = p2p?.role === "guest";
+  if (elements.p2pSyncRow) {
+    elements.p2pSyncRow.hidden = !isGuest;
+  }
+  if (elements.timerSyncBadge) {
+    elements.timerSyncBadge.hidden = !isGuest || !state.syncWithHostTimer;
+  }
   if (document.activeElement !== elements.plantType) elements.plantType.value = state.plantType;
   if (document.activeElement !== elements.musicVolume) elements.musicVolume.value = state.musicVolume;
   elements.musicVolumeValue.value = `${state.musicVolume}%`;
@@ -983,6 +1020,17 @@ function updateTimerModeUI(mode, cycleRound) {
   }
 }
 
+function broadcastTimerSyncIfHost() {
+  if (p2p && p2p.role === "host") {
+    p2p.sendTimerSync({
+      mode: timer.mode,
+      remaining: timer.remaining,
+      isRunning: Boolean(timer.interval),
+      cycleRound: timer.cycleRound,
+    });
+  }
+}
+
 function bindTimer() {
   timer.addEventListener("tick", (event) => {
     const minutes = Math.floor(event.detail / 60)
@@ -1002,6 +1050,7 @@ function bindTimer() {
 
   timer.addEventListener("modechange", (event) => {
     updateTimerModeUI(event.detail.mode, event.detail.cycleRound);
+    broadcastTimerSyncIfHost();
   });
 
   timer.addEventListener("running", (event) => {
@@ -1009,6 +1058,7 @@ function bindTimer() {
     const playTitle = isFocus ? "開始專注" : "開始休息";
     const pauseTitle = isFocus ? "暫停專注" : "暫停休息";
     replaceButtonIcon(elements.toggleTimer, event.detail ? "pause" : "play", event.detail ? pauseTitle : playTitle);
+    broadcastTimerSyncIfHost();
 
     if (isFocus) {
       elements.focusGarden.classList.toggle("growing", event.detail);
@@ -1045,7 +1095,7 @@ function bindTimer() {
 
     if (timer.mode === "focus") {
       viewer?.setTimerState("completed");
-      companionSound.playCelebrationFanfare();
+      companionSound.playCompletionChime(store.get().completionChime || "fanfare");
 
       const activeTasks = taskTracker.getActiveTasks();
       let completedTaskId = null;
@@ -1071,6 +1121,7 @@ function bindTimer() {
       }
 
       const nextMode = timer.advanceMode();
+      broadcastTimerSyncIfHost();
       if (nextMode === "longBreak") {
         showCompanionBubble(`太棒了！連續達成 4 輪番茄鐘！進入 ${timer.longBreakMinutes} 分鐘深度長休 🌴`, 7000);
         showToast(`達成 4 輪番茄鐘！進入 ${timer.longBreakMinutes} 分鐘深度長休 🌴`);
@@ -1085,6 +1136,7 @@ function bindTimer() {
       companionSound.playSingingBowl();
       viewer?.setTimerState("idle");
       timer.advanceMode();
+      broadcastTimerSyncIfHost();
       showCompanionBubble(`休息結束囉！準備好開始第 ${timer.cycleRound}/4 輪專注了嗎？🎯`, 5000);
       showToast(`休息結束，進入第 ${timer.cycleRound}/4 輪專注 🎯`);
     }
@@ -1111,6 +1163,7 @@ function bindTimer() {
     timer.reset();
     viewer?.setTimerState("idle");
     notificationManager.updateTitle({ remaining: null, isRunning: false });
+    broadcastTimerSyncIfHost();
   });
 }
 
@@ -1414,6 +1467,44 @@ function bindSettings() {
     store.update({ minutes });
     timer.setMinutes(minutes);
   });
+  elements.shortBreakMinutes?.addEventListener("change", () => {
+    const shortBreakMinutes = Math.max(1, Math.min(30, Number(elements.shortBreakMinutes.value) || 5));
+    store.update({ shortBreakMinutes });
+    timer.setBreakDurations({
+      shortBreak: shortBreakMinutes,
+      longBreak: store.get().longBreakMinutes || 15,
+    });
+    showToast(`短休時間已設定為 ${shortBreakMinutes} 分鐘。`);
+  });
+  elements.longBreakMinutes?.addEventListener("change", () => {
+    const longBreakMinutes = Math.max(5, Math.min(60, Number(elements.longBreakMinutes.value) || 15));
+    store.update({ longBreakMinutes });
+    timer.setBreakDurations({
+      shortBreak: store.get().shortBreakMinutes || 5,
+      longBreak: longBreakMinutes,
+    });
+    showToast(`長休時間已設定為 ${longBreakMinutes} 分鐘。`);
+  });
+  elements.completionChime?.addEventListener("change", () => {
+    const completionChime = elements.completionChime.value;
+    store.update({ completionChime });
+    companionSound.playCompletionChime(completionChime);
+    const chimeNames = {
+      fanfare: "歡慶號角",
+      bowl: "西藏頌缽",
+      wooden_fish: "禪意木魚",
+      wind_chime: "微風風鈴",
+    };
+    showToast(`完賽鈴聲已切換為「${chimeNames[completionChime] || completionChime}」（試聽播放中）`);
+  });
+  elements.syncWithHostTimer?.addEventListener("change", () => {
+    const syncWithHostTimer = elements.syncWithHostTimer.checked;
+    store.update({ syncWithHostTimer });
+    if (elements.timerSyncBadge) {
+      elements.timerSyncBadge.hidden = !syncWithHostTimer || p2p?.role !== "guest";
+    }
+    showToast(syncWithHostTimer ? "已開啟「跟隨房主番茄鐘倒數」同步" : "已關閉房主番茄鐘同步");
+  });
   elements.plantType.addEventListener("change", () => {
     lastGardenStage = "";
     store.update({ plantType: elements.plantType.value });
@@ -1537,7 +1628,24 @@ async function startP2P() {
   });
   p2p.addEventListener("security-event", (event) => showToast(event.detail));
   p2p.addEventListener("network-error", (event) => showToast(event.detail));
+  p2p.addEventListener("timer-sync", (event) => {
+    if (store.get().syncWithHostTimer && p2p.role === "guest") {
+      timer.syncState(event.detail);
+      updateTimerModeUI(event.detail.mode, event.detail.cycleRound);
+    }
+  });
+  p2p.addEventListener("presence", () => {
+    if (p2p.role === "host") {
+      broadcastTimerSyncIfHost();
+    }
+  });
   await p2p.start();
+  const isGuest = p2p.role === "guest";
+  if (elements.p2pSyncRow) elements.p2pSyncRow.hidden = !isGuest;
+  if (elements.timerSyncBadge) elements.timerSyncBadge.hidden = !isGuest || !store.get().syncWithHostTimer;
+  if (!isGuest) {
+    broadcastTimerSyncIfHost();
+  }
   p2p.restoreOutbox(store.getPendingTips());
 }
 

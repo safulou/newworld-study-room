@@ -250,4 +250,60 @@ export class CompanionSoundManager {
       osc.stop(now + dur + 0.05);
     });
   }
+
+  /**
+   * Play procedural celestial breeze wind chimes
+   */
+  playWindChime() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const chimePitches = [1318.51, 1567.98, 1760.0, 2093.0, 2637.02]; // E6, G6, A6, C7, E7
+    const delays = [0, 0.08, 0.19, 0.29, 0.42];
+
+    chimePitches.forEach((freq, idx) => {
+      const start = now + delays[idx];
+      const dur = 2.4;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, start);
+
+      const peakGain = 0.11 * this.volume;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(peakGain, start + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(start);
+      osc.stop(start + dur + 0.05);
+    });
+  }
+
+  /**
+   * Play chosen focus completion bell/chime
+   */
+  playCompletionChime(type = "fanfare") {
+    switch (type) {
+      case "bowl":
+        this.playSingingBowl();
+        break;
+      case "wooden_fish":
+        this.playWoodenFish();
+        setTimeout(() => this.playWoodenFish(), 180);
+        setTimeout(() => this.playWoodenFish(), 360);
+        break;
+      case "wind_chime":
+        this.playWindChime();
+        break;
+      case "fanfare":
+      default:
+        this.playCelebrationFanfare();
+        break;
+    }
+  }
 }

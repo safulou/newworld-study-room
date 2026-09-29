@@ -94,5 +94,25 @@ describe("FocusTimer Service", () => {
     });
     timer.emitTick();
     expect(tickedRemaining).toBe(5 * 60);
+
+    let modechangeFired = false;
+    timer.addEventListener("modechange", () => {
+      modechangeFired = true;
+    });
+    timer.setMode("focus");
+    expect(modechangeFired).toBe(true);
+  });
+
+  it("synchronizes timer state from external sync payload", () => {
+    timer.syncState({
+      mode: "shortBreak",
+      remaining: 250,
+      isRunning: false,
+      cycleRound: 3,
+    });
+    expect(timer.mode).toBe("shortBreak");
+    expect(timer.remaining).toBe(250);
+    expect(timer.cycleRound).toBe(3);
+    expect(timer.interval).toBeNull();
   });
 });

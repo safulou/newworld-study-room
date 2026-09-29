@@ -73,4 +73,33 @@ describe("room-scoped store", () => {
     expect(store.get().generation).toBe("error");
     write.mockRestore();
   });
+
+  it("validates and defaults pomodoro break durations and chime preferences", () => {
+    const store = createStore({ roomId: "room-a", includeStarterTips: false });
+    expect(store.get().shortBreakMinutes).toBe(5);
+    expect(store.get().longBreakMinutes).toBe(15);
+    expect(store.get().completionChime).toBe("fanfare");
+    expect(store.get().syncWithHostTimer).toBe(false);
+
+    store.update({
+      shortBreakMinutes: 10,
+      longBreakMinutes: 30,
+      completionChime: "wind_chime",
+      syncWithHostTimer: true,
+    });
+    expect(store.get().shortBreakMinutes).toBe(10);
+    expect(store.get().longBreakMinutes).toBe(30);
+    expect(store.get().completionChime).toBe("wind_chime");
+    expect(store.get().syncWithHostTimer).toBe(true);
+
+    // Clamping bounds
+    store.update({
+      shortBreakMinutes: -5,
+      longBreakMinutes: 200,
+      completionChime: "unknown_chime",
+    });
+    expect(store.get().shortBreakMinutes).toBe(1);
+    expect(store.get().longBreakMinutes).toBe(60);
+    expect(store.get().completionChime).toBe("fanfare");
+  });
 });

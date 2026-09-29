@@ -11,13 +11,13 @@ A cozy online study cabin with a photo-textured 3D companion, a focus timer, and
 - Four-phase day/night atmospheric cabin lighting (auto, day, dusk, night) with procedural window raindrop canvas animations.
 - Multi-track procedural ambient soundscapes (rain, wind, campfire, tidal brown noise, 10Hz Alpha & 40Hz Gamma binaural beats) with one-click atmosphere presets and master volume control, synthesized via Web Audio API.
 - Integrated daily task checklist and focus analytics milestone panel with customizable target Pomodoro goals, progress steppers, HTML5 drag-and-drop & keyboard reordering, 28-day study heatmap with history navigation and 4 theme palettes (Emerald, Amber, Cyber, Ocean), streak tracking, 24-hour hourly flow distribution chart with peak-window detection, plant harvest counts, and Markdown/JSON export.
-- Real WebRTC DataChannel Tip delivery, live co-focusing status broadcast, celebration cheers, and quick emoji reactions (💡, 🔥, ☕, ✨, 💯) with animated floating bubbles and harmonic chimes through PeerJS.
+- Real WebRTC DataChannel Tip delivery, live co-focusing status broadcast, synchronized host-timer flow broadcast (`🔗 房主同步`), celebration cheers, and quick emoji reactions (💡, 🔥, ☕, ✨, 💯) with animated floating bubbles and harmonic chimes through PeerJS.
 - Offline-ready Progressive Web App (PWA) with Service Worker caching and app manifest.
 - Local photo validation, center cropping, compression, and persistent texture preview.
 - Token-protected invitation links, room snapshots, an eight-member limit, presence, reconnect handling, and Tip rate limits.
 - Room-scoped history plus a persistent Tip outbox with acknowledgements and automatic retry.
 - A shooting star carries each newly received peer Tip to the unread indicator in the sky.
-- Drift-resistant focus timer with complete 4-round Pomodoro workflow (Focus, 5m Short Break, 15m Long Break), round tracking badge (`1/4 🍅`), dynamic browser tab title countdown, and background Web Notifications for focus completion and incoming Tips.
+- Drift-resistant focus timer with complete 4-round Pomodoro workflow (Focus, configurable Short Break 1~~30m, Long Break 5~~60m), customizable completion chime (Fanfare, Tibetan Singing Bowl, Zen Wooden Fish, Celestial Wind Chimes), round tracking badge (`1/4 🍅`), dynamic browser tab title countdown, and background Web Notifications for focus completion and incoming Tips.
 - Fullscreen Zen ambient mode (`Z` shortcut or topbar toggle) with auto-hiding controls, enlarged glowing timer display, and interactive mindfulness tool tray featuring authentic procedurally synthesized Tibetan singing bowl and temple wooden fish strikes with floating sparks and ripple effects.
 - Generative procedural Lo-Fi jazz chord progressions synthesized in real time via Web Audio API with vintage lowpass filter and tape flutter LFO.
 - Petting & doll mood interaction system: stroke/pet the doll head to trigger joyful squinting expressions, blushing cheeks, gentle body wiggles, purring chimes, floating hearts, procedural 3D study book, and idle sleep `Zzz` bubble.

@@ -22,4 +22,38 @@ describe("P2P protocol validation", () => {
     expect(p2pInternals.REACTION_EMOJIS).toContain("☕");
     expect(p2pInternals.REACTION_EMOJIS.length).toBeGreaterThanOrEqual(5);
   });
+
+  it("validates timer-sync broadcast payload", () => {
+    expect(
+      p2pInternals.isTimerSync({
+        type: "timer-sync",
+        mode: "focus",
+        remaining: 1200,
+        isRunning: true,
+        cycleRound: 2,
+      }),
+    ).toBe(true);
+
+    // Invalid mode
+    expect(
+      p2pInternals.isTimerSync({
+        type: "timer-sync",
+        mode: "party",
+        remaining: 1200,
+        isRunning: true,
+        cycleRound: 2,
+      }),
+    ).toBe(false);
+
+    // Invalid cycleRound
+    expect(
+      p2pInternals.isTimerSync({
+        type: "timer-sync",
+        mode: "shortBreak",
+        remaining: 300,
+        isRunning: false,
+        cycleRound: 5,
+      }),
+    ).toBe(false);
+  });
 });

@@ -36,5 +36,10 @@ describe("CompanionSoundManager", () => {
     expect(() => manager.playReactionChime("💡")).not.toThrow();
     expect(() => manager.playWoodenFish()).not.toThrow();
     expect(() => manager.playSingingBowl()).not.toThrow();
+    expect(() => manager.playWindChime()).not.toThrow();
+    expect(() => manager.playCompletionChime("fanfare")).not.toThrow();
+    expect(() => manager.playCompletionChime("bowl")).not.toThrow();
+    expect(() => manager.playCompletionChime("wooden_fish")).not.toThrow();
+    expect(() => manager.playCompletionChime("wind_chime")).not.toThrow();
   });
 });

@@ -45,16 +45,48 @@ export class FocusTimer extends EventTarget {
     }
 
     this.reset();
-    this.dispatchEvent(
-      new CustomEvent("mode-change", {
-        detail: {
-          mode: this.mode,
-          minutes: this.minutes,
-          cycleRound: this.cycleRound,
-          completedRounds: this.completedRounds,
-        },
-      }),
-    );
+    this.emitModeChange();
+  }
+
+  emitModeChange() {
+    const detail = {
+      mode: this.mode,
+      minutes: this.minutes,
+      cycleRound: this.cycleRound,
+      completedRounds: this.completedRounds,
+    };
+    this.dispatchEvent(new CustomEvent("modechange", { detail }));
+    this.dispatchEvent(new CustomEvent("mode-change", { detail }));
+  }
+
+  syncState({ mode, remaining, isRunning, cycleRound }) {
+    const validModes = ["focus", "shortBreak", "longBreak"];
+    const newMode = validModes.includes(mode) ? mode : this.mode;
+    const modeChanged = newMode !== this.mode;
+    this.mode = newMode;
+    if (this.mode === "focus") this.minutes = this.focusMinutes;
+    else if (this.mode === "shortBreak") this.minutes = this.shortBreakMinutes;
+    else if (this.mode === "longBreak") this.minutes = this.longBreakMinutes;
+
+    if (Number.isInteger(cycleRound) && cycleRound >= 1 && cycleRound <= 4) {
+      this.cycleRound = cycleRound;
+    }
+
+    if (modeChanged) {
+      this.emitModeChange();
+    }
+
+    if (Number.isFinite(remaining) && remaining >= 0) {
+      this.remaining = remaining;
+      this.emitTick();
+    }
+
+    const currentlyRunning = Boolean(this.interval);
+    if (isRunning && !currentlyRunning) {
+      this.start();
+    } else if (!isRunning && currentlyRunning) {
+      this.pause();
+    }
   }
 
   advanceMode() {

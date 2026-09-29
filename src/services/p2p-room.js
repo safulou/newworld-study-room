@@ -32,6 +32,19 @@ function publicTip(tip) {
   };
 }
 
+function isTimerSync(msg) {
+  return Boolean(
+    msg &&
+    msg.type === "timer-sync" &&
+    ["focus", "shortBreak", "longBreak"].includes(msg.mode) &&
+    Number.isFinite(msg.remaining) &&
+    typeof msg.isRunning === "boolean" &&
+    Number.isInteger(msg.cycleRound) &&
+    msg.cycleRound >= 1 &&
+    msg.cycleRound <= 4,
+  );
+}
+
 function safeHostId(value) {
   return typeof value === "string" && /^[a-zA-Z0-9_-]{1,80}$/.test(value) ? value : "";
 }
@@ -252,6 +265,10 @@ export class P2PRoom extends EventTarget {
       }
       return;
     }
+    if (message.type === "timer-sync" && this.role === "guest" && isTimerSync(message)) {
+      this.dispatchEvent(new CustomEvent("timer-sync", { detail: message }));
+      return;
+    }
     if (message.type !== "tip" || !isTip(message.tip)) return;
 
     const tip = publicTip(message.tip);
@@ -369,6 +386,23 @@ export class P2PRoom extends EventTarget {
     return msg;
   }
 
+  sendTimerSync({ mode = "focus", remaining = 1500, isRunning = false, cycleRound = 1 } = {}) {
+    const validModes = ["focus", "shortBreak", "longBreak"];
+    const msg = {
+      type: "timer-sync",
+      version: MESSAGE_VERSION,
+      mode: validModes.includes(mode) ? mode : "focus",
+      remaining: Math.max(0, Math.floor(Number(remaining) || 0)),
+      isRunning: Boolean(isRunning),
+      cycleRound: Math.max(1, Math.min(4, Math.floor(Number(cycleRound) || 1))),
+      timestamp: Date.now(),
+    };
+    if (this.role === "host") {
+      this.broadcast(msg);
+    }
+    return msg;
+  }
+
   broadcast(message, exceptPeer = "") {
     this.connections.forEach((connection, peerId) => {
       if (peerId !== exceptPeer) this.send(connection, message);
@@ -454,6 +488,7 @@ export class P2PRoom extends EventTarget {
 export const p2pInternals = {
   isTip,
   publicTip,
+  isTimerSync,
   safeHostId,
   safeRoomToken,
   roomParams,

@@ -50,6 +50,10 @@ const profileDefaults = {
   ambientMode: "auto",
   desktopNotifications: false,
   heatmapTheme: "emerald",
+  shortBreakMinutes: 5,
+  longBreakMinutes: 15,
+  completionChime: "fanfare",
+  syncWithHostTimer: false,
 };
 
 const roomDefaults = {
@@ -139,6 +143,12 @@ function sanitizeProfile(value = {}) {
     ambientMode,
     desktopNotifications: Boolean(value.desktopNotifications),
     heatmapTheme,
+    shortBreakMinutes: Math.max(1, Math.min(30, Number(value.shortBreakMinutes) || profileDefaults.shortBreakMinutes)),
+    longBreakMinutes: Math.max(5, Math.min(60, Number(value.longBreakMinutes) || profileDefaults.longBreakMinutes)),
+    completionChime: ["fanfare", "bowl", "wooden_fish", "wind_chime"].includes(value.completionChime)
+      ? value.completionChime
+      : profileDefaults.completionChime,
+    syncWithHostTimer: Boolean(value.syncWithHostTimer),
   };
 }
 

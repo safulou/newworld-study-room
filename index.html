@@ -157,12 +157,15 @@
                 <span class="cycle-count" id="cycleCountBadge">1/4</span>
               </button>
               <button class="timer-mode-pill" type="button" data-mode="shortBreak" role="tab" aria-selected="false">
-                <span>☕ 短休 5m</span>
+                <span id="pillShortBreakText">☕ 短休 5m</span>
               </button>
               <button class="timer-mode-pill" type="button" data-mode="longBreak" role="tab" aria-selected="false">
-                <span>🌴 長休 15m</span>
+                <span id="pillLongBreakText">🌴 長休 15m</span>
               </button>
             </div>
+            <span class="timer-sync-badge" id="timerSyncBadge" hidden title="已跟隨房主番茄鐘倒數同步"
+              >🔗 房主同步</span
+            >
             <div class="zen-mindfulness-tray" id="zenMindfulnessTray" aria-label="禪意木魚與頌缽">
               <button class="zen-tool-btn" id="btnWoodenFish" type="button" title="敲擊木魚（專注 +1）">
                 <span class="zen-icon">🪵</span>
@@ -531,6 +534,30 @@
               <span>專注分鐘</span>
               <input id="minutes" type="number" min="5" max="120" step="5" value="25" />
             </label>
+            <label class="field">
+              <span>短休分鐘</span>
+              <input id="shortBreakMinutes" type="number" min="1" max="30" step="1" value="5" />
+            </label>
+            <label class="field">
+              <span>長休分鐘</span>
+              <input id="longBreakMinutes" type="number" min="5" max="60" step="5" value="15" />
+            </label>
+            <label class="field">
+              <span>完賽鈴聲</span>
+              <select id="completionChime">
+                <option value="fanfare">🎺 歡慶號角</option>
+                <option value="bowl">🧘 西藏頌缽</option>
+                <option value="wooden_fish">🪵 禪意木魚</option>
+                <option value="wind_chime">🔔 微風風鈴</option>
+              </select>
+            </label>
+            <div class="field" id="p2pSyncRow">
+              <span>番茄鐘同步</span>
+              <label class="checkbox-label" title="在自習室中跟隨房主的番茄鐘節奏同步倒數">
+                <input type="checkbox" id="syncWithHostTimer" />
+                <span>跟隨房主節奏倒數</span>
+              </label>
+            </div>
             <label class="field">
               <span>專注植物</span>
               <select id="plantType">
