@@ -22,24 +22,59 @@ export const SOUNDSCAPE_PRESETS = {
     name: "雨夜壁爐",
     icon: "flame",
     tracks: { rain: 0.35, campfire: 0.3 },
+    pans: { rain: -0.65, campfire: 0.65 },
   },
   forest_breeze: {
     id: "forest_breeze",
     name: "林間微風",
     icon: "wind",
     tracks: { wind: 0.35, brown_noise: 0.25 },
+    pans: { wind: -0.45, brown_noise: 0.45 },
   },
   deep_flow: {
     id: "deep_flow",
     name: "深度心流",
     icon: "sparkles",
     tracks: { binaural_alpha: 0.22, rain: 0.2 },
+    pans: { binaural_alpha: 0, rain: -0.35 },
   },
   study_library: {
     id: "study_library",
     name: "圖書館自習",
     icon: "book-open",
     tracks: { keyboard: 0.28, pencil: 0.25, rain: 0.15 },
+    pans: { keyboard: -0.45, pencil: 0.45, rain: -0.65 },
+  },
+};
+
+export const SPATIAL_SCENARIOS = {
+  cabin_realism: {
+    id: "cabin_realism",
+    name: "小木屋真實音場",
+    pans: {
+      rain: -0.7,
+      wind: -0.45,
+      campfire: 0.65,
+      keyboard: -0.3,
+      pencil: 0.3,
+      brown_noise: 0.4,
+      binaural_alpha: 0,
+      binaural_gamma: 0,
+    },
+  },
+  centered: {
+    id: "centered",
+    name: "全軌道居中平衡",
+    pans: {
+      rain: 0,
+      wind: 0,
+      campfire: 0,
+      keyboard: 0,
+      pencil: 0,
+      brown_noise: 0,
+      binaural_alpha: 0,
+      binaural_gamma: 0,
+    },
   },
 };
 
@@ -51,6 +86,7 @@ export class AmbientSoundscapeManager {
     this.isMuted = false;
     this.masterVolume = 0.5;
     this.trackVolumes = {};
+    this.trackPans = {};
   }
 
   ensureContext() {
@@ -86,17 +122,28 @@ export class AmbientSoundscapeManager {
     return buffer;
   }
 
-  startTrack(name, volume = 0.3) {
+  startTrack(name, volume = 0.3, pan = 0) {
     const ctx = this.ensureContext();
     if (!ctx) return false;
     if (this.nodes.has(name)) return true;
 
     const initialVolume = this.trackVolumes[name] !== undefined ? this.trackVolumes[name] : volume;
     this.trackVolumes[name] = initialVolume;
+    const initialPan = this.trackPans[name] !== undefined ? this.trackPans[name] : pan;
+    this.trackPans[name] = initialPan;
 
     const trackGain = ctx.createGain();
     trackGain.gain.setValueAtTime(initialVolume, ctx.currentTime);
-    trackGain.connect(this.masterGain);
+
+    let panner = null;
+    if (ctx.createStereoPanner) {
+      panner = ctx.createStereoPanner();
+      panner.pan.setValueAtTime(Math.max(-1, Math.min(1, initialPan)), ctx.currentTime);
+      trackGain.connect(panner);
+      panner.connect(this.masterGain);
+    } else {
+      trackGain.connect(this.masterGain);
+    }
 
     // Procedural Binaural Beat Synthesis (Alpha 10Hz or Gamma 40Hz)
     if (name === "binaural_alpha" || name === "binaural_gamma") {
@@ -130,7 +177,9 @@ export class AmbientSoundscapeManager {
       this.nodes.set(name, {
         sources: [oscL, oscR],
         gain: trackGain,
+        panner,
         volume,
+        pan: initialPan,
       });
       return true;
     }
@@ -154,7 +203,9 @@ export class AmbientSoundscapeManager {
           window.clearTimeout(timerId);
         },
         gain: trackGain,
+        panner,
         volume,
+        pan: initialPan,
       });
       return true;
     }
@@ -194,7 +245,9 @@ export class AmbientSoundscapeManager {
         lfo,
         filter: hpFilter,
         gain: trackGain,
+        panner,
         volume,
+        pan: initialPan,
       });
       return true;
     }
@@ -238,7 +291,9 @@ export class AmbientSoundscapeManager {
       source: noiseSource,
       filter,
       gain: trackGain,
+      panner,
       volume,
+      pan: initialPan,
     });
     return true;
   }
@@ -267,6 +322,7 @@ export class AmbientSoundscapeManager {
       }
       if (track.filter) track.filter.disconnect();
       if (track.gain) track.gain.disconnect();
+      if (track.panner) track.panner.disconnect();
     } catch {}
 
     this.nodes.delete(name);
@@ -322,6 +378,40 @@ export class AmbientSoundscapeManager {
     return track ? track.volume : 0.3;
   }
 
+  setTrackPan(name, pan) {
+    const clamped = Math.max(-1, Math.min(1, Number(pan) || 0));
+    this.trackPans[name] = clamped;
+    const track = this.nodes.get(name);
+    if (!track || !this.audioCtx || !track.panner) return true;
+    track.pan = clamped;
+    track.panner.pan.setValueAtTime(clamped, this.audioCtx.currentTime);
+    return true;
+  }
+
+  getTrackPan(name) {
+    if (this.trackPans[name] !== undefined) {
+      return this.trackPans[name];
+    }
+    const track = this.nodes.get(name);
+    return track && track.panner ? track.panner.pan.value : 0;
+  }
+
+  getCurrentTrackPans() {
+    const pans = {};
+    for (const name of this.getActiveTracks()) {
+      pans[name] = this.getTrackPan(name);
+    }
+    return pans;
+  }
+
+  applySpatialScenario(scenarioKey = "cabin_realism") {
+    const scenario = SPATIAL_SCENARIOS[scenarioKey];
+    if (!scenario) return;
+    for (const [name, panVal] of Object.entries(scenario.pans)) {
+      this.setTrackPan(name, panVal);
+    }
+  }
+
   setMasterVolume(volume) {
     this.masterVolume = Math.max(0, Math.min(1, volume));
     if (this.masterGain && this.audioCtx && !this.isMuted) {
@@ -349,14 +439,17 @@ export class AmbientSoundscapeManager {
     return mix;
   }
 
-  applyTrackMix(tracksObj) {
+  applyTrackMix(tracksObj, pansObj = {}) {
     if (!tracksObj || typeof tracksObj !== "object") return [];
     this.stopAll();
     for (const [trackName, vol] of Object.entries(tracksObj)) {
       const numVol = Number(vol);
       if (Number.isFinite(numVol) && numVol > 0) {
         this.trackVolumes[trackName] = Math.max(0, Math.min(1, numVol));
-        this.startTrack(trackName, this.trackVolumes[trackName]);
+        if (pansObj && pansObj[trackName] !== undefined && Number.isFinite(Number(pansObj[trackName]))) {
+          this.trackPans[trackName] = Math.max(-1, Math.min(1, Number(pansObj[trackName])));
+        }
+        this.startTrack(trackName, this.trackVolumes[trackName], this.trackPans[trackName] || 0);
       }
     }
     return this.getActiveTracks();
@@ -366,7 +459,7 @@ export class AmbientSoundscapeManager {
     const preset = SOUNDSCAPE_PRESETS[presetId];
     if (!preset) return [];
 
-    return this.applyTrackMix(preset.tracks);
+    return this.applyTrackMix(preset.tracks, preset.pans);
   }
 
   stopAll() {

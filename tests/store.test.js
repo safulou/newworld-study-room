@@ -133,4 +133,27 @@ describe("room-scoped store", () => {
     expect(presets[0].tracks.cafe).toBe(1); // clamped to 1
     expect(presets[0].tracks.fireplace).toBe(0); // clamped to 0
   });
+
+  it("validates and sanitizes focusIntention and customPresets pans", () => {
+    const store = createStore({ roomId: "room-a", includeStarterTips: false });
+    expect(store.get().focusIntention).toBe("");
+
+    store.update({ focusIntention: "  攻克使用者認證模組  " });
+    expect(store.get().focusIntention).toBe("攻克使用者認證模組");
+
+    store.update({
+      customPresets: [
+        {
+          id: "spatial-1",
+          name: "立體聲景",
+          tracks: { rain: 0.5 },
+          pans: { rain: -1.8, campfire: 0.7 },
+        },
+      ],
+    });
+
+    const preset = store.get().customPresets[0];
+    expect(preset.pans.rain).toBe(-1); // clamped to -1
+    expect(preset.pans.campfire).toBe(0.7);
+  });
 });

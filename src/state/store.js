@@ -55,6 +55,7 @@ const profileDefaults = {
   completionChime: "fanfare",
   syncWithHostTimer: false,
   focusCategory: "dev",
+  focusIntention: "",
   customPresets: [],
 };
 
@@ -154,6 +155,7 @@ function sanitizeProfile(value = {}) {
     focusCategory: ["dev", "read", "write", "design", "review"].includes(value.focusCategory)
       ? value.focusCategory
       : profileDefaults.focusCategory,
+    focusIntention: typeof value.focusIntention === "string" ? value.focusIntention.trim().slice(0, 48) : "",
     customPresets: Array.isArray(value.customPresets)
       ? value.customPresets
           .filter((p) => p && typeof p.name === "string" && typeof p.tracks === "object" && p.tracks !== null)
@@ -166,6 +168,14 @@ function sanitizeProfile(value = {}) {
                 .filter(([k, v]) => typeof k === "string" && Number.isFinite(Number(v)))
                 .map(([k, v]) => [k, Math.max(0, Math.min(1, Number(v)))]),
             ),
+            pans:
+              p.pans && typeof p.pans === "object"
+                ? Object.fromEntries(
+                    Object.entries(p.pans)
+                      .filter(([k, v]) => typeof k === "string" && Number.isFinite(Number(v)))
+                      .map(([k, v]) => [k, Math.max(-1, Math.min(1, Number(v)))]),
+                  )
+                : {},
           }))
       : [],
   };

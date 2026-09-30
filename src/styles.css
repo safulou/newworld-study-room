@@ -1245,9 +1245,114 @@ h1 {
   font-variant-numeric: tabular-nums;
 }
 
+/* Focus Intention Bar & HUD */
+.focus-intention-bar {
+  position: absolute;
+  bottom: 112px;
+  left: 18px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  background: rgba(13, 21, 32, 0.88);
+  border: 1px solid rgba(255, 224, 163, 0.22);
+  backdrop-filter: blur(10px);
+  max-width: calc(100% - 36px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.focus-intention-bar:focus-within {
+  border-color: rgba(246, 200, 81, 0.55);
+  box-shadow: 0 4px 20px rgba(246, 200, 81, 0.15);
+}
+
+.focus-intention-bar .intention-icon {
+  font-size: 13px;
+  line-height: 1;
+  user-select: none;
+}
+
+.focus-intention-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text, #f0f4f8);
+  font-size: 12px;
+  font-weight: 500;
+  width: 250px;
+  transition: width 0.2s ease;
+}
+
+.focus-intention-input::placeholder {
+  color: var(--muted, #94a3b8);
+  font-size: 11px;
+}
+
+.intention-sync-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted, #94a3b8);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.intention-sync-btn i,
+.intention-sync-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.intention-sync-btn:hover {
+  background: rgba(246, 200, 81, 0.18);
+  border-color: rgba(246, 200, 81, 0.4);
+  color: #fff;
+}
+
+/* Zen Focus Intention HUD */
+.zen-focus-intention {
+  position: absolute;
+  top: 4vh;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  background: rgba(14, 22, 33, 0.75);
+  border: 1px solid rgba(246, 200, 81, 0.3);
+  border-radius: 24px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+.zen-intention-icon {
+  font-size: 16px;
+}
+
+.zen-intention-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffe8a3;
+  letter-spacing: 0.5px;
+}
+
 .ambient-bar {
   position: absolute;
-  bottom: 116px;
+  bottom: 156px;
   left: 18px;
   z-index: 8;
   display: flex;
@@ -1348,12 +1453,41 @@ h1 {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .ambient-mixer-title {
   font-size: 11px;
   font-weight: 600;
   color: var(--teal);
+}
+
+.spatial-panner-presets {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.spatial-preset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 500;
+  border-radius: 4px;
+  border: 1px solid rgba(105, 200, 189, 0.28);
+  background: rgba(105, 200, 189, 0.08);
+  color: var(--teal);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.spatial-preset-btn:hover {
+  background: rgba(105, 200, 189, 0.2);
+  border-color: var(--teal);
+  color: #fff;
 }
 
 .ambient-mixer-sub {
@@ -1364,13 +1498,23 @@ h1 {
 .ambient-mixer-tracks {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  max-height: 140px;
+  gap: 8px;
+  max-height: 180px;
   overflow-y: auto;
   padding-right: 2px;
 }
 
 .ambient-mixer-track {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 6px;
+  background: rgba(14, 22, 33, 0.5);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.mixer-track-row {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1379,7 +1523,7 @@ h1 {
 .mixer-track-name {
   font-size: 11px;
   color: var(--text);
-  width: 72px;
+  width: 68px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1399,6 +1543,43 @@ h1 {
   width: 28px;
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+.mixer-pan-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-left: 2px;
+}
+
+.mixer-pan-label {
+  font-size: 9px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 68px;
+}
+
+.mixer-pan-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  max-width: 140px;
+}
+
+.mixer-pan-indicator {
+  font-size: 9px;
+  color: var(--muted);
+  user-select: none;
+}
+
+.mixer-track-pan-slider {
+  flex: 1;
+  height: 4px;
+  padding: 0;
+  accent-color: var(--gold);
+  cursor: pointer;
 }
 
 .ambient-volume-row {
@@ -2810,9 +2991,19 @@ input::placeholder {
     left: 12px;
     justify-content: space-between;
   }
+  .focus-intention-bar {
+    right: 12px;
+    bottom: 106px;
+    left: 12px;
+    justify-content: space-between;
+  }
+  .focus-intention-input {
+    width: 150px;
+    flex: 1;
+  }
   .ambient-bar {
     right: 12px;
-    bottom: 112px;
+    bottom: 148px;
     left: 12px;
     min-width: 0;
   }
@@ -2856,11 +3047,13 @@ input::placeholder {
   .toast {
     bottom: 82px;
   }
-  .herbarium-modal {
+  .herbarium-modal,
+  .poster-modal {
     width: 95vw;
   }
-  .herbarium-dialog-card {
-    padding: 16px;
+  .herbarium-dialog-card,
+  .poster-dialog-card {
+    padding: 14px;
   }
   .plant-grid,
   .badge-grid {
@@ -2987,8 +3180,13 @@ body.zen-mode .mobile-nav,
 body.zen-mode #dollPanel,
 body.zen-mode .stars,
 body.zen-mode .peer-status-bar,
-body.zen-mode .celebrate-banner {
+body.zen-mode .celebrate-banner,
+body.zen-mode .focus-intention-bar {
   display: none !important;
+}
+
+body.zen-mode .zen-focus-intention {
+  display: flex !important;
 }
 
 body.zen-mode .app {
@@ -3093,7 +3291,8 @@ body.zen-mode.zen-inactive * {
 body.zen-mode.zen-inactive .exit-zen-btn,
 body.zen-mode.zen-inactive .timer-mode-bar,
 body.zen-mode.zen-inactive .focus-bar .icon-btn,
-body.zen-mode.zen-inactive .herbarium-btn {
+body.zen-mode.zen-inactive .herbarium-btn,
+body.zen-mode.zen-inactive .zen-focus-intention {
   opacity: 0;
   pointer-events: none;
 }
@@ -3765,6 +3964,128 @@ body.zen-mode.zen-inactive .herbarium-btn {
   font-size: 12px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+}
+
+/* Focus Flow Polaroid Modal */
+.poster-modal {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  max-width: 480px;
+  width: min(92vw, 480px);
+  margin: auto;
+  border-radius: 16px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75);
+  color: var(--text);
+  z-index: 110;
+}
+
+.poster-modal::backdrop {
+  background: rgba(7, 11, 18, 0.85);
+  backdrop-filter: blur(10px);
+}
+
+.poster-dialog-card {
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(175deg, #141f2e 0%, #0d1522 100%);
+  border: 1px solid rgba(246, 200, 81, 0.35);
+  border-radius: 16px;
+  padding: 20px;
+  gap: 16px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.poster-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 12px;
+}
+
+.poster-title-group h2 {
+  font-size: 17px;
+  margin: 0;
+  color: #ffe8a3;
+  font-weight: 700;
+}
+
+.poster-subtitle {
+  font-size: 11px;
+  color: var(--muted);
+  display: block;
+  margin-top: 2px;
+}
+
+.poster-canvas-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px;
+  background: rgba(7, 12, 19, 0.7);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.poster-canvas-wrapper canvas {
+  max-width: 100%;
+  height: auto !important;
+  border-radius: 8px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+  display: block;
+}
+
+.poster-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.poster-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.poster-action-btn i,
+.poster-action-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.poster-action-btn.primary {
+  background: linear-gradient(135deg, #f6c851, #e0aa28);
+  color: #0c1822;
+  box-shadow: 0 4px 14px rgba(246, 200, 81, 0.35);
+}
+
+.poster-action-btn.primary:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.poster-action-btn.secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: var(--text);
+}
+
+.poster-action-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
 }
 
 /* Peer Reaction Tray */

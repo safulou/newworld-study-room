@@ -14,8 +14,9 @@ import {
   ChevronUp,
   ClipboardCopy,
   CloudRain,
-  Coffee,
+  Camera,
   Copy,
+  Crosshair,
   Crown,
   Cuboid,
   Download,
@@ -62,6 +63,7 @@ import { LofiGenerator } from "./services/lofi-generator.js";
 import { NotificationManager } from "./services/notification-manager.js";
 import { StudyStatsManager } from "./services/study-stats.js";
 import { TaskTracker } from "./services/task-tracker.js";
+import { FocusPosterGenerator } from "./services/poster-generator.js";
 import { createStore } from "./state/store.js";
 
 const icons = {
@@ -71,6 +73,7 @@ const icons = {
   BellRing,
   BookmarkPlus,
   BookOpen,
+  Camera,
   Cat,
   CheckSquare,
   ChevronDown,
@@ -79,8 +82,8 @@ const icons = {
   ChevronUp,
   ClipboardCopy,
   CloudRain,
-  Coffee,
   Copy,
+  Crosshair,
   Crown,
   Cuboid,
   Download,
@@ -171,6 +174,11 @@ const elements = {
   peerReactionTray: $("#peerReactionTray"),
   reactionChips: [...document.querySelectorAll(".reaction-chip")],
   floatingReactions: $("#floatingReactions"),
+  focusIntentionBar: $("#focusIntentionBar"),
+  focusIntentionInput: $("#focusIntentionInput"),
+  btnSyncActiveTask: $("#btnSyncActiveTask"),
+  zenFocusIntention: $("#zenFocusIntention"),
+  zenIntentionText: $("#zenIntentionText"),
   ambientBar: $("#ambientBar"),
   ambientVolume: $("#ambientVolume"),
   ambientVolumeValue: $("#ambientVolumeValue"),
@@ -178,6 +186,8 @@ const elements = {
   ambientMixer: $("#ambientMixer"),
   ambientMixerCount: $("#ambientMixerCount"),
   ambientMixerTracks: $("#ambientMixerTracks"),
+  btnSpatialCabin: $("#btnSpatialCabin"),
+  btnSpatialCenter: $("#btnSpatialCenter"),
   presetButtons: [...document.querySelectorAll(".preset-btn")],
   customPresetsRow: $("#customPresetsRow"),
   customPresetsList: $("#customPresetsList"),
@@ -212,6 +222,12 @@ const elements = {
   sessionTimelineList: $("#sessionTimelineList"),
   copyMarkdownLog: $("#copyMarkdownLog"),
   exportBackupJson: $("#exportBackupJson"),
+  btnOpenPoster: $("#btnOpenPoster"),
+  posterModal: $("#posterModal"),
+  closePoster: $("#closePoster"),
+  posterCanvasWrapper: $("#posterCanvasWrapper"),
+  btnDownloadPoster: $("#btnDownloadPoster"),
+  btnCopyPoster: $("#btnCopyPoster"),
   photoInput: $("#photoInput"),
   photoDrop: $("#photoDrop"),
   clearPhoto: $("#clearPhoto"),
@@ -981,6 +997,14 @@ function renderState(state) {
     elements.timerSyncBadge.hidden = !isGuest || !state.syncWithHostTimer;
   }
   if (document.activeElement !== elements.plantType) elements.plantType.value = state.plantType;
+  if (elements.focusIntentionInput && document.activeElement !== elements.focusIntentionInput) {
+    elements.focusIntentionInput.value = state.focusIntention || "";
+  }
+  if (elements.zenIntentionText) {
+    elements.zenIntentionText.textContent = state.focusIntention
+      ? `當前意圖：${state.focusIntention}`
+      : "當前意圖：保持專注";
+  }
   if (document.activeElement !== elements.musicVolume) elements.musicVolume.value = state.musicVolume;
   elements.musicVolumeValue.value = `${state.musicVolume}%`;
   elements.focusGarden.dataset.plant = state.plantType;
@@ -1359,6 +1383,13 @@ const TRACK_METAS = {
   binaural_gamma: { name: "Gamma波", icon: "zap" },
 };
 
+function formatPanLabel(pan) {
+  const panPercent = Math.round(pan * 100);
+  if (panPercent === 0) return "居中";
+  if (panPercent < 0) return `左 ${Math.abs(panPercent)}%`;
+  return `右 ${panPercent}%`;
+}
+
 function renderAmbientMixer() {
   if (!elements.ambientMixer || !elements.ambientMixerTracks) return;
   const activeTracks = ambientSound.getActiveTracks();
@@ -1374,25 +1405,38 @@ function renderAmbientMixer() {
 
   const activeElement = document.activeElement;
   const activeTrackAttr = activeElement?.closest?.(".ambient-mixer-track")?.dataset.track;
+  const isPanSlider = activeElement?.classList?.contains("mixer-track-pan-slider");
 
   elements.ambientMixerTracks.innerHTML = activeTracks
     .map((name) => {
       const meta = TRACK_METAS[name] || { name, icon: "volume-2" };
       const vol = Math.round(ambientSound.getTrackVolume(name) * 100);
+      const pan = ambientSound.getTrackPan(name);
+      const panPercent = Math.round(pan * 100);
+      const panText = formatPanLabel(pan);
       return `
         <div class="ambient-mixer-track" data-track="${name}">
-          <span class="mixer-track-name" title="${meta.name}">${meta.name}</span>
-          <input class="mixer-track-slider" type="range" min="0" max="100" step="1" value="${vol}" aria-label="${meta.name} 軌道音量" />
-          <span class="mixer-track-value">${vol}%</span>
+          <div class="mixer-track-row">
+            <span class="mixer-track-name" title="${meta.name}">${meta.name}</span>
+            <input class="mixer-track-slider" type="range" min="0" max="100" step="1" value="${vol}" aria-label="${meta.name} 軌道音量" />
+            <span class="mixer-track-value">${vol}%</span>
+          </div>
+          <div class="mixer-pan-row">
+            <span class="mixer-pan-label">方位: ${panText}</span>
+            <div class="mixer-pan-controls">
+              <span class="mixer-pan-indicator">L</span>
+              <input class="mixer-track-pan-slider" type="range" min="-100" max="100" step="5" value="${panPercent}" aria-label="${meta.name} 聲道左右音場方位" />
+              <span class="mixer-pan-indicator">R</span>
+            </div>
+          </div>
         </div>
       `;
     })
     .join("");
 
   if (activeTrackAttr) {
-    const restoredSlider = elements.ambientMixerTracks.querySelector(
-      `[data-track="${activeTrackAttr}"] .mixer-track-slider`,
-    );
+    const selector = isPanSlider ? ".mixer-track-pan-slider" : ".mixer-track-slider";
+    const restoredSlider = elements.ambientMixerTracks.querySelector(`[data-track="${activeTrackAttr}"] ${selector}`);
     restoredSlider?.focus();
   }
 }
@@ -1403,6 +1447,18 @@ function bindAmbientSound() {
     elements.ambientBar.hidden = !isHidden;
     elements.toggleAmbient.classList.toggle("primary", isHidden);
     elements.toggleAmbient.setAttribute("aria-pressed", String(isHidden));
+  });
+
+  elements.btnSpatialCabin?.addEventListener("click", () => {
+    ambientSound.applySpatialScenario("cabin_realism");
+    renderAmbientMixer();
+    showToast("已套用小木屋立體聲環繞音場 🪵");
+  });
+
+  elements.btnSpatialCenter?.addEventListener("click", () => {
+    ambientSound.applySpatialScenario("centered");
+    renderAmbientMixer();
+    showToast("所有運行軌道立體聲道已居中 🎯");
   });
 
   elements.ambientChips.forEach((chip) => {
@@ -1431,15 +1487,30 @@ function bindAmbientSound() {
   });
 
   elements.ambientMixerTracks?.addEventListener("input", (e) => {
-    const slider = e.target.closest(".mixer-track-slider");
-    if (!slider) return;
-    const trackRow = slider.closest(".ambient-mixer-track");
-    const trackName = trackRow?.dataset.track;
-    if (!trackName) return;
-    const vol = Number(slider.value);
-    ambientSound.setTrackVolume(trackName, vol / 100);
-    const valueLabel = trackRow.querySelector(".mixer-track-value");
-    if (valueLabel) valueLabel.textContent = `${vol}%`;
+    const volSlider = e.target.closest(".mixer-track-slider");
+    if (volSlider) {
+      const trackRow = volSlider.closest(".ambient-mixer-track");
+      const trackName = trackRow?.dataset.track;
+      if (!trackName) return;
+      const vol = Number(volSlider.value);
+      ambientSound.setTrackVolume(trackName, vol / 100);
+      const valueLabel = trackRow.querySelector(".mixer-track-value");
+      if (valueLabel) valueLabel.textContent = `${vol}%`;
+      return;
+    }
+
+    const panSlider = e.target.closest(".mixer-track-pan-slider");
+    if (panSlider) {
+      const trackRow = panSlider.closest(".ambient-mixer-track");
+      const trackName = trackRow?.dataset.track;
+      if (!trackName) return;
+      const panVal = Number(panSlider.value);
+      ambientSound.setTrackPan(trackName, panVal / 100);
+      const panLabel = trackRow.querySelector(".mixer-pan-label");
+      if (panLabel) {
+        panLabel.textContent = `方位: ${formatPanLabel(panVal / 100)}`;
+      }
+    }
   });
 
   const onKeyType = () => {
@@ -1509,7 +1580,7 @@ function renderCustomPresets() {
     delBtn.innerHTML = "&times;";
 
     nameBtn.addEventListener("click", () => {
-      ambientSound.applyTrackMix(preset.tracks);
+      ambientSound.applyTrackMix(preset.tracks, preset.pans || {});
       elements.ambientChips.forEach((chipEl) => {
         const sound = chipEl.dataset.sound;
         if (sound === "lofi") return;
@@ -1553,10 +1624,12 @@ function bindCustomPresets() {
     const trimmed = inputName.trim().slice(0, 16);
     if (!trimmed) return;
     const currentMix = ambientSound.getCurrentTrackMix();
+    const currentPans = ambientSound.getCurrentTrackPans();
     const newPreset = {
       id: crypto.randomUUID(),
       name: trimmed,
       tracks: currentMix,
+      pans: currentPans,
     };
     const currentPresets = store.get().customPresets || [];
     store.update({ customPresets: [...currentPresets, newPreset] });
@@ -1694,6 +1767,103 @@ function bindExports() {
     a.click();
     URL.revokeObjectURL(url);
     showToast("學習記錄 JSON 備份檔已開始下載。📥");
+  });
+}
+
+let currentPosterCanvas = null;
+
+function bindPosterModal() {
+  elements.btnOpenPoster?.addEventListener("click", () => {
+    const summary = studyStats.getExecutiveSummary();
+    const today = new Date().toISOString().split("T")[0];
+    const todayMinutes = studyStats.history
+      .filter((h) => h.date === today)
+      .reduce((sum, h) => sum + (h.durationMinutes || 0), 0);
+    const currentPlant = store.get().plantType || "rose";
+    const nickname = store.get().nickname || "旅人";
+    const intention = store.get().focusIntention;
+    const quote = intention ? `今日專注焦點：「${intention}」` : "每一分鐘的專注，都是給未來的禮物 ✨";
+
+    currentPosterCanvas = FocusPosterGenerator.generate({
+      date: today,
+      todayMinutes,
+      totalHours: summary.totalHours,
+      streakDays: summary.streakDays,
+      topCategory: summary.topCategory || store.get().focusCategory || "dev",
+      harvestedPlant: currentPlant,
+      nickname,
+      quote,
+    });
+
+    if (elements.posterCanvasWrapper) {
+      elements.posterCanvasWrapper.replaceChildren(currentPosterCanvas);
+    }
+    elements.posterModal?.showModal();
+  });
+
+  elements.closePoster?.addEventListener("click", () => {
+    elements.posterModal?.close();
+  });
+
+  elements.posterModal?.addEventListener("click", (e) => {
+    if (e.target === elements.posterModal) {
+      elements.posterModal.close();
+    }
+  });
+
+  elements.btnDownloadPoster?.addEventListener("click", () => {
+    if (!currentPosterCanvas) return;
+    const today = new Date().toISOString().split("T")[0];
+    FocusPosterGenerator.download(currentPosterCanvas, `focus-flow-${today}.png`);
+    showToast("拍立得卡片已開始下載 📸");
+  });
+
+  elements.btnCopyPoster?.addEventListener("click", async () => {
+    if (!currentPosterCanvas) return;
+    const today = new Date().toISOString().split("T")[0];
+    const success = await FocusPosterGenerator.copyToClipboard(currentPosterCanvas);
+    if (success) {
+      showToast("拍立得卡片已複製至剪貼簿 📋");
+    } else {
+      FocusPosterGenerator.download(currentPosterCanvas, `focus-flow-${today}.png`);
+      showToast("因瀏覽器安全限制，已自動為您下載 PNG 📸");
+    }
+  });
+}
+
+function bindFocusIntention() {
+  const commitIntention = () => {
+    if (!elements.focusIntentionInput) return;
+    const val = elements.focusIntentionInput.value.trim().slice(0, 60);
+    store.update({ focusIntention: val });
+    if (elements.zenIntentionText) {
+      elements.zenIntentionText.textContent = val ? `當前意圖：${val}` : "當前意圖：保持專注";
+    }
+  };
+
+  elements.focusIntentionInput?.addEventListener("change", commitIntention);
+  elements.focusIntentionInput?.addEventListener("blur", commitIntention);
+  elements.focusIntentionInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.target.blur();
+    }
+  });
+
+  elements.btnSyncActiveTask?.addEventListener("click", () => {
+    const activeTask = taskTracker.tasks.find((t) => !t.completed);
+    if (activeTask) {
+      const text = activeTask.title.slice(0, 60);
+      if (elements.focusIntentionInput) {
+        elements.focusIntentionInput.value = text;
+      }
+      store.update({ focusIntention: text });
+      if (elements.zenIntentionText) {
+        elements.zenIntentionText.textContent = `當前意圖：${text}`;
+      }
+      showToast(`已同步當前任務意圖：「${text}」🎯`);
+    } else {
+      showToast("任務清單中目前沒有未完成的任務。");
+    }
   });
 }
 
@@ -2506,7 +2676,9 @@ function init() {
   bindIdleSleep();
   bindP2PCheer();
   bindTasks();
+  bindFocusIntention();
   bindExports();
+  bindPosterModal();
   bindHeatmapControls();
   renderStats();
   bindTips();

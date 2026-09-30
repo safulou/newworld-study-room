@@ -159,6 +159,33 @@
             </div>
           </div>
 
+          <div class="zen-focus-intention" id="zenFocusIntention" hidden aria-live="polite">
+            <span class="zen-intention-icon">🎯</span>
+            <span class="zen-intention-text" id="zenIntentionText">當前意圖：保持專注</span>
+          </div>
+
+          <div class="focus-intention-bar" id="focusIntentionBar">
+            <span class="intention-icon" aria-hidden="true">🎯</span>
+            <input
+              type="text"
+              id="focusIntentionInput"
+              class="focus-intention-input"
+              placeholder="此刻最重要的單一專注意圖...（例：重構渲染引擎）"
+              maxlength="60"
+              aria-label="當前專注意圖"
+            />
+            <button
+              class="intention-sync-btn"
+              id="btnSyncActiveTask"
+              type="button"
+              title="快速同步當前清單進行中任務"
+              aria-label="同步當前任務"
+            >
+              <i data-lucide="crosshair"></i>
+              <span>同步任務</span>
+            </button>
+          </div>
+
           <div class="timer-mode-bar" id="timerModeBar">
             <div class="timer-mode-pills" id="timerModePills" role="tablist" aria-label="番茄鐘模式">
               <button class="timer-mode-pill active" type="button" data-mode="focus" role="tab" aria-selected="true">
@@ -308,6 +335,24 @@
             <div class="ambient-mixer" id="ambientMixer" hidden>
               <div class="ambient-mixer-head">
                 <span class="ambient-mixer-title">🎚️ 獨立軌道混音</span>
+                <div class="spatial-panner-presets">
+                  <button
+                    type="button"
+                    class="spatial-preset-btn"
+                    id="btnSpatialCabin"
+                    title="一鍵套用小木屋立體聲環繞音場（雨聲左、柴火右、白噪聲深處）"
+                  >
+                    🪵 3D 木屋
+                  </button>
+                  <button
+                    type="button"
+                    class="spatial-preset-btn"
+                    id="btnSpatialCenter"
+                    title="將所有運行中軌道聲道復位居中"
+                  >
+                    🎯 全居中
+                  </button>
+                </div>
                 <span class="ambient-mixer-sub" id="ambientMixerCount">0 軌運行中</span>
               </div>
               <div class="ambient-mixer-tracks" id="ambientMixerTracks"></div>
@@ -572,6 +617,15 @@
             </div>
 
             <div class="stats-export-row">
+              <button
+                class="stats-action-btn primary-action"
+                id="btnOpenPoster"
+                type="button"
+                title="生成今日專注成果拍立得卡片"
+              >
+                <i data-lucide="camera"></i>
+                <span>拍立得卡片</span>
+              </button>
               <button class="stats-action-btn" id="copyMarkdownLog" type="button" title="複製今日專注 Markdown 日誌">
                 <i data-lucide="clipboard-copy"></i>
                 <span>複製 Markdown 日誌</span>
@@ -825,6 +879,31 @@
             <span id="breathingPlayText">開始呼吸</span>
           </button>
           <span class="breathing-cycle-badge" id="breathingCycleBadge">已完成 0 循環</span>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="poster-modal" id="posterModal">
+      <div class="poster-dialog-card">
+        <div class="poster-header">
+          <div class="poster-title-group">
+            <h2>📸 專注成果拍立得卡片</h2>
+            <span class="poster-subtitle">定格今日專注高光時刻，分享心流印記</span>
+          </div>
+          <button class="icon-btn subtle close-btn" id="closePoster" type="button" aria-label="關閉拍立得卡片">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="poster-canvas-wrapper" id="posterCanvasWrapper"></div>
+        <div class="poster-actions">
+          <button class="poster-action-btn primary" id="btnDownloadPoster" type="button">
+            <i data-lucide="download"></i>
+            <span>下載高清 PNG</span>
+          </button>
+          <button class="poster-action-btn secondary" id="btnCopyPoster" type="button">
+            <i data-lucide="copy"></i>
+            <span>複製到剪貼簿</span>
+          </button>
         </div>
       </div>
     </dialog>

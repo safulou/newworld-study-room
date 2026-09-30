@@ -67,4 +67,27 @@ describe("AmbientSoundscapeManager", () => {
     expect(manager.getTrackVolume("campfire")).toBe(0.45);
     expect(manager.applyTrackMix(null)).toEqual([]);
   });
+
+  it("manages track stereo panning with clamping (-1 to 1) and spatial scenarios", () => {
+    const manager = new AmbientSoundscapeManager();
+    expect(manager.getTrackPan("rain")).toBe(0);
+
+    manager.setTrackPan("rain", -0.75);
+    expect(manager.getTrackPan("rain")).toBe(-0.75);
+
+    // Clamping bounds
+    manager.setTrackPan("wind", -2.5);
+    expect(manager.getTrackPan("wind")).toBe(-1.0);
+
+    manager.setTrackPan("campfire", 1.8);
+    expect(manager.getTrackPan("campfire")).toBe(1.0);
+
+    manager.applySpatialScenario("cabin_realism");
+    expect(manager.getTrackPan("rain")).toBe(-0.7);
+    expect(manager.getTrackPan("campfire")).toBe(0.65);
+
+    manager.applySpatialScenario("centered");
+    expect(manager.getTrackPan("rain")).toBe(0);
+    expect(manager.getTrackPan("campfire")).toBe(0);
+  });
 });
