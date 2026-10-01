@@ -156,4 +156,35 @@ describe("room-scoped store", () => {
     expect(preset.pans.rain).toBe(-1); // clamped to -1
     expect(preset.pans.campfire).toBe(0.7);
   });
+
+  it("validates sprintPreset, windowWeather, and parkingLot defaults and bounds", () => {
+    const store = createStore({ roomId: "room-a", includeStarterTips: false });
+    expect(store.get().sprintPreset).toBe("classic");
+    expect(store.get().windowWeather).toBe("auto");
+    expect(store.get().parkingLot).toEqual([]);
+
+    store.update({
+      sprintPreset: "deep",
+      windowWeather: "snow",
+      parkingLot: [
+        { id: "p-1", text: "  查郵件  ", completed: false },
+        { text: "回覆訊息", completed: true },
+        { text: "   " }, // empty text should be filtered out
+      ],
+    });
+
+    const state = store.get();
+    expect(state.sprintPreset).toBe("deep");
+    expect(state.windowWeather).toBe("snow");
+    expect(state.parkingLot).toHaveLength(2);
+    expect(state.parkingLot[0].text).toBe("查郵件");
+    expect(state.parkingLot[0].completed).toBe(false);
+    expect(state.parkingLot[1].text).toBe("回覆訊息");
+    expect(state.parkingLot[1].completed).toBe(true);
+
+    // Invalid fallback
+    store.update({ sprintPreset: "invalid-preset", windowWeather: "tornado" });
+    expect(store.get().sprintPreset).toBe("classic");
+    expect(store.get().windowWeather).toBe("auto");
+  });
 });

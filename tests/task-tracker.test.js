@@ -120,4 +120,48 @@ describe("TaskTracker Service", () => {
     expect(ok).toBe(true);
     expect(tracker.tasks.map((t) => t.id)).toEqual([t3.id, t1.id, t2.id]);
   });
+
+  it("imports markdown tasks with bullet points, checkboxes, and target pomodoros", () => {
+    const md = `
+- [ ] 完成系統架構設計 (4)
+- [x] 撰寫單元測試 [3]
+* 閱讀論文第二章 🍅 2
+1. 整理會議記錄
+普通清單任務 (5)
+`;
+
+    const imported = tracker.importMarkdown(md);
+    expect(imported).toHaveLength(5);
+    expect(tracker.tasks).toHaveLength(5);
+
+    expect(tracker.tasks[0].title).toBe("完成系統架構設計");
+    expect(tracker.tasks[0].targetPomodoros).toBe(4);
+    expect(tracker.tasks[0].completed).toBe(false);
+
+    expect(tracker.tasks[1].title).toBe("撰寫單元測試");
+    expect(tracker.tasks[1].targetPomodoros).toBe(3);
+    expect(tracker.tasks[1].completed).toBe(true);
+
+    expect(tracker.tasks[2].title).toBe("閱讀論文第二章");
+    expect(tracker.tasks[2].targetPomodoros).toBe(2);
+
+    expect(tracker.tasks[3].title).toBe("整理會議記錄");
+    expect(tracker.tasks[3].targetPomodoros).toBe(2); // default
+
+    expect(tracker.tasks[4].title).toBe("普通清單任務");
+    expect(tracker.tasks[4].targetPomodoros).toBe(5);
+
+    // Test forecast
+    // Uncompleted: [0] (4), [2] (2), [3] (2), [4] (5) -> Total = 13 pomodoros = 13 * 25 = 325 mins = 5 小時 25 分
+    const forecast = tracker.getForecast(25);
+    expect(forecast.remainingTasksCount).toBe(4);
+    expect(forecast.remainingPomodoros).toBe(13);
+    expect(forecast.estimatedMinutes).toBe(325);
+    expect(forecast.durationText).toBe("5 小時 25 分");
+
+    // Test clearCompleted returns count
+    const removedCount = tracker.clearCompleted();
+    expect(removedCount).toBe(1);
+    expect(tracker.tasks).toHaveLength(4);
+  });
 });

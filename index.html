@@ -94,6 +94,7 @@
               <div class="beam beam-v"></div>
               <div class="beam beam-h"></div>
               <div class="floor"></div>
+              <div class="fireplace-glow" id="fireplaceGlow" aria-hidden="true"></div>
               <div class="desk"></div>
               <div class="lamp"></div>
               <div class="bookshelf">
@@ -184,6 +185,17 @@
               <i data-lucide="crosshair"></i>
               <span>同步任務</span>
             </button>
+            <button
+              class="intention-sync-btn distraction-trigger-btn"
+              id="btnQuickDistraction"
+              type="button"
+              title="傾倒雜念收集箱 (快捷鍵: I)"
+              aria-label="雜念收集箱"
+            >
+              <i data-lucide="lightbulb"></i>
+              <span>雜念箱</span>
+              <span class="parking-badge" id="parkingBadge" hidden>0</span>
+            </button>
           </div>
 
           <div class="timer-mode-bar" id="timerModeBar">
@@ -197,6 +209,48 @@
               </button>
               <button class="timer-mode-pill" type="button" data-mode="longBreak" role="tab" aria-selected="false">
                 <span id="pillLongBreakText">🌴 長休 15m</span>
+              </button>
+            </div>
+            <div class="sprint-preset-picker" id="sprintPresetPicker" role="radiogroup" aria-label="心流衝刺範本">
+              <button
+                class="sprint-chip active"
+                type="button"
+                data-preset="classic"
+                role="radio"
+                aria-checked="true"
+                title="經典心流：25 分專注 / 5 分短休"
+              >
+                <span>⏱️ 經典 25m</span>
+              </button>
+              <button
+                class="sprint-chip"
+                type="button"
+                data-preset="deep"
+                role="radio"
+                aria-checked="false"
+                title="深度鑽研：50 分專注 / 10 分短休"
+              >
+                <span>🌊 深度 50m</span>
+              </button>
+              <button
+                class="sprint-chip"
+                type="button"
+                data-preset="sprint"
+                role="radio"
+                aria-checked="false"
+                title="極速衝刺：15 分專注 / 3 分短休"
+              >
+                <span>⚡ 衝刺 15m</span>
+              </button>
+              <button
+                class="sprint-chip"
+                type="button"
+                data-preset="ultradian"
+                role="radio"
+                aria-checked="false"
+                title="超晝心流：90 分專注 / 20 分長休"
+              >
+                <span>🪐 週期 90m</span>
               </button>
             </div>
             <span class="timer-sync-badge" id="timerSyncBadge" hidden title="已跟隨房主番茄鐘倒數同步"
@@ -474,9 +528,32 @@
           </section>
 
           <section class="panel task-panel" id="taskPanel">
-            <div class="panel-head">
-              <h2>伴讀待辦清單</h2>
-              <span class="task-summary-badge" id="taskSummaryBadge">0/0</span>
+            <div class="panel-head task-panel-head">
+              <div class="task-head-main">
+                <h2>伴讀待辦清單</h2>
+                <span class="task-forecast-badge" id="taskForecastBadge" title="心流時間預算儀">預計 0 🍅</span>
+              </div>
+              <div class="task-head-actions">
+                <span class="task-summary-badge" id="taskSummaryBadge">0/0</span>
+                <button
+                  class="icon-btn subtle task-tool-btn"
+                  id="btnBatchImportTasks"
+                  type="button"
+                  aria-label="批次導入 Markdown 任務"
+                  title="批次導入 Markdown 任務"
+                >
+                  <i data-lucide="list-plus"></i>
+                </button>
+                <button
+                  class="icon-btn subtle task-tool-btn"
+                  id="btnClearCompletedTasks"
+                  type="button"
+                  aria-label="清除已完成任務"
+                  title="清除已完成任務"
+                >
+                  <i data-lucide="check-check"></i>
+                </button>
+              </div>
             </div>
             <form class="task-form" id="taskForm">
               <input
@@ -825,6 +902,10 @@
             <kbd class="shortcut-kbd">T</kbd>
           </div>
           <div class="shortcut-row">
+            <span class="shortcut-desc">快速傾倒雜念收集箱</span>
+            <kbd class="shortcut-kbd">I</kbd>
+          </div>
+          <div class="shortcut-row">
             <span class="shortcut-desc">跳轉至專注里程碑統計</span>
             <kbd class="shortcut-kbd">S</kbd>
           </div>
@@ -903,6 +984,70 @@
           <button class="poster-action-btn secondary" id="btnCopyPoster" type="button">
             <i data-lucide="copy"></i>
             <span>複製到剪貼簿</span>
+          </button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="distraction-modal" id="distractionModal">
+      <div class="distraction-dialog-card">
+        <div class="distraction-header">
+          <div class="distraction-title-group">
+            <h2>💡 雜念暫存與收集箱</h2>
+            <span class="distraction-subtitle">隨手傾倒干擾思緒，不中斷當前心流，稍後再整理</span>
+          </div>
+          <button class="icon-btn subtle close-btn" id="closeDistraction" type="button" aria-label="關閉雜念收集箱">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <form class="distraction-form" id="distractionForm">
+          <input
+            id="distractionInput"
+            class="distraction-input"
+            maxlength="80"
+            placeholder="突然想到的瑣事、靈感或突發干擾... (Enter 快速存放)"
+            autocomplete="off"
+            aria-label="輸入雜念內容"
+          />
+          <button class="icon-btn primary" type="submit" aria-label="存放雜念" title="存放雜念">
+            <i data-lucide="plus"></i>
+          </button>
+        </form>
+        <div class="distraction-list-header">
+          <span>待辦暫存清單 (<span id="parkingLotCount">0</span>)</span>
+          <button class="btn-text-subtle" id="btnClearFinishedParking" type="button">清除已處理</button>
+        </div>
+        <div class="distraction-list" id="distractionList" aria-live="polite">
+          <div class="distraction-empty">思緒清明，暫無雜念塵埃 ✨</div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="batch-task-modal" id="batchTaskModal">
+      <div class="batch-task-dialog-card">
+        <div class="batch-task-header">
+          <div class="batch-task-title-group">
+            <h2>📋 批次導入 Markdown 任務</h2>
+            <span class="batch-task-subtitle">支援清單符號 (-、*、1.)、核取方塊 (- [ ]) 及番茄預估 (3) 或 🍅 2</span>
+          </div>
+          <button class="icon-btn subtle close-btn" id="closeBatchTask" type="button" aria-label="關閉批次導入">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="batch-task-body">
+          <textarea
+            id="batchTaskInput"
+            class="batch-task-textarea"
+            rows="7"
+            placeholder="- 重構渲染核心 (3)&#10;- 撰寫單元測試 [2]&#10;- [x] 已完成的文件整理&#10;1. 審查 Pull Request 🍅 1"
+            aria-label="Markdown 任務文字"
+          ></textarea>
+        </div>
+        <div class="batch-task-footer">
+          <button class="batch-btn secondary" id="btnCancelBatchTask" type="button">取消</button>
+          <button class="batch-btn primary" id="btnConfirmBatchTasks" type="button">
+            <i data-lucide="plus-circle"></i>
+            <span>匯入清單</span>
           </button>
         </div>
       </div>

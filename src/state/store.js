@@ -56,6 +56,9 @@ const profileDefaults = {
   syncWithHostTimer: false,
   focusCategory: "dev",
   focusIntention: "",
+  sprintPreset: "classic",
+  parkingLot: [],
+  windowWeather: "auto",
   customPresets: [],
 };
 
@@ -156,6 +159,23 @@ function sanitizeProfile(value = {}) {
       ? value.focusCategory
       : profileDefaults.focusCategory,
     focusIntention: typeof value.focusIntention === "string" ? value.focusIntention.trim().slice(0, 48) : "",
+    sprintPreset: ["classic", "deep", "sprint", "ultradian", "custom"].includes(value.sprintPreset)
+      ? value.sprintPreset
+      : profileDefaults.sprintPreset,
+    windowWeather: ["auto", "rain", "snow", "leaves", "clear"].includes(value.windowWeather)
+      ? value.windowWeather
+      : profileDefaults.windowWeather,
+    parkingLot: Array.isArray(value.parkingLot)
+      ? value.parkingLot
+          .filter((item) => item && typeof item.text === "string" && item.text.trim())
+          .slice(0, 50)
+          .map((item) => ({
+            id: String(item.id || crypto.randomUUID()).slice(0, 64),
+            text: String(item.text).trim().slice(0, 80),
+            createdAt: Number.isFinite(Number(item.createdAt)) ? Number(item.createdAt) : Date.now(),
+            completed: Boolean(item.completed),
+          }))
+      : [],
     customPresets: Array.isArray(value.customPresets)
       ? value.customPresets
           .filter((p) => p && typeof p.name === "string" && typeof p.tracks === "object" && p.tracks !== null)

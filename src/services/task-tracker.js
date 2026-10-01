@@ -156,8 +156,83 @@ export class TaskTracker {
     return false;
   }
 
+  importMarkdown(markdownText) {
+    if (typeof markdownText !== "string") return [];
+    const lines = markdownText.split("\n");
+    const addedTasks = [];
+
+    for (const rawLine of lines) {
+      let line = rawLine.trim();
+      if (!line) continue;
+
+      // 1. Check completed status: - [x] or - [X]
+      let completed = false;
+      if (/^[-*+]\s*\[([xX])\]/i.test(line)) {
+        completed = true;
+        line = line.replace(/^[-*+]\s*\[([xX])\]\s*/i, "");
+      } else if (/^[-*+]\s*\[\s*\]/.test(line)) {
+        completed = false;
+        line = line.replace(/^[-*+]\s*\[\s*\]\s*/, "");
+      } else if (/^[-*+]\s+/.test(line)) {
+        line = line.replace(/^[-*+]\s+/, "");
+      } else if (/^\d+[.)]\s+/.test(line)) {
+        line = line.replace(/^\d+[.)]\s+/, "");
+      }
+
+      // 2. Extract target pomodoros: e.g. (3), [2], 🍅 4, pomo: 2
+      let targetPomodoros = 2;
+      const pomoMatch = line.match(/(?:\((\d+)\)|\[(\d+)\]|🍅\s*(\d+)|pomo:\s*(\d+))\s*$/i);
+      if (pomoMatch) {
+        const val = Number(pomoMatch[1] || pomoMatch[2] || pomoMatch[3] || pomoMatch[4]);
+        if (Number.isFinite(val) && val > 0) {
+          targetPomodoros = Math.max(1, Math.min(20, Math.round(val)));
+        }
+        line = line.replace(/(?:\((\d+)\)|\[(\d+)\]|🍅\s*(\d+)|pomo:\s*(\d+))\s*$/i, "").trim();
+      }
+
+      const title = line.trim();
+      if (!title) continue;
+
+      const task = this.addTask(title, targetPomodoros);
+      if (task) {
+        if (completed) {
+          task.completed = true;
+          this.saveTasks();
+        }
+        addedTasks.push(task);
+      }
+    }
+
+    return addedTasks;
+  }
+
+  getForecast(focusMinutes = 25) {
+    const activeTasks = this.getActiveTasks();
+    const remainingTasksCount = activeTasks.length;
+    const remainingPomodoros = activeTasks.reduce(
+      (sum, t) => sum + Math.max(1, t.targetPomodoros - (t.pomodoros || 0)),
+      0,
+    );
+    const estimatedMinutes = remainingPomodoros * focusMinutes;
+    const hours = Math.floor(estimatedMinutes / 60);
+    const mins = estimatedMinutes % 60;
+    const durationText = hours > 0 ? (mins > 0 ? `${hours} 小時 ${mins} 分` : `${hours} 小時`) : `${mins} 分鐘`;
+
+    return {
+      remainingTasksCount,
+      remainingPomodoros,
+      estimatedMinutes,
+      durationText,
+    };
+  }
+
   clearCompleted() {
+    const beforeLen = this.tasks.length;
     this.tasks = this.tasks.filter((t) => !t.completed);
-    this.saveTasks();
+    const removedCount = beforeLen - this.tasks.length;
+    if (removedCount > 0) {
+      this.saveTasks();
+    }
+    return removedCount;
   }
 }

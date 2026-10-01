@@ -7,6 +7,8 @@ import {
   BookmarkPlus,
   BookOpen,
   Cat,
+  Check,
+  CheckCheck,
   CheckSquare,
   ChevronDown,
   ChevronLeft,
@@ -27,6 +29,8 @@ import {
   House,
   ImagePlus,
   Keyboard,
+  Lightbulb,
+  ListPlus,
   Maximize2,
   Minimize2,
   MessageCircleHeart,
@@ -37,6 +41,7 @@ import {
   Pencil,
   Play,
   Plus,
+  PlusCircle,
   RefreshCw,
   RotateCcw,
   Search,
@@ -58,12 +63,13 @@ import { AmbientSoundscapeManager, SOUNDSCAPE_PRESETS } from "./services/ambient
 import { BackgroundMusic } from "./services/background-music.js";
 import { CompanionSoundManager } from "./services/companion-sound.js";
 import { createCompanionAsset } from "./services/doll-generation.js";
-import { FocusTimer } from "./services/focus-timer.js";
+import { FocusTimer, SPRINT_PRESETS } from "./services/focus-timer.js";
 import { LofiGenerator } from "./services/lofi-generator.js";
 import { NotificationManager } from "./services/notification-manager.js";
 import { StudyStatsManager } from "./services/study-stats.js";
 import { TaskTracker } from "./services/task-tracker.js";
 import { FocusPosterGenerator } from "./services/poster-generator.js";
+import { WeatherEngine } from "./services/weather-engine.js";
 import { createStore } from "./state/store.js";
 
 const icons = {
@@ -75,6 +81,8 @@ const icons = {
   BookOpen,
   Camera,
   Cat,
+  Check,
+  CheckCheck,
   CheckSquare,
   ChevronDown,
   ChevronLeft,
@@ -94,6 +102,8 @@ const icons = {
   House,
   ImagePlus,
   Keyboard,
+  Lightbulb,
+  ListPlus,
   Maximize2,
   Minimize2,
   MessageCircleHeart,
@@ -104,6 +114,7 @@ const icons = {
   Pencil,
   Play,
   Plus,
+  PlusCircle,
   RefreshCw,
   RotateCcw,
   Search,
@@ -292,6 +303,26 @@ const elements = {
   petHearts: $("#petHearts"),
   lofiChip: $("#lofiChip"),
   toast: $("#toast"),
+  sprintPresetPicker: $("#sprintPresetPicker"),
+  sprintChips: [...document.querySelectorAll(".sprint-chip")],
+  btnQuickDistraction: $("#btnQuickDistraction"),
+  parkingBadge: $("#parkingBadge"),
+  fireplaceGlow: $("#fireplaceGlow"),
+  taskForecastBadge: $("#taskForecastBadge"),
+  btnBatchImportTasks: $("#btnBatchImportTasks"),
+  btnClearCompletedTasks: $("#btnClearCompletedTasks"),
+  distractionModal: $("#distractionModal"),
+  closeDistraction: $("#closeDistraction"),
+  distractionForm: $("#distractionForm"),
+  distractionInput: $("#distractionInput"),
+  distractionList: $("#distractionList"),
+  parkingLotCount: $("#parkingLotCount"),
+  btnClearFinishedParking: $("#btnClearFinishedParking"),
+  batchTaskModal: $("#batchTaskModal"),
+  closeBatchTask: $("#closeBatchTask"),
+  batchTaskInput: $("#batchTaskInput"),
+  btnCancelBatchTask: $("#btnCancelBatchTask"),
+  btnConfirmBatchTasks: $("#btnConfirmBatchTasks"),
 };
 
 const store = createStore({
@@ -311,6 +342,7 @@ const taskTracker = new TaskTracker();
 const studyStats = new StudyStatsManager();
 const companionSound = new CompanionSoundManager(0.4);
 const notificationManager = new NotificationManager({ baseTitle: "NewWorld Study Room" });
+const weatherEngine = new WeatherEngine(elements.windowRain);
 let viewer = null;
 let p2p = null;
 let toastTimeout = null;
@@ -508,6 +540,17 @@ function renderTasks() {
   elements.taskList.replaceChildren();
   const summary = taskTracker.getSummary();
   elements.taskSummaryBadge.textContent = `${summary.completed}/${summary.total} (🍅 ${summary.totalPomodoros}/${summary.totalTargetPomodoros})`;
+
+  if (elements.taskForecastBadge) {
+    const forecast = taskTracker.getForecast(timer.minutes || 25);
+    if (summary.total === 0) {
+      elements.taskForecastBadge.textContent = "待安排 🍅";
+    } else if (forecast.remainingPomodoros === 0) {
+      elements.taskForecastBadge.textContent = "全部完成 ✨";
+    } else {
+      elements.taskForecastBadge.textContent = `預計 ${forecast.remainingPomodoros} 🍅 · ${forecast.formattedDuration}`;
+    }
+  }
 
   if (!taskTracker.tasks.length) {
     const empty = document.createElement("div");
@@ -875,6 +918,37 @@ function updateNotificationUI(state = store.get()) {
   }
 }
 
+function syncWeatherAtmosphere() {
+  const currentStore = store.get();
+  const campfireActive = ambientSound.tracks && "campfire" in ambientSound.tracks;
+  const isNight = elements.stage?.dataset.atmosphere === "night";
+
+  if (elements.fireplaceGlow) {
+    if (campfireActive || isNight) {
+      elements.fireplaceGlow.classList.add("active");
+    } else {
+      elements.fireplaceGlow.classList.remove("active");
+    }
+  }
+
+  const manualWeather = currentStore.windowWeather;
+  if (manualWeather && manualWeather !== "auto") {
+    weatherEngine.setMode(manualWeather);
+    return;
+  }
+
+  // Auto weather derivation based on soundscape and day/night
+  if (ambientSound.tracks && "rain" in ambientSound.tracks) {
+    weatherEngine.setMode("rain");
+  } else if (ambientSound.tracks && ("wind" in ambientSound.tracks || "brown_noise" in ambientSound.tracks)) {
+    weatherEngine.setMode("leaves");
+  } else if (isNight) {
+    weatherEngine.setMode("snow");
+  } else {
+    weatherEngine.setMode("clear");
+  }
+}
+
 function updateAtmosphere(mode = "auto") {
   let resolved = mode;
   if (mode === "auto") {
@@ -891,51 +965,7 @@ function updateAtmosphere(mode = "auto") {
     night: "環境氛圍：子夜星空",
   };
   if (elements.toggleAtmosphere) elements.toggleAtmosphere.title = labels[mode] || labels.auto;
-}
-
-let rainAnimationFrame = null;
-const raindrops = Array.from({ length: 28 }, () => ({
-  x: Math.random() * 88,
-  y: Math.random() * 96,
-  length: 6 + Math.random() * 8,
-  speed: 1.5 + Math.random() * 2.5,
-  opacity: 0.3 + Math.random() * 0.5,
-}));
-
-function startWindowRain() {
-  if (rainAnimationFrame || !elements.windowRain) return;
-  const ctx = elements.windowRain.getContext("2d");
-  if (!ctx) return;
-  function renderRain() {
-    ctx.clearRect(0, 0, 88, 96);
-    ctx.strokeStyle = "rgba(180, 220, 255, 0.6)";
-    ctx.lineWidth = 1;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    for (const drop of raindrops) {
-      ctx.moveTo(drop.x, drop.y);
-      ctx.lineTo(drop.x - 0.5, drop.y + drop.length);
-      drop.y += drop.speed;
-      if (drop.y > 96) {
-        drop.y = -drop.length;
-        drop.x = Math.random() * 88;
-      }
-    }
-    ctx.stroke();
-    rainAnimationFrame = requestAnimationFrame(renderRain);
-  }
-  renderRain();
-}
-
-function stopWindowRain() {
-  if (rainAnimationFrame) {
-    cancelAnimationFrame(rainAnimationFrame);
-    rainAnimationFrame = null;
-  }
-  if (elements.windowRain) {
-    const ctx = elements.windowRain.getContext("2d");
-    ctx?.clearRect(0, 0, 88, 96);
-  }
+  syncWeatherAtmosphere();
 }
 
 function clampProgress(value) {
@@ -1032,6 +1062,18 @@ function renderState(state) {
     chip.classList.toggle("active", active);
     chip.setAttribute("aria-checked", String(active));
   });
+  if (state.sprintPreset) {
+    updateSprintPresetUI(state.sprintPreset);
+  }
+  const pendingParking = (state.parkingLot || []).filter((p) => !p.completed).length;
+  if (elements.parkingBadge) {
+    if (pendingParking > 0) {
+      elements.parkingBadge.textContent = String(pendingParking);
+      elements.parkingBadge.hidden = false;
+    } else {
+      elements.parkingBadge.hidden = true;
+    }
+  }
   renderGeneration(state);
   renderTips(state.tips);
   if (viewer && (state.photo !== lastRenderedPhoto || state.standeePhoto !== lastRenderedStandeePhoto)) {
@@ -1475,14 +1517,13 @@ function bindAmbientSound() {
         ambientSound.stopTrack(sound);
         chip.classList.remove("active");
         chip.setAttribute("aria-pressed", "false");
-        if (sound === "rain") stopWindowRain();
       } else {
         ambientSound.startTrack(sound);
         chip.classList.add("active");
         chip.setAttribute("aria-pressed", "true");
-        if (sound === "rain") startWindowRain();
       }
       renderAmbientMixer();
+      syncWeatherAtmosphere();
     });
   });
 
@@ -1543,11 +1584,7 @@ function bindPresets() {
         chip.classList.toggle("active", isPlaying);
         chip.setAttribute("aria-pressed", String(isPlaying));
       });
-      if ("rain" in preset.tracks) {
-        startWindowRain();
-      } else {
-        stopWindowRain();
-      }
+      syncWeatherAtmosphere();
       renderAmbientMixer();
       showToast(`已套用「${preset.name}」音景預設。`);
     });
@@ -1588,11 +1625,7 @@ function renderCustomPresets() {
         chipEl.classList.toggle("active", isPlaying);
         chipEl.setAttribute("aria-pressed", String(isPlaying));
       });
-      if ("rain" in preset.tracks && preset.tracks.rain > 0) {
-        startWindowRain();
-      } else {
-        stopWindowRain();
-      }
+      syncWeatherAtmosphere();
       renderAmbientMixer();
       showToast(`已套用自訂預設「${preset.name}」。`);
     });
@@ -1902,6 +1935,249 @@ function bindTasks() {
   });
 
   renderTasks();
+}
+
+function updateSprintPresetUI(presetKey) {
+  elements.sprintChips?.forEach((chip) => {
+    const isSelected = chip.dataset.preset === presetKey;
+    chip.classList.toggle("active", isSelected);
+    chip.setAttribute("aria-checked", String(isSelected));
+  });
+}
+
+function bindSprintPresets() {
+  const SPRINT_MESSAGES = {
+    classic: "經典 25 分番茄鐘！節奏明快，保持專注～ 🍅",
+    deep: "開啟 50 分鐘深度鑽研！深呼吸，沉浸心流之中 🌊",
+    sprint: "15 分鐘極速衝刺！全力攻克眼前關鍵小任務 ⚡",
+    ultradian: "90 分鐘超晝心流！跟隨大腦自然律動，全神貫注 🪐",
+  };
+
+  const initialPreset = store.get().sprintPreset || "classic";
+  updateSprintPresetUI(initialPreset);
+
+  elements.sprintChips?.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const presetKey = chip.dataset.preset;
+      const preset = SPRINT_PRESETS[presetKey];
+      if (!preset) return;
+
+      const currentPreset = store.get().sprintPreset;
+      if (currentPreset === presetKey) return;
+
+      timer.applySprintPreset(presetKey);
+      store.update({
+        sprintPreset: presetKey,
+        minutes: preset.focus,
+        shortBreakMinutes: preset.shortBreak,
+        longBreakMinutes: preset.longBreak,
+      });
+
+      if (elements.minutes) elements.minutes.value = String(preset.focus);
+      if (elements.shortBreakMinutes) elements.shortBreakMinutes.value = String(preset.shortBreak);
+      if (elements.longBreakMinutes) elements.longBreakMinutes.value = String(preset.longBreak);
+
+      if (elements.pillShortBreakText) elements.pillShortBreakText.textContent = `☕ 短休 ${preset.shortBreak}m`;
+      if (elements.pillLongBreakText) elements.pillLongBreakText.textContent = `🌴 長休 ${preset.longBreak}m`;
+
+      updateSprintPresetUI(presetKey);
+      renderTasks();
+
+      const bubbleMsg = SPRINT_MESSAGES[presetKey] || `已切換為「${preset.label}」衝刺模式！`;
+      showCompanionBubble(bubbleMsg, 3500);
+      showToast(`已套用「${preset.label}」衝刺設定（專注 ${preset.focus}m / 短休 ${preset.shortBreak}m）。`);
+    });
+  });
+}
+
+function renderParkingLot() {
+  if (!elements.distractionList) return;
+  const items = store.get().parkingLot || [];
+  const pendingCount = items.filter((item) => !item.completed).length;
+
+  if (elements.parkingLotCount) {
+    elements.parkingLotCount.textContent = String(items.length);
+  }
+
+  if (elements.parkingBadge) {
+    if (pendingCount > 0) {
+      elements.parkingBadge.textContent = String(pendingCount);
+      elements.parkingBadge.hidden = false;
+    } else {
+      elements.parkingBadge.hidden = true;
+    }
+  }
+
+  elements.distractionList.innerHTML = "";
+  if (!items.length) {
+    const empty = document.createElement("div");
+    empty.className = "distraction-empty";
+    empty.textContent = "思緒清明，暫無雜念塵埃 ✨";
+    elements.distractionList.append(empty);
+    return;
+  }
+
+  items.forEach((item) => {
+    const el = document.createElement("div");
+    el.className = `distraction-item ${item.completed ? "completed" : ""}`.trim();
+    el.dataset.id = item.id;
+
+    const left = document.createElement("div");
+    left.className = "distraction-item-left";
+
+    const chk = document.createElement("input");
+    chk.type = "checkbox";
+    chk.checked = !!item.completed;
+    chk.title = item.completed ? "標示為未完成" : "標示為已處理";
+    chk.setAttribute("aria-label", `切換狀態：${item.text}`);
+    chk.addEventListener("change", () => {
+      const current = store.get().parkingLot || [];
+      const updated = current.map((p) => (p.id === item.id ? { ...p, completed: chk.checked } : p));
+      store.update({ parkingLot: updated });
+      renderParkingLot();
+    });
+
+    const span = document.createElement("span");
+    span.className = "distraction-text";
+    span.textContent = item.text;
+    span.title = item.text;
+
+    left.append(chk, span);
+
+    const actions = document.createElement("div");
+    actions.className = "distraction-actions";
+
+    const convertBtn = document.createElement("button");
+    convertBtn.type = "button";
+    convertBtn.className = "distraction-action-btn promote";
+    convertBtn.title = "轉化為待辦任務";
+    convertBtn.setAttribute("aria-label", `轉為待辦任務：${item.text}`);
+    convertBtn.innerHTML = '<i data-lucide="plus-circle"></i>';
+    convertBtn.addEventListener("click", () => {
+      taskTracker.addTask(item.text, 1);
+      const current = store.get().parkingLot || [];
+      store.update({
+        parkingLot: current.filter((p) => p.id !== item.id),
+      });
+      renderTasks();
+      renderParkingLot();
+      showToast("已將雜念轉化為待辦任務！📋");
+    });
+
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "distraction-action-btn delete";
+    delBtn.title = "刪除雜念";
+    delBtn.setAttribute("aria-label", `刪除雜念：${item.text}`);
+    delBtn.innerHTML = '<i data-lucide="trash-2"></i>';
+    delBtn.addEventListener("click", () => {
+      const current = store.get().parkingLot || [];
+      store.update({ parkingLot: current.filter((p) => p.id !== item.id) });
+      renderParkingLot();
+    });
+
+    actions.append(convertBtn, delBtn);
+    el.append(left, actions);
+    elements.distractionList.append(el);
+  });
+
+  createIcons({ icons });
+}
+
+function openDistractionModal() {
+  if (!elements.distractionModal) return;
+  renderParkingLot();
+  elements.distractionModal.showModal();
+  elements.distractionInput?.focus();
+}
+
+function closeDistractionModal() {
+  elements.distractionModal?.close();
+}
+
+function bindDistraction() {
+  elements.btnQuickDistraction?.addEventListener("click", openDistractionModal);
+  elements.closeDistraction?.addEventListener("click", closeDistractionModal);
+
+  elements.distractionModal?.addEventListener("click", (e) => {
+    if (!e.target.closest(".distraction-dialog-card")) {
+      closeDistractionModal();
+    }
+  });
+
+  elements.distractionForm?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const text = (elements.distractionInput?.value || "").trim();
+    if (!text) return;
+    const current = store.get().parkingLot || [];
+    const newItem = {
+      id: `dist_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      text,
+      createdAt: Date.now(),
+      completed: false,
+    };
+    store.update({ parkingLot: [newItem, ...current] });
+    if (elements.distractionInput) elements.distractionInput.value = "";
+    renderParkingLot();
+    showToast("雜念已封存至收集箱 💡 繼續保持專注！");
+  });
+
+  elements.btnClearFinishedParking?.addEventListener("click", () => {
+    const current = store.get().parkingLot || [];
+    const remaining = current.filter((p) => !p.completed);
+    const cleared = current.length - remaining.length;
+    if (cleared > 0) {
+      store.update({ parkingLot: remaining });
+      renderParkingLot();
+      showToast(`已清理 ${cleared} 項已處理的雜念 ✨`);
+    } else {
+      showToast("目前沒有已處理的雜念項目。");
+    }
+  });
+}
+
+function bindBatchTaskImporter() {
+  elements.btnBatchImportTasks?.addEventListener("click", () => {
+    elements.batchTaskModal?.showModal();
+    elements.batchTaskInput?.focus();
+  });
+
+  elements.closeBatchTask?.addEventListener("click", () => {
+    elements.batchTaskModal?.close();
+  });
+
+  elements.btnCancelBatchTask?.addEventListener("click", () => {
+    elements.batchTaskModal?.close();
+  });
+
+  elements.batchTaskModal?.addEventListener("click", (e) => {
+    if (!e.target.closest(".batch-task-dialog-card")) {
+      elements.batchTaskModal?.close();
+    }
+  });
+
+  elements.btnConfirmBatchTasks?.addEventListener("click", () => {
+    const text = elements.batchTaskInput?.value || "";
+    const added = taskTracker.importMarkdown(text);
+    if (added.length > 0) {
+      renderTasks();
+      if (elements.batchTaskInput) elements.batchTaskInput.value = "";
+      elements.batchTaskModal?.close();
+      showToast(`成功批次匯入 ${added.length} 個任務！📋`);
+    } else {
+      showToast("未辨識出有效任務項目，請檢查格式。");
+    }
+  });
+
+  elements.btnClearCompletedTasks?.addEventListener("click", () => {
+    const cleared = taskTracker.clearCompleted();
+    if (cleared > 0) {
+      renderTasks();
+      showToast(`已清理 ${cleared} 個已完成任務 🧹`);
+    } else {
+      showToast("目前沒有已完成的任務可清理。");
+    }
+  });
 }
 
 function bindTips() {
@@ -2353,6 +2629,12 @@ function bindShortcuts() {
       return;
     }
 
+    if (e.key === "i" || e.key === "I") {
+      e.preventDefault();
+      openDistractionModal();
+      return;
+    }
+
     if (e.key === "s" || e.key === "S") {
       e.preventDefault();
       elements.statsPanel?.scrollIntoView({ behavior: "smooth" });
@@ -2676,6 +2958,10 @@ function init() {
   bindIdleSleep();
   bindP2PCheer();
   bindTasks();
+  bindSprintPresets();
+  bindDistraction();
+  renderParkingLot();
+  bindBatchTaskImporter();
   bindFocusIntention();
   bindExports();
   bindPosterModal();
@@ -2685,6 +2971,7 @@ function init() {
   bindTipSignal();
   bindSettings();
   bindMobileNavigation();
+  syncWeatherAtmosphere();
   elements.avatarFallback?.addEventListener("click", () => {
     viewer?.triggerBounce();
     viewer?.onTap?.();
@@ -2703,7 +2990,7 @@ function init() {
     music.destroy();
     ambientSound.stopAll();
     lofiGenerator.stop();
-    stopWindowRain();
+    weatherEngine?.destroy();
     stopBreathingGuide();
   });
 }

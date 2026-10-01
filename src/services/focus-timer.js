@@ -1,3 +1,38 @@
+export const SPRINT_PRESETS = {
+  classic: {
+    id: "classic",
+    name: "經典 25/5",
+    icon: "🎯",
+    focusMinutes: 25,
+    shortBreakMinutes: 5,
+    longBreakMinutes: 15,
+  },
+  deep: {
+    id: "deep",
+    name: "深度 50/10",
+    icon: "🌊",
+    focusMinutes: 50,
+    shortBreakMinutes: 10,
+    longBreakMinutes: 20,
+  },
+  sprint: {
+    id: "sprint",
+    name: "衝刺 15/3",
+    icon: "⚡",
+    focusMinutes: 15,
+    shortBreakMinutes: 3,
+    longBreakMinutes: 10,
+  },
+  ultradian: {
+    id: "ultradian",
+    name: "超晝夜 90/20",
+    icon: "🌌",
+    focusMinutes: 90,
+    shortBreakMinutes: 20,
+    longBreakMinutes: 30,
+  },
+};
+
 export class FocusTimer extends EventTarget {
   constructor(minutes = 25) {
     super();
@@ -18,6 +53,24 @@ export class FocusTimer extends EventTarget {
       this.minutes = this.focusMinutes;
       this.reset();
     }
+  }
+
+  applySprintPreset(presetKey) {
+    const preset = SPRINT_PRESETS[presetKey];
+    if (!preset) return null;
+    this.focusMinutes = preset.focusMinutes;
+    this.shortBreakMinutes = preset.shortBreakMinutes;
+    this.longBreakMinutes = preset.longBreakMinutes;
+    if (this.mode === "focus") {
+      this.minutes = this.focusMinutes;
+    } else if (this.mode === "shortBreak") {
+      this.minutes = this.shortBreakMinutes;
+    } else if (this.mode === "longBreak") {
+      this.minutes = this.longBreakMinutes;
+    }
+    this.reset();
+    this.emitModeChange();
+    return preset;
   }
 
   setBreakDurations({ shortBreak = 5, longBreak = 15 } = {}) {

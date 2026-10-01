@@ -115,4 +115,33 @@ describe("FocusTimer Service", () => {
     expect(timer.cycleRound).toBe(3);
     expect(timer.interval).toBeNull();
   });
+
+  it("applies sprint presets correctly (classic, deep, sprint, ultradian)", () => {
+    // Deep work (50/10/20)
+    const deepPreset = timer.applySprintPreset("deep");
+    expect(deepPreset).toBeDefined();
+    expect(deepPreset.focusMinutes).toBe(50);
+    expect(timer.focusMinutes).toBe(50);
+    expect(timer.shortBreakMinutes).toBe(10);
+    expect(timer.longBreakMinutes).toBe(20);
+    expect(timer.minutes).toBe(50);
+    expect(timer.remaining).toBe(50 * 60);
+
+    // Sprint (15/3/10)
+    const sprintPreset = timer.applySprintPreset("sprint");
+    expect(sprintPreset.focusMinutes).toBe(15);
+    expect(timer.focusMinutes).toBe(15);
+    expect(timer.shortBreakMinutes).toBe(3);
+    expect(timer.longBreakMinutes).toBe(10);
+    expect(timer.remaining).toBe(15 * 60);
+
+    // Ultradian (90/20/30)
+    timer.applySprintPreset("ultradian");
+    expect(timer.focusMinutes).toBe(90);
+    expect(timer.shortBreakMinutes).toBe(20);
+    expect(timer.longBreakMinutes).toBe(30);
+
+    // Invalid preset returns null
+    expect(timer.applySprintPreset("unknown")).toBeNull();
+  });
 });

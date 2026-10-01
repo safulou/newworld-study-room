@@ -24,7 +24,7 @@ flowchart LR
 
 ## State boundaries
 
-- The profile store contains nickname, focusIntention, timer, focus category, break durations, completion chime, music, ambient preferences, custom soundscape presets (with stereo pans), doll style, photo texture, and optional model URL.
+- The profile store contains nickname, focusIntention, timer, focus category, sprintPreset rhythm templates, distraction parkingLot, break durations, completion chime, music, ambient preferences, windowWeather canvas mode, custom soundscape presets (with stereo pans), doll style, photo texture, and optional model URL.
 - Each host ID has a separate room store containing only room name and Tip history.
 - Joining another room cannot merge its Tips into a future room.
 - Outgoing guest Tips remain `pending` until the host returns a protocol ACK. Pending Tips survive reload and retry after reconnection.
