@@ -7,6 +7,8 @@ describe("AmbientSoundscapeManager", () => {
     expect(AMBIENT_SOUND_TYPES).toContain("wind");
     expect(AMBIENT_SOUND_TYPES).toContain("campfire");
     expect(AMBIENT_SOUND_TYPES).toContain("brown_noise");
+    expect(AMBIENT_SOUND_TYPES).toContain("pink_noise");
+    expect(AMBIENT_SOUND_TYPES).toContain("ocean_waves");
     expect(AMBIENT_SOUND_TYPES).toContain("binaural_alpha");
     expect(AMBIENT_SOUND_TYPES).toContain("binaural_gamma");
     expect(AMBIENT_SOUND_TYPES).toContain("keyboard");
@@ -17,6 +19,7 @@ describe("AmbientSoundscapeManager", () => {
     expect(SOUNDSCAPE_PRESETS.cozy_fireplace).toBeDefined();
     expect(SOUNDSCAPE_PRESETS.forest_breeze).toBeDefined();
     expect(SOUNDSCAPE_PRESETS.deep_flow).toBeDefined();
+    expect(SOUNDSCAPE_PRESETS.ocean_tide).toBeDefined();
     expect(SOUNDSCAPE_PRESETS.study_library).toBeDefined();
   });
 

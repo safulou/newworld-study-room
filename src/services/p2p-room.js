@@ -45,6 +45,17 @@ function isTimerSync(msg) {
   );
 }
 
+function isInteraction(msg) {
+  return Boolean(
+    msg &&
+    msg.type === "peer-interaction" &&
+    ["clink", "knock"].includes(msg.action) &&
+    typeof msg.by === "string" &&
+    msg.by.length > 0 &&
+    msg.by.length <= 18,
+  );
+}
+
 function safeHostId(value) {
   return typeof value === "string" && /^[a-zA-Z0-9_-]{1,80}$/.test(value) ? value : "";
 }
@@ -265,6 +276,21 @@ export class P2PRoom extends EventTarget {
       }
       return;
     }
+    if (message.type === "peer-interaction" && isInteraction(message)) {
+      this.dispatchEvent(new CustomEvent("peer-interaction", { detail: message }));
+      if (this.role === "host") {
+        this.broadcast(message, source.peer);
+      }
+      return;
+    }
+    if (message.type === "migration-data") {
+      this.dispatchEvent(new CustomEvent("migration-data", { detail: message }));
+      if (this.role === "host" && message.targetPeerId && message.targetPeerId !== this.selfId) {
+        const target = this.connections.get(message.targetPeerId);
+        if (target) this.send(target, message);
+      }
+      return;
+    }
     if (message.type === "timer-sync" && this.role === "guest" && isTimerSync(message)) {
       this.dispatchEvent(new CustomEvent("timer-sync", { detail: message }));
       return;
@@ -386,6 +412,45 @@ export class P2PRoom extends EventTarget {
     return msg;
   }
 
+  sendInteraction(action = "clink", by = "夥伴") {
+    const msg = {
+      type: "peer-interaction",
+      version: MESSAGE_VERSION,
+      action: ["clink", "knock"].includes(action) ? action : "clink",
+      by: String(by || "夥伴").slice(0, 18),
+      timestamp: Date.now(),
+    };
+    if (this.role === "host") {
+      this.broadcast(msg);
+    } else {
+      const host = this.connections.get(this.hostId);
+      this.send(host, msg);
+    }
+    return msg;
+  }
+
+  sendMigrationData(bundle, targetPeerId = null) {
+    const msg = {
+      type: "migration-data",
+      version: MESSAGE_VERSION,
+      bundle,
+      fromPeerId: this.peer?.id || this.selfId,
+      targetPeerId,
+      timestamp: Date.now(),
+    };
+    if (targetPeerId && this.connections.has(targetPeerId)) {
+      this.send(this.connections.get(targetPeerId), msg);
+      return true;
+    }
+    if (this.role === "host") {
+      this.broadcast(msg);
+      return true;
+    } else {
+      const host = this.connections.get(this.hostId);
+      return this.send(host, msg);
+    }
+  }
+
   sendTimerSync({ mode = "focus", remaining = 1500, isRunning = false, cycleRound = 1 } = {}) {
     const validModes = ["focus", "shortBreak", "longBreak"];
     const msg = {
@@ -489,9 +554,11 @@ export const p2pInternals = {
   isTip,
   publicTip,
   isTimerSync,
+  isInteraction,
   safeHostId,
   safeRoomToken,
   roomParams,
   validIceServers,
   REACTION_EMOJIS: ["💡", "🔥", "☕", "✨", "💯", "🌱"],
+  INTERACTION_ACTIONS: ["clink", "knock"],
 };

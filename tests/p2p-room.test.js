@@ -56,4 +56,36 @@ describe("P2P protocol validation", () => {
       }),
     ).toBe(false);
   });
+
+  it("validates peer-interaction payload and actions", () => {
+    expect(p2pInternals.INTERACTION_ACTIONS).toEqual(["clink", "knock"]);
+    expect(
+      p2pInternals.isInteraction({
+        type: "peer-interaction",
+        action: "clink",
+        by: "小森",
+      }),
+    ).toBe(true);
+    expect(
+      p2pInternals.isInteraction({
+        type: "peer-interaction",
+        action: "knock",
+        by: "旅人",
+      }),
+    ).toBe(true);
+    expect(
+      p2pInternals.isInteraction({
+        type: "peer-interaction",
+        action: "hug",
+        by: "小森",
+      }),
+    ).toBe(false);
+    expect(
+      p2pInternals.isInteraction({
+        type: "peer-interaction",
+        action: "clink",
+        by: "A".repeat(20),
+      }),
+    ).toBe(false);
+  });
 });

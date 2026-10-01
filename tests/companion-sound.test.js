@@ -45,5 +45,8 @@ describe("CompanionSoundManager", () => {
     expect(() => manager.playBreathingCue("hold")).not.toThrow();
     expect(() => manager.playBreathingCue("exhale")).not.toThrow();
     expect(() => manager.playBreathingCue("rest")).not.toThrow();
+    expect(() => manager.playCupClink()).not.toThrow();
+    expect(() => manager.playDeskKnock()).not.toThrow();
+    expect(() => manager.playWindDownChime()).not.toThrow();
   });
 });

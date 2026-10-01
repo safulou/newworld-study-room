@@ -372,4 +372,81 @@ export class CompanionSoundManager {
       osc.stop(now + dur + 0.05);
     }
   }
+
+  /**
+   * Play crystal ceramic/glass clink for peer toast reaction
+   */
+  playCupClink() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const frequencies = [2093, 4186, 6279];
+    const weights = [1, 0.45, 0.18];
+    frequencies.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now);
+      const peak = 0.14 * weights[idx] * this.volume;
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(peak, now + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.45);
+    });
+  }
+
+  /**
+   * Play warm wooden table double-knock ASMR sound
+   */
+  playDeskKnock() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    [0.0, 0.12].forEach((offset) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(145, now + offset);
+      osc.frequency.exponentialRampToValueAtTime(80, now + offset + 0.07);
+      const peak = 0.22 * this.volume;
+      gain.gain.setValueAtTime(0.0001, now + offset);
+      gain.gain.exponentialRampToValueAtTime(peak, now + offset + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.08);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + offset);
+      osc.stop(now + offset + 0.1);
+    });
+  }
+
+  /**
+   * Play gentle celestial crystal wind-down chime when focus approaches completion (last 3m/1m)
+   */
+  playWindDownChime() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const notes = [
+      { freq: 880.0, delay: 0.0, dur: 0.8 }, // A5
+      { freq: 1108.73, delay: 0.12, dur: 0.9 }, // C#6
+      { freq: 1318.51, delay: 0.24, dur: 1.2 }, // E6
+    ];
+    notes.forEach(({ freq, delay, dur }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + delay);
+      const peak = 0.08 * this.volume;
+      gain.gain.setValueAtTime(0.0001, now + delay);
+      gain.gain.exponentialRampToValueAtTime(peak, now + delay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + delay);
+      osc.stop(now + delay + dur + 0.05);
+    });
+  }
 }

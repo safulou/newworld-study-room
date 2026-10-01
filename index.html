@@ -329,6 +329,24 @@
               <button class="reaction-chip" type="button" data-reaction="☕" title="送出休息 ☕">☕</button>
               <button class="reaction-chip" type="button" data-reaction="✨" title="送出閃耀 ✨">✨</button>
               <button class="reaction-chip" type="button" data-reaction="💯" title="送出滿分 💯">💯</button>
+              <button
+                class="reaction-chip asmr-interaction-chip"
+                id="btnPeerClink"
+                type="button"
+                data-interaction="clink"
+                title="同伴碰杯乾杯 ASMR 🥂"
+              >
+                🥂
+              </button>
+              <button
+                class="reaction-chip asmr-interaction-chip"
+                id="btnPeerKnock"
+                type="button"
+                data-interaction="knock"
+                title="木桌敲敲打招呼 ASMR 🪵"
+              >
+                🪵
+              </button>
             </div>
           </div>
 
@@ -337,6 +355,7 @@
               <span class="ambient-preset-title">場景預設：</span>
               <button class="preset-btn" type="button" data-preset="cozy_fireplace">🌧️ 雨夜壁爐</button>
               <button class="preset-btn" type="button" data-preset="forest_breeze">🌲 林間微風</button>
+              <button class="preset-btn" type="button" data-preset="ocean_tide">🌊 潮汐漫步</button>
               <button class="preset-btn" type="button" data-preset="deep_flow">🧘 深度心流</button>
               <button class="preset-btn" type="button" data-preset="study_library">📚 圖書館自習</button>
             </div>
@@ -384,6 +403,14 @@
               <button class="ambient-chip" type="button" data-sound="binaural_gamma" aria-pressed="false">
                 <i data-lucide="zap"></i>
                 <span>Gamma波</span>
+              </button>
+              <button class="ambient-chip" type="button" data-sound="pink_noise" aria-pressed="false">
+                <i data-lucide="activity"></i>
+                <span>粉紅噪</span>
+              </button>
+              <button class="ambient-chip" type="button" data-sound="ocean_waves" aria-pressed="false">
+                <i data-lucide="waves"></i>
+                <span>潮汐海浪</span>
               </button>
             </div>
             <div class="ambient-mixer" id="ambientMixer" hidden>
@@ -755,6 +782,20 @@
                 <span>跟隨房主節奏倒數</span>
               </label>
             </div>
+            <div class="field">
+              <span>心流自動巡航</span>
+              <label class="checkbox-label" title="專注與休息倒數結束後自動切換並接續倒數">
+                <input type="checkbox" id="flowAutopilot" />
+                <span>自動切換專注與休息</span>
+              </label>
+            </div>
+            <div class="field">
+              <span>收尾溫柔提醒</span>
+              <label class="checkbox-label" title="專注剩餘 3 分鐘與 1 分鐘時播放輕柔收尾水晶音">
+                <input type="checkbox" id="windDownAlert" checked />
+                <span>剩餘 3m / 1m 播放提示音</span>
+              </label>
+            </div>
             <label class="field">
               <span>專注植物</span>
               <select id="plantType">
@@ -778,6 +819,15 @@
                 <button class="notification-btn" id="toggleNotification" type="button" aria-label="切換桌面通知">
                   <i data-lucide="bell" id="notificationIcon"></i>
                   <span id="notificationBtnText">開啟桌面通知</span>
+                </button>
+              </div>
+            </div>
+            <div class="field migration-field">
+              <span>資料遷移</span>
+              <div class="migration-control">
+                <button class="settings-action-btn" id="btnOpenMigration" type="button">
+                  <i data-lucide="smartphone"></i>
+                  <span>跨裝置鏡像遷移</span>
                 </button>
               </div>
             </div>
@@ -1049,6 +1099,76 @@
             <i data-lucide="plus-circle"></i>
             <span>匯入清單</span>
           </button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="migration-modal" id="migrationModal">
+      <div class="migration-dialog-card">
+        <div class="migration-header">
+          <div class="migration-title-group">
+            <h2>📱 跨裝置鏡像與無伺服器資料遷移</h2>
+            <span class="migration-subtitle">100% 本地端 P2P 直連或離線代碼包，無伺服器留存個資</span>
+          </div>
+          <button class="icon-btn subtle close-btn" id="closeMigration" type="button" aria-label="關閉資料遷移視窗">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="migration-body">
+          <div class="migration-section">
+            <h3>方案 A：一鍵產生離線鏡像遷移包</h3>
+            <p class="migration-desc">
+              將當前裝置的所有任務、番茄鐘歷史里程碑與房間設定打包成代碼，至新裝置貼上即可無縫復原。
+            </p>
+            <div class="migration-actions-row">
+              <button class="migration-btn primary" id="btnExportMigration" type="button">
+                <i data-lucide="download"></i>
+                <span>複製本機完整遷移代碼</span>
+              </button>
+            </div>
+            <textarea
+              id="migrationExportText"
+              class="migration-code-box"
+              rows="3"
+              readonly
+              placeholder="點擊上方按鈕後，此處將產生可複製的代碼包..."
+              aria-label="匯出的遷移代碼包"
+            ></textarea>
+          </div>
+
+          <div class="migration-divider"></div>
+
+          <div class="migration-section">
+            <h3>方案 B：導入遷移代碼包</h3>
+            <p class="migration-desc">貼上來自舊裝置的遷移代碼，將會安全融合或覆蓋本機資料並即時生效。</p>
+            <textarea
+              id="migrationImportText"
+              class="migration-code-box"
+              rows="3"
+              placeholder="在此貼上舊裝置的遷移代碼包..."
+              aria-label="欲匯入的遷移代碼包"
+            ></textarea>
+            <div class="migration-actions-row">
+              <button class="migration-btn secondary" id="btnApplyMigration" type="button">
+                <i data-lucide="upload"></i>
+                <span>解析並匯入至此裝置</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="migration-divider"></div>
+
+          <div class="migration-section" id="p2pLiveMigrationSection">
+            <h3>方案 C：同房 P2P 即時空中推送</h3>
+            <p class="migration-desc">如果新舊兩台裝置同時開啟且位於同一個 P2P 伴讀房間，可直接空中直傳鏡像資料。</p>
+            <div class="migration-actions-row">
+              <button class="migration-btn subtle" id="btnP2PLivePush" type="button">
+                <i data-lucide="send"></i>
+                <span>空中推送本機資料至房內夥伴裝置</span>
+              </button>
+            </div>
+            <p class="migration-p2p-status" id="migrationP2PStatus" aria-live="polite"></p>
+          </div>
         </div>
       </div>
     </dialog>

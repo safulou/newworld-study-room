@@ -10,6 +10,8 @@ export const AMBIENT_SOUND_TYPES = [
   "wind",
   "campfire",
   "brown_noise",
+  "pink_noise",
+  "ocean_waves",
   "binaural_alpha",
   "binaural_gamma",
   "keyboard",
@@ -38,6 +40,13 @@ export const SOUNDSCAPE_PRESETS = {
     tracks: { binaural_alpha: 0.22, rain: 0.2 },
     pans: { binaural_alpha: 0, rain: -0.35 },
   },
+  ocean_tide: {
+    id: "ocean_tide",
+    name: "潮汐漫步",
+    icon: "waves",
+    tracks: { ocean_waves: 0.38, pink_noise: 0.22 },
+    pans: { ocean_waves: 0.15, pink_noise: -0.35 },
+  },
   study_library: {
     id: "study_library",
     name: "圖書館自習",
@@ -58,6 +67,8 @@ export const SPATIAL_SCENARIOS = {
       keyboard: -0.3,
       pencil: 0.3,
       brown_noise: 0.4,
+      pink_noise: -0.25,
+      ocean_waves: 0.25,
       binaural_alpha: 0,
       binaural_gamma: 0,
     },
@@ -72,6 +83,8 @@ export const SPATIAL_SCENARIOS = {
       keyboard: 0,
       pencil: 0,
       brown_noise: 0,
+      pink_noise: 0,
+      ocean_waves: 0,
       binaural_alpha: 0,
       binaural_gamma: 0,
     },
@@ -118,6 +131,34 @@ export class AmbientSoundscapeManager {
       data[i] = (lastOut + 0.02 * white) / 1.02;
       lastOut = data[i];
       data[i] *= 3.5; // Gain compensation
+    }
+    return buffer;
+  }
+
+  createPinkNoiseBuffer(seconds = 4) {
+    const ctx = this.ensureContext();
+    if (!ctx) return null;
+    const sampleRate = ctx.sampleRate;
+    const bufferSize = sampleRate * seconds;
+    const buffer = ctx.createBuffer(1, bufferSize, sampleRate);
+    const data = buffer.getChannelData(0);
+    let b0 = 0,
+      b1 = 0,
+      b2 = 0,
+      b3 = 0,
+      b4 = 0,
+      b5 = 0,
+      b6 = 0;
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1;
+      b0 = 0.99886 * b0 + white * 0.0555179;
+      b1 = 0.99332 * b1 + white * 0.0750759;
+      b2 = 0.969 * b2 + white * 0.153852;
+      b3 = 0.8665 * b3 + white * 0.3104856;
+      b4 = 0.55 * b4 + white * 0.5329522;
+      b5 = -0.7616 * b5 - white * 0.016898;
+      data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+      b6 = white * 0.115926;
     }
     return buffer;
   }
@@ -244,6 +285,81 @@ export class AmbientSoundscapeManager {
         source: noiseSource,
         lfo,
         filter: hpFilter,
+        gain: trackGain,
+        panner,
+        volume,
+        pan: initialPan,
+      });
+      return true;
+    }
+
+    // Procedural Pink Noise (1/f Power Spectrum)
+    if (name === "pink_noise") {
+      const pinkBuffer = this.createPinkNoiseBuffer(4);
+      if (!pinkBuffer) return false;
+      const pinkSource = ctx.createBufferSource();
+      pinkSource.buffer = pinkBuffer;
+      pinkSource.loop = true;
+
+      const lpFilter = ctx.createBiquadFilter();
+      lpFilter.type = "lowpass";
+      lpFilter.frequency.setValueAtTime(3200, ctx.currentTime);
+
+      pinkSource.connect(lpFilter);
+      lpFilter.connect(trackGain);
+      pinkSource.start();
+
+      this.nodes.set(name, {
+        source: pinkSource,
+        filter: lpFilter,
+        gain: trackGain,
+        panner,
+        volume,
+        pan: initialPan,
+      });
+      return true;
+    }
+
+    // Procedural Ocean Waves with Ultra-Low Frequency Tidal LFO Modulation
+    if (name === "ocean_waves") {
+      const waveBuffer = this.createPinkNoiseBuffer(4);
+      if (!waveBuffer) return false;
+      const waveSource = ctx.createBufferSource();
+      waveSource.buffer = waveBuffer;
+      waveSource.loop = true;
+
+      const waveFilter = ctx.createBiquadFilter();
+      waveFilter.type = "lowpass";
+      waveFilter.frequency.setValueAtTime(360, ctx.currentTime);
+      waveFilter.Q.setValueAtTime(2.2, ctx.currentTime);
+
+      const lfo = ctx.createOscillator();
+      lfo.type = "sine";
+      lfo.frequency.setValueAtTime(0.08, ctx.currentTime);
+
+      const lfoFilterGain = ctx.createGain();
+      lfoFilterGain.gain.setValueAtTime(300, ctx.currentTime);
+      lfo.connect(lfoFilterGain);
+      lfoFilterGain.connect(waveFilter.frequency);
+
+      const waveGain = ctx.createGain();
+      waveGain.gain.setValueAtTime(0.55, ctx.currentTime);
+      const lfoVolumeGain = ctx.createGain();
+      lfoVolumeGain.gain.setValueAtTime(0.35, ctx.currentTime);
+      lfo.connect(lfoVolumeGain);
+      lfoVolumeGain.connect(waveGain.gain);
+
+      waveSource.connect(waveFilter);
+      waveFilter.connect(waveGain);
+      waveGain.connect(trackGain);
+
+      waveSource.start();
+      lfo.start();
+
+      this.nodes.set(name, {
+        source: waveSource,
+        lfo,
+        filter: waveFilter,
         gain: trackGain,
         panner,
         volume,

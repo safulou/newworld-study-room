@@ -1,5 +1,6 @@
 import "./styles.css";
 import {
+  Activity,
   BarChart2,
   Bell,
   BellOff,
@@ -48,6 +49,7 @@ import {
   Send,
   Share2,
   Shuffle,
+  Smartphone,
   Sparkles,
   SunMoon,
   Trash2,
@@ -73,6 +75,7 @@ import { WeatherEngine } from "./services/weather-engine.js";
 import { createStore } from "./state/store.js";
 
 const icons = {
+  Activity,
   BarChart2,
   Bell,
   BellOff,
@@ -121,6 +124,7 @@ const icons = {
   Send,
   Share2,
   Shuffle,
+  Smartphone,
   Sparkles,
   SunMoon,
   Trash2,
@@ -323,6 +327,19 @@ const elements = {
   batchTaskInput: $("#batchTaskInput"),
   btnCancelBatchTask: $("#btnCancelBatchTask"),
   btnConfirmBatchTasks: $("#btnConfirmBatchTasks"),
+  btnPeerClink: $("#btnPeerClink"),
+  btnPeerKnock: $("#btnPeerKnock"),
+  flowAutopilot: $("#flowAutopilot"),
+  windDownAlert: $("#windDownAlert"),
+  btnOpenMigration: $("#btnOpenMigration"),
+  migrationModal: $("#migrationModal"),
+  closeMigration: $("#closeMigration"),
+  btnExportMigration: $("#btnExportMigration"),
+  migrationExportText: $("#migrationExportText"),
+  migrationImportText: $("#migrationImportText"),
+  btnApplyMigration: $("#btnApplyMigration"),
+  btnP2PLivePush: $("#btnP2PLivePush"),
+  migrationP2PStatus: $("#migrationP2PStatus"),
 };
 
 const store = createStore({
@@ -1013,6 +1030,12 @@ function renderState(state) {
   if (elements.syncWithHostTimer && document.activeElement !== elements.syncWithHostTimer) {
     elements.syncWithHostTimer.checked = Boolean(state.syncWithHostTimer);
   }
+  if (elements.flowAutopilot && document.activeElement !== elements.flowAutopilot) {
+    elements.flowAutopilot.checked = Boolean(state.flowAutopilot);
+  }
+  if (elements.windDownAlert && document.activeElement !== elements.windDownAlert) {
+    elements.windDownAlert.checked = Boolean(state.windDownAlert);
+  }
   if (elements.pillShortBreakText) {
     elements.pillShortBreakText.textContent = `☕ 短休 ${state.shortBreakMinutes}m`;
   }
@@ -1241,6 +1264,8 @@ function broadcastTimerSyncIfHost() {
 }
 
 function bindTimer() {
+  let lastWindDownPlayedSec = 0;
+
   timer.addEventListener("tick", (event) => {
     const minutes = Math.floor(event.detail / 60)
       .toString()
@@ -1255,6 +1280,15 @@ function bindTimer() {
       isRunning: true,
       totalSeconds: timer.minutes * 60,
     });
+
+    if (timer.mode === "focus" && store.get().windDownAlert) {
+      if ((event.detail === 180 || event.detail === 60) && lastWindDownPlayedSec !== event.detail) {
+        lastWindDownPlayedSec = event.detail;
+        companionSound.playWindDownChime();
+        showToast(event.detail === 180 ? "🕊️ 專注剩餘 3 分鐘，準備溫和收尾" : "✨ 專注剩餘 1 分鐘，整理手邊思緒");
+        spawnZenSpark("🕊️ 舒緩收尾");
+      }
+    }
   });
 
   timer.addEventListener("modechange", (event) => {
@@ -1268,6 +1302,10 @@ function bindTimer() {
     const pauseTitle = isFocus ? "暫停專注" : "暫停休息";
     replaceButtonIcon(elements.toggleTimer, event.detail ? "pause" : "play", event.detail ? pauseTitle : playTitle);
     broadcastTimerSyncIfHost();
+
+    if (event.detail) {
+      lastWindDownPlayedSec = 0;
+    }
 
     if (isFocus) {
       elements.focusGarden.classList.toggle("growing", event.detail);
@@ -1350,6 +1388,13 @@ function bindTimer() {
       showCompanionBubble(`休息結束囉！準備好開始第 ${timer.cycleRound}/4 輪專注了嗎？🎯`, 5000);
       showToast(`休息結束，進入第 ${timer.cycleRound}/4 輪專注 🎯`);
     }
+
+    if (store.get().flowAutopilot) {
+      window.setTimeout(() => {
+        timer.start();
+        showToast("🚀 心流自動巡航：已自動開啟下一輪計時");
+      }, 1200);
+    }
   });
 
   elements.timerModePills?.forEach((pill) => {
@@ -1423,6 +1468,8 @@ const TRACK_METAS = {
   pencil: { name: "鉛筆書寫", icon: "pencil" },
   binaural_alpha: { name: "Alpha波", icon: "sparkles" },
   binaural_gamma: { name: "Gamma波", icon: "zap" },
+  pink_noise: { name: "粉紅噪", icon: "activity" },
+  ocean_waves: { name: "潮汐海浪", icon: "waves" },
 };
 
 function formatPanLabel(pan) {
@@ -1752,6 +1799,22 @@ function bindP2PCheer() {
       showToast(`已送出表情 ${emoji} 給同房夥伴！`);
     });
   });
+
+  elements.btnPeerClink?.addEventListener("click", () => {
+    companionSound.playCupClink();
+    spawnFloatingReaction("🥂", "你");
+    spawnZenSpark("🥂 乾杯！");
+    p2p?.sendInteraction("clink", store.get().nickname);
+    showToast("乾杯！與同房夥伴碰杯 🥂");
+  });
+
+  elements.btnPeerKnock?.addEventListener("click", () => {
+    companionSound.playDeskKnock();
+    spawnFloatingReaction("🪵", "你");
+    spawnZenSpark("🪵 叩叩！");
+    p2p?.sendInteraction("knock", store.get().nickname);
+    showToast("叩叩！輕敲小木屋木桌打招呼 🪵");
+  });
 }
 
 function bindHeatmapControls() {
@@ -1800,6 +1863,149 @@ function bindExports() {
     a.click();
     URL.revokeObjectURL(url);
     showToast("學習記錄 JSON 備份檔已開始下載。📥");
+  });
+}
+
+function createMigrationBundle() {
+  return {
+    app: "newworld-study-room",
+    version: 1,
+    exportedAt: Date.now(),
+    profile: store.get(),
+    tasks: taskTracker.tasks,
+    history: studyStats.history,
+  };
+}
+
+function serializeMigrationBundle(bundle) {
+  const json = JSON.stringify(bundle);
+  const utf8Bytes = new TextEncoder().encode(json);
+  let binary = "";
+  for (let i = 0; i < utf8Bytes.length; i++) {
+    binary += String.fromCharCode(utf8Bytes[i]);
+  }
+  return "NWSR1_" + btoa(binary);
+}
+
+function deserializeMigrationBundle(code) {
+  const trimmed = code.trim();
+  if (trimmed.startsWith("NWSR1_")) {
+    const binary = atob(trimmed.slice(6));
+    const bytes = new Uint8Array([...binary].map((c) => c.charCodeAt(0)));
+    const json = new TextDecoder().decode(bytes);
+    return JSON.parse(json);
+  }
+  return JSON.parse(trimmed);
+}
+
+function applyMigrationBundle(bundle) {
+  if (!bundle || bundle.app !== "newworld-study-room") {
+    throw new Error("無效的資料包格式");
+  }
+
+  if (bundle.profile && typeof bundle.profile === "object") {
+    store.update({
+      roomName: bundle.profile.roomName,
+      nickname: bundle.profile.nickname,
+      minutes: bundle.profile.minutes,
+      shortBreakMinutes: bundle.profile.shortBreakMinutes,
+      longBreakMinutes: bundle.profile.longBreakMinutes,
+      completionChime: bundle.profile.completionChime,
+      plantType: bundle.profile.plantType,
+      flowAutopilot: bundle.profile.flowAutopilot,
+      windDownAlert: bundle.profile.windDownAlert,
+    });
+  }
+
+  if (Array.isArray(bundle.tasks)) {
+    const existingIds = new Set(taskTracker.tasks.map((t) => t.id));
+    bundle.tasks.forEach((importedTask) => {
+      if (importedTask && importedTask.id && !existingIds.has(importedTask.id)) {
+        taskTracker.tasks.push(importedTask);
+        existingIds.add(importedTask.id);
+      }
+    });
+    taskTracker.saveTasks();
+    renderTasks();
+  }
+
+  if (Array.isArray(bundle.history)) {
+    const existingHistoryIds = new Set(studyStats.history.map((h) => h.id));
+    bundle.history.forEach((entry) => {
+      if (entry && entry.id && !existingHistoryIds.has(entry.id)) {
+        studyStats.history.push(entry);
+        existingHistoryIds.add(entry.id);
+      }
+    });
+    studyStats.saveHistory();
+    renderStats();
+  }
+}
+
+function bindMigrationModal() {
+  elements.btnOpenMigration?.addEventListener("click", () => {
+    elements.migrationModal?.showModal();
+    if (elements.migrationP2PStatus) {
+      const isOnline = Boolean(p2p && p2p.peer && p2p.peer.open);
+      elements.migrationP2PStatus.textContent = isOnline
+        ? `目前連線狀態：${p2p.connections.size} 位夥伴在線`
+        : "尚未建立 P2P 房間連線，建議使用方案 A/B 離線代碼包";
+    }
+  });
+
+  elements.closeMigration?.addEventListener("click", () => {
+    elements.migrationModal?.close();
+  });
+
+  elements.migrationModal?.addEventListener("click", (e) => {
+    if (!e.target.closest(".migration-dialog-card")) {
+      elements.migrationModal?.close();
+    }
+  });
+
+  elements.btnExportMigration?.addEventListener("click", async () => {
+    try {
+      const bundle = createMigrationBundle();
+      const code = serializeMigrationBundle(bundle);
+      if (elements.migrationExportText) {
+        elements.migrationExportText.value = code;
+      }
+      await navigator.clipboard.writeText(code);
+      showToast("已產生遷移代碼並複製至剪貼簿！📋");
+    } catch {
+      showToast("已產生遷移代碼，請手動複製文字框內容。");
+    }
+  });
+
+  elements.btnApplyMigration?.addEventListener("click", () => {
+    const raw = elements.migrationImportText?.value || "";
+    if (!raw.trim()) {
+      showToast("請先貼上欲匯入的遷移代碼包。");
+      return;
+    }
+    try {
+      const bundle = deserializeMigrationBundle(raw);
+      applyMigrationBundle(bundle);
+      if (elements.migrationImportText) elements.migrationImportText.value = "";
+      elements.migrationModal?.close();
+      showToast("🎉 資料鏡像遷移成功！所有資料已同步生效。");
+    } catch {
+      showToast("解析失敗，請確認代碼是否完整複製。");
+    }
+  });
+
+  elements.btnP2PLivePush?.addEventListener("click", () => {
+    if (!p2p || !p2p.peer || !p2p.peer.open) {
+      showToast("P2P 尚未連線，無法空中推送。");
+      return;
+    }
+    if (p2p.connections.size === 0) {
+      showToast("房間內目前沒有其他已連線的夥伴裝置。");
+      return;
+    }
+    const bundle = createMigrationBundle();
+    p2p.sendMigrationData(bundle);
+    showToast(`已向房內 ${p2p.connections.size} 台夥伴裝置空中推送資料鏡像！🚀`);
   });
 }
 
@@ -2250,6 +2456,16 @@ function bindSettings() {
     }
     showToast(syncWithHostTimer ? "已開啟「跟隨房主番茄鐘倒數」同步" : "已關閉房主番茄鐘同步");
   });
+  elements.flowAutopilot?.addEventListener("change", () => {
+    const flowAutopilot = elements.flowAutopilot.checked;
+    store.update({ flowAutopilot });
+    showToast(flowAutopilot ? "已開啟心流自動巡航（自動接續下一輪）" : "已關閉心流自動巡航");
+  });
+  elements.windDownAlert?.addEventListener("change", () => {
+    const windDownAlert = elements.windDownAlert.checked;
+    store.update({ windDownAlert });
+    showToast(windDownAlert ? "已開啟收尾溫柔提示音（3m / 1m 水晶音）" : "已關閉收尾提示音");
+  });
   elements.plantType.addEventListener("change", () => {
     lastGardenStage = "";
     store.update({ plantType: elements.plantType.value });
@@ -2359,6 +2575,32 @@ async function startP2P() {
     companionSound.playReactionChime(detail.emoji);
     spawnFloatingReaction(detail.emoji, detail.by || "同房夥伴");
     showToast(`${detail.by || "夥伴"} 送來了表情反應 ${detail.emoji}！`);
+  });
+  p2p.addEventListener("peer-interaction", (event) => {
+    const detail = event.detail;
+    if (detail.action === "clink") {
+      companionSound.playCupClink();
+      spawnFloatingReaction("🥂", detail.by || "同房夥伴");
+      spawnZenSpark("🥂 乾杯！");
+      showToast(`🥂 ${detail.by || "夥伴"} 與你乾杯碰杯！`);
+    } else if (detail.action === "knock") {
+      companionSound.playDeskKnock();
+      spawnFloatingReaction("🪵", detail.by || "同房夥伴");
+      spawnZenSpark("🪵 叩叩！");
+      showToast(`🪵 ${detail.by || "夥伴"} 敲敲木桌向你打招呼！`);
+    }
+  });
+  p2p.addEventListener("migration-data", (event) => {
+    const detail = event.detail;
+    if (!detail?.bundle) return;
+    const from = detail.fromPeerId ? `夥伴 (${detail.fromPeerId.slice(0, 6)})` : "同房夥伴";
+    const confirmed = window.confirm(
+      `收到來自 ${from} 的小木屋設定與資料鏡像，是否立即套用至本機？\n（此操作將融合任務與里程碑）`,
+    );
+    if (confirmed) {
+      applyMigrationBundle(detail.bundle);
+      showToast("🎉 已成功自 P2P 即時同步資料鏡像！");
+    }
   });
   p2p.addEventListener("peer-status", (event) => {
     const detail = event.detail;
@@ -2964,6 +3206,7 @@ function init() {
   bindBatchTaskImporter();
   bindFocusIntention();
   bindExports();
+  bindMigrationModal();
   bindPosterModal();
   bindHeatmapControls();
   renderStats();

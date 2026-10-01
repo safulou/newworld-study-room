@@ -59,6 +59,8 @@ const profileDefaults = {
   sprintPreset: "classic",
   parkingLot: [],
   windowWeather: "auto",
+  flowAutopilot: false,
+  windDownAlert: true,
   customPresets: [],
 };
 
@@ -165,6 +167,8 @@ function sanitizeProfile(value = {}) {
     windowWeather: ["auto", "rain", "snow", "leaves", "clear"].includes(value.windowWeather)
       ? value.windowWeather
       : profileDefaults.windowWeather,
+    flowAutopilot: Boolean(value.flowAutopilot),
+    windDownAlert: value.windDownAlert !== undefined ? Boolean(value.windDownAlert) : profileDefaults.windDownAlert,
     parkingLot: Array.isArray(value.parkingLot)
       ? value.parkingLot
           .filter((item) => item && typeof item.text === "string" && item.text.trim())

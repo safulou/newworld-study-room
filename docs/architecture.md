@@ -24,17 +24,25 @@ flowchart LR
 
 ## State boundaries
 
-- The profile store contains nickname, focusIntention, timer, focus category, sprintPreset rhythm templates, distraction parkingLot, break durations, completion chime, music, ambient preferences, windowWeather canvas mode, custom soundscape presets (with stereo pans), doll style, photo texture, and optional model URL.
+- The profile store contains nickname, focusIntention, timer, focus category, sprintPreset rhythm templates, distraction parkingLot, break durations, completion chime, music, ambient preferences (including Paul Kellet pink noise & ocean wave tides), flowAutopilot, windDownAlert, windowWeather canvas mode, custom soundscape presets (with stereo pans), doll style, photo texture, and optional model URL.
 - Each host ID has a separate room store containing only room name and Tip history.
 - Joining another room cannot merge its Tips into a future room.
 - Outgoing guest Tips remain `pending` until the host returns a protocol ACK. Pending Tips survive reload and retry after reconnection.
 - Legacy v1/v2 state migrates only when creating a local host room, never when following a guest invitation.
+- Cross-device mirror migration bundles (`app: "newworld-study-room"`) export profile preferences, task lists, and study milestone analytics either as base64-encoded offline codes or live via WebRTC DataChannel without server storage.
 
 ## P2P protocol
 
 The host uses a small star topology with at most seven guests. Invitations contain a random token in the URL fragment; guests present it in PeerJS connection metadata. The host rejects invalid metadata, incompatible protocol versions, excess members, malformed messages, and peers sending more than six Tips per ten seconds.
 
-Each Tip has bounded `id`, `by`, `text`, and `createdAt` fields. The host acknowledges valid guest Tips, deduplicates IDs, and relays them to other guests. Text is rendered through `textContent`.
+Supported message types:
+
+- `snapshot`, `room-meta`, `presence`: Room metadata and member count synchronization.
+- `tip`, `tip-ack`: Bounded peer Tip delivery with outbox acknowledgements.
+- `timer-sync`: Host-to-guest pomodoro rhythm synchronization.
+- `peer-status`, `peer-celebrate`, `peer-reaction`: Co-study status badges, applause celebrations, and floating emoji reactions.
+- `peer-interaction`: ASMR micro-interactions (`clink` cup cheers and `knock` desk taps).
+- `migration-data`: P2P direct aerial mirror migration of profile and study metrics.
 
 ## Cloudflare boundary
 

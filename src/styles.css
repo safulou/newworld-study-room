@@ -4686,6 +4686,192 @@ body.zen-mode.zen-inactive .zen-focus-intention {
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* ASMR Peer Interaction Chips */
+.asmr-interaction-chip {
+  position: relative;
+}
+
+.asmr-interaction-chip:hover {
+  background: rgba(245, 158, 11, 0.2);
+  transform: scale(1.3);
+}
+
+/* Settings Action Buttons */
+.settings-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(45, 212, 191, 0.1);
+  border: 1px solid rgba(45, 212, 191, 0.3);
+  color: var(--teal);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  justify-content: center;
+}
+
+.settings-action-btn:hover {
+  background: rgba(45, 212, 191, 0.2);
+  border-color: var(--teal);
+  transform: translateY(-1px);
+}
+
+/* Migration Modal */
+.migration-modal {
+  border: none;
+  padding: 0;
+  background: transparent;
+  max-width: 580px;
+  width: calc(100% - 32px);
+  margin: auto;
+}
+
+.migration-dialog-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: var(--text);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.migration-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.migration-title-group h2 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text);
+}
+
+.migration-subtitle {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+  display: block;
+}
+
+.migration-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.migration-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.migration-section h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--teal);
+}
+
+.migration-desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.migration-code-box {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(14, 25, 38, 0.85);
+  color: var(--text);
+  font-size: 11px;
+  font-family: monospace;
+  line-height: 1.4;
+  resize: vertical;
+  outline: none;
+  word-break: break-all;
+  transition: border-color 0.2s;
+}
+
+.migration-code-box:focus {
+  border-color: var(--teal);
+}
+
+.migration-actions-row {
+  display: flex;
+  gap: 8px;
+}
+
+.migration-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.migration-btn.primary {
+  background: var(--teal);
+  color: #0b1520;
+}
+
+.migration-btn.primary:hover {
+  filter: brightness(1.1);
+}
+
+.migration-btn.secondary {
+  background: rgba(45, 212, 191, 0.12);
+  color: var(--teal);
+  border-color: rgba(45, 212, 191, 0.3);
+}
+
+.migration-btn.secondary:hover {
+  background: rgba(45, 212, 191, 0.22);
+}
+
+.migration-btn.subtle {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  border-color: var(--line);
+}
+
+.migration-btn.subtle:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.migration-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 4px 0;
+}
+
+.migration-p2p-status {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+  min-height: 18px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

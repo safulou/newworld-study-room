@@ -187,4 +187,14 @@ describe("room-scoped store", () => {
     expect(store.get().sprintPreset).toBe("classic");
     expect(store.get().windowWeather).toBe("auto");
   });
+
+  it("validates flowAutopilot and windDownAlert settings", () => {
+    const store = createStore({ roomId: "room-a", includeStarterTips: false });
+    expect(store.get().flowAutopilot).toBe(false);
+    expect(store.get().windDownAlert).toBe(true);
+
+    store.update({ flowAutopilot: true, windDownAlert: false });
+    expect(store.get().flowAutopilot).toBe(true);
+    expect(store.get().windDownAlert).toBe(false);
+  });
 });
