@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { generateQRMatrix, renderQrToCanvas } from "../src/services/qr-generator.js";
+import {
+  generateQRMatrix,
+  renderQrToCanvas,
+  exportQrBlob,
+  copyQrCanvasToClipboard,
+  downloadQrCanvas,
+} from "../src/services/qr-generator.js";
 
 describe("qr-generator", () => {
   let originalGetContext;
@@ -94,6 +100,80 @@ describe("qr-generator", () => {
       const res = renderQrToCanvas(canvas, "A".repeat(500));
       expect(res.success).toBe(false);
       expect(res.error).toBeDefined();
+    });
+  });
+
+  describe("exportQrBlob, copyQrCanvasToClipboard, and downloadQrCanvas", () => {
+    it("exportQrBlob resolves with blob when canvas.toBlob is available", async () => {
+      const canvas = document.createElement("canvas");
+      const mockBlob = new Blob(["dummy"], { type: "image/png" });
+      canvas.toBlob = vi.fn((cb) => cb(mockBlob));
+
+      const blob = await exportQrBlob(canvas);
+      expect(blob).toBe(mockBlob);
+      expect(canvas.toBlob).toHaveBeenCalled();
+    });
+
+    it("exportQrBlob resolves null if canvas is null or toBlob is missing", async () => {
+      const res = await exportQrBlob(null);
+      expect(res).toBeNull();
+    });
+
+    it("copyQrCanvasToClipboard copies image via ClipboardItem when supported", async () => {
+      const canvas = document.createElement("canvas");
+      const mockBlob = new Blob(["dummy"], { type: "image/png" });
+      canvas.toBlob = vi.fn((cb) => cb(mockBlob));
+
+      const mockWrite = vi.fn().mockResolvedValue(undefined);
+      class MockClipboardItem {
+        constructor(data) {
+          this.data = data;
+        }
+      }
+      global.ClipboardItem = MockClipboardItem;
+      window.ClipboardItem = MockClipboardItem;
+      Object.defineProperty(navigator, "clipboard", {
+        value: { write: mockWrite },
+        configurable: true,
+      });
+
+      const success = await copyQrCanvasToClipboard(canvas);
+      expect(success).toBe(true);
+      expect(mockWrite).toHaveBeenCalled();
+    });
+
+    it("copyQrCanvasToClipboard returns false when clipboard API is unavailable or fails", async () => {
+      const canvas = document.createElement("canvas");
+      const originalClipboard = navigator.clipboard;
+      Object.defineProperty(navigator, "clipboard", {
+        value: undefined,
+        configurable: true,
+      });
+
+      const success = await copyQrCanvasToClipboard(canvas);
+      expect(success).toBe(false);
+
+      Object.defineProperty(navigator, "clipboard", {
+        value: originalClipboard,
+        configurable: true,
+      });
+    });
+
+    it("downloadQrCanvas creates an anchor and triggers click", () => {
+      const canvas = document.createElement("canvas");
+      canvas.toDataURL = vi.fn().mockReturnValue("data:image/png;base64,mockdata");
+
+      const clickSpy = vi.fn();
+      const createElementSpy = vi.spyOn(document, "createElement").mockImplementation((tag) => {
+        if (tag === "a") {
+          return { click: clickSpy, set download(val) {}, set href(val) {} };
+        }
+        return document.createElement(tag);
+      });
+
+      downloadQrCanvas(canvas, "test-qr.png");
+      expect(clickSpy).toHaveBeenCalled();
+      createElementSpy.mockRestore();
     });
   });
 });

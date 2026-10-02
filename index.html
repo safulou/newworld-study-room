@@ -367,6 +367,14 @@
                 <span>存為預設</span>
               </button>
             </div>
+            <div class="ambient-weather-row" id="ambientWeatherRow">
+              <span class="ambient-preset-title">窗外景緻：</span>
+              <button class="weather-chip active" type="button" data-weather="auto">✨ 自動連動</button>
+              <button class="weather-chip" type="button" data-weather="rain">🌧️ 細雨</button>
+              <button class="weather-chip" type="button" data-weather="snow">❄️ 落雪</button>
+              <button class="weather-chip" type="button" data-weather="leaves">🍂 飄葉</button>
+              <button class="weather-chip" type="button" data-weather="clear">🌌 晴空</button>
+            </div>
             <div class="ambient-chips">
               <button class="ambient-chip" type="button" data-sound="rain" aria-pressed="false">
                 <i data-lucide="cloud-rain"></i>
@@ -806,6 +814,16 @@
                 <option value="pine">松樹</option>
               </select>
             </label>
+            <label class="field">
+              <span>窗外天氣</span>
+              <select id="windowWeather">
+                <option value="auto">✨ 智能連動（依白噪音與晝夜）</option>
+                <option value="rain">🌧️ 窗外細雨</option>
+                <option value="snow">❄️ 冬日落雪</option>
+                <option value="leaves">🍂 飄零落葉</option>
+                <option value="clear">🌌 晴空星塵</option>
+              </select>
+            </label>
             <label class="field volume-field">
               <span>音樂音量</span>
               <span class="range-control">
@@ -1207,6 +1225,16 @@
             <input type="text" id="qrModalUrlInput" class="qr-url-input" readonly aria-label="QR Code 連結" />
             <button class="icon-btn" id="btnCopyQrUrl" type="button" aria-label="複製連結" title="複製連結">
               <i data-lucide="copy"></i>
+            </button>
+          </div>
+          <div class="qr-actions">
+            <button class="qr-action-btn primary" id="btnDownloadQr" type="button">
+              <i data-lucide="download"></i>
+              <span>下載 QR Code 圖片</span>
+            </button>
+            <button class="qr-action-btn secondary" id="btnCopyQrImage" type="button">
+              <i data-lucide="image"></i>
+              <span>複製 QR 圖片</span>
             </button>
           </div>
         </div>

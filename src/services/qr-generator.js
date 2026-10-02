@@ -482,3 +482,59 @@ export function renderQrToCanvas(canvas, text, options = {}) {
     return { success: false, error: err.message };
   }
 }
+
+/**
+ * Export canvas to PNG Blob
+ * @param {HTMLCanvasElement} canvas
+ * @returns {Promise<Blob|null>}
+ */
+export function exportQrBlob(canvas) {
+  return new Promise((resolve) => {
+    if (!canvas || typeof canvas.toBlob !== "function") {
+      resolve(null);
+      return;
+    }
+    canvas.toBlob((blob) => resolve(blob), "image/png");
+  });
+}
+
+/**
+ * Copy QR Code canvas image directly to clipboard
+ * @param {HTMLCanvasElement} canvas
+ * @returns {Promise<boolean>}
+ */
+export async function copyQrCanvasToClipboard(canvas) {
+  try {
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.clipboard ||
+      typeof window === "undefined" ||
+      !window.ClipboardItem
+    ) {
+      return false;
+    }
+    const blob = await exportQrBlob(canvas);
+    if (!blob) return false;
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        "image/png": blob,
+      }),
+    ]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Trigger download of QR Code canvas as a PNG file
+ * @param {HTMLCanvasElement} canvas
+ * @param {string} [filename]
+ */
+export function downloadQrCanvas(canvas, filename = `study-room-qr-${new Date().toISOString().split("T")[0]}.png`) {
+  if (!canvas || typeof canvas.toDataURL !== "function") return;
+  const link = document.createElement("a");
+  link.download = filename;
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}

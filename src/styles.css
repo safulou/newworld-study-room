@@ -1399,6 +1399,39 @@ h1 {
   color: var(--teal);
 }
 
+.ambient-weather-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  overflow-x: auto;
+}
+
+.weather-chip {
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-raised);
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.weather-chip:hover {
+  border-color: var(--teal);
+  color: var(--text);
+}
+
+.weather-chip.active {
+  border-color: var(--teal);
+  background: rgba(105, 200, 189, 0.18);
+  color: var(--teal);
+  box-shadow: 0 0 8px rgba(105, 200, 189, 0.25);
+}
+
 .ambient-chips {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -4973,6 +5006,47 @@ body.zen-mode.zen-inactive .zen-focus-intention {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.qr-actions {
+  width: 100%;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.qr-action-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid var(--line);
+  background: var(--surface-raised);
+  color: var(--text);
+}
+
+.qr-action-btn:hover {
+  border-color: var(--teal);
+  color: var(--teal);
+}
+
+.qr-action-btn.primary {
+  background: var(--teal);
+  color: #0b1320;
+  border-color: var(--teal);
+  font-weight: 600;
+}
+
+.qr-action-btn.primary:hover {
+  filter: brightness(1.1);
+  color: #0b1320;
 }
 
 .qr-card-footer {

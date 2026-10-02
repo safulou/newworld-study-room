@@ -28,6 +28,7 @@ import {
   GripVertical,
   HandMetal,
   House,
+  Image as ImageIcon,
   ImagePlus,
   Keyboard,
   Lightbulb,
@@ -72,7 +73,7 @@ import { NotificationManager } from "./services/notification-manager.js";
 import { StudyStatsManager } from "./services/study-stats.js";
 import { TaskTracker } from "./services/task-tracker.js";
 import { FocusPosterGenerator } from "./services/poster-generator.js";
-import { renderQrToCanvas } from "./services/qr-generator.js";
+import { renderQrToCanvas, downloadQrCanvas, copyQrCanvasToClipboard } from "./services/qr-generator.js";
 import { WeatherEngine } from "./services/weather-engine.js";
 import { createStore } from "./state/store.js";
 
@@ -105,6 +106,7 @@ const icons = {
   GripVertical,
   HandMetal,
   House,
+  Image: ImageIcon,
   ImagePlus,
   Keyboard,
   Lightbulb,
@@ -354,6 +356,11 @@ const elements = {
   qrModalDesc: $("#qrModalDesc"),
   qrModalUrlInput: $("#qrModalUrlInput"),
   btnCopyQrUrl: $("#btnCopyQrUrl"),
+  btnDownloadQr: $("#btnDownloadQr"),
+  btnCopyQrImage: $("#btnCopyQrImage"),
+  windowWeather: $("#windowWeather"),
+  ambientWeatherRow: $("#ambientWeatherRow"),
+  weatherChips: document.querySelectorAll(".weather-chip"),
 };
 
 const store = createStore({
@@ -1064,6 +1071,14 @@ function renderState(state) {
     elements.timerSyncBadge.hidden = !isGuest || !state.syncWithHostTimer;
   }
   if (document.activeElement !== elements.plantType) elements.plantType.value = state.plantType;
+  if (elements.windowWeather && document.activeElement !== elements.windowWeather) {
+    elements.windowWeather.value = state.windowWeather || "auto";
+  }
+  elements.weatherChips?.forEach((chip) => {
+    const active = chip.dataset.weather === (state.windowWeather || "auto");
+    chip.classList.toggle("active", active);
+    chip.setAttribute("aria-pressed", String(active));
+  });
   if (elements.focusIntentionInput && document.activeElement !== elements.focusIntentionInput) {
     elements.focusIntentionInput.value = state.focusIntention || "";
   }
@@ -1749,6 +1764,48 @@ function bindAtmosphere() {
   };
   elements.toggleAtmosphere?.addEventListener("click", cycleMode);
   elements.windowCelestial?.addEventListener("click", cycleMode);
+
+  // Manual weather scene switching
+  elements.windowWeather?.addEventListener("change", (e) => {
+    store.update({ windowWeather: e.target.value });
+    syncWeatherAtmosphere();
+  });
+
+  elements.weatherChips?.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const mode = chip.dataset.weather;
+      if (!mode) return;
+      store.update({ windowWeather: mode });
+      syncWeatherAtmosphere();
+      const names = {
+        auto: "✨ 自動智能連動",
+        rain: "🌧️ 窗外細雨",
+        snow: "❄️ 冬日落雪",
+        leaves: "🍂 飄零落葉",
+        clear: "🌌 晴空星塵",
+      };
+      showToast(`窗外景緻已切換為：${names[mode] || mode}`);
+    });
+  });
+
+  // Clicking window pane cycles weather mode
+  elements.cabinWindow?.addEventListener("click", (e) => {
+    if (e.target.closest("#windowCelestial")) return;
+    const weatherModes = ["auto", "rain", "snow", "leaves", "clear"];
+    const current = store.get().windowWeather || "auto";
+    const nextIdx = (weatherModes.indexOf(current) + 1) % weatherModes.length;
+    const next = weatherModes[nextIdx];
+    store.update({ windowWeather: next });
+    syncWeatherAtmosphere();
+    const names = {
+      auto: "✨ 自動智能連動",
+      rain: "🌧️ 窗外細雨",
+      snow: "❄️ 冬日落雪",
+      leaves: "🍂 飄零落葉",
+      clear: "🌌 晴空星塵",
+    };
+    showToast(`窗外景緻已切換為：${names[next] || next}`);
+  });
 }
 
 function bindAccessories() {
@@ -2087,6 +2144,27 @@ function bindQrModal() {
     } catch {
       elements.qrModalUrlInput?.select();
       showToast("已選取連結文字。");
+    }
+  });
+
+  elements.btnDownloadQr?.addEventListener("click", () => {
+    if (!elements.qrCanvas) return;
+    const isMigration = elements.qrModalTitle?.textContent?.includes("新裝置");
+    const filename = isMigration ? "newworld-study-migration-qr.png" : "newworld-study-invite-qr.png";
+    downloadQrCanvas(elements.qrCanvas, filename);
+    showToast("已下載 QR Code 圖片！📥");
+  });
+
+  elements.btnCopyQrImage?.addEventListener("click", async () => {
+    if (!elements.qrCanvas) return;
+    const copied = await copyQrCanvasToClipboard(elements.qrCanvas);
+    if (copied) {
+      showToast("QR Code 圖片已複製到剪貼簿！✨");
+    } else {
+      const isMigration = elements.qrModalTitle?.textContent?.includes("新裝置");
+      const filename = isMigration ? "newworld-study-migration-qr.png" : "newworld-study-invite-qr.png";
+      downloadQrCanvas(elements.qrCanvas, filename);
+      showToast("瀏覽器未開放剪貼簿圖片寫入，已自動下載 PNG 圖片 📥");
     }
   });
 }

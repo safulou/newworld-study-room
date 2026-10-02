@@ -1,9 +1,10 @@
 import * as THREE from "three";
 
-function drawDollFace(context, mode = "open") {
+export function drawDollFace(context, mode = "open", lookYaw = 0, lookPitch = 0) {
   const isClosed = mode === true || mode === "closed";
   const isJoy = mode === "joy" || mode === "petting";
   const isSleep = mode === "sleep";
+  const isHalf = mode === "half";
 
   context.clearRect(0, 0, 512, 512);
   context.fillStyle = "#f2d7b6";
@@ -68,13 +69,41 @@ function drawDollFace(context, mode = "open") {
     context.beginPath();
     context.arc(346, 246, 26, Math.PI * 1.15, Math.PI * 1.85);
     context.stroke();
-  } else {
+  } else if (isHalf) {
+    // Half-blink / dreamy sleepy gaze (squash eye oval)
     context.beginPath();
-    context.arc(166, 235, 22, 0, Math.PI * 2);
-    context.arc(346, 235, 22, 0, Math.PI * 2);
+    context.ellipse(166, 240, 22, 10, 0, 0, Math.PI * 2);
+    context.ellipse(346, 240, 22, 10, 0, 0, Math.PI * 2);
+    context.fill();
+  } else {
+    // Open expressive eyes with gaze parallax and dual catchlights
+    const gazeDx = Math.max(-7, Math.min(7, lookYaw * 22));
+    const gazeDy = Math.max(-5, Math.min(5, -lookPitch * 20));
+
+    // Outer pupil
+    context.beginPath();
+    context.arc(166 + gazeDx * 0.45, 235 + gazeDy * 0.45, 22, 0, Math.PI * 2);
+    context.arc(346 + gazeDx * 0.45, 235 + gazeDy * 0.45, 22, 0, Math.PI * 2);
+    context.fill();
+
+    // Primary sparkling white catchlight (top-left offset by gaze)
+    context.fillStyle = "rgba(255, 255, 255, 0.95)";
+    context.beginPath();
+    context.arc(166 + gazeDx * 0.7 - 6, 235 + gazeDy * 0.7 - 6, 6.5, 0, Math.PI * 2);
+    context.arc(346 + gazeDx * 0.7 - 6, 235 + gazeDy * 0.7 - 6, 6.5, 0, Math.PI * 2);
+    context.fill();
+
+    // Secondary subtle micro-catchlight (bottom-right)
+    context.fillStyle = "rgba(255, 255, 255, 0.7)";
+    context.beginPath();
+    context.arc(166 + gazeDx * 0.7 + 6, 235 + gazeDy * 0.7 + 4, 3, 0, Math.PI * 2);
+    context.arc(346 + gazeDx * 0.7 + 6, 235 + gazeDy * 0.7 + 4, 3, 0, Math.PI * 2);
     context.fill();
   }
 
+  // Smile
+  context.fillStyle = "#30261f";
+  context.strokeStyle = "#30261f";
   context.lineWidth = 18;
   context.lineCap = "round";
   context.beginPath();
@@ -162,6 +191,9 @@ export class DollViewer {
     this.nextBlinkTime = performance.now() + 2500 + Math.random() * 2500;
     this.isBlinking = false;
     this.blinkEndTime = 0;
+    this.pendingDoubleBlink = false;
+    this.lastDrawnLookYaw = 0;
+    this.lastDrawnLookPitch = 0;
     this.consecutiveTaps = 0;
     this.lastTapTime = 0;
     this.spinStartTime = 0;
@@ -866,7 +898,14 @@ export class DollViewer {
     const elapsed = this.clock.getElapsed();
     const now = performance.now();
 
-    // Procedural facial expressions: petting / joy, sleeping, blinking, or open
+    // Head Tracking & Eye Contact
+    const lerpFactor = 0.06;
+    const lookTargetYaw = this.dragging ? 0 : this.targetLookYaw;
+    const lookTargetPitch = this.dragging ? 0 : this.targetLookPitch;
+    this.currentLookYaw += (lookTargetYaw - this.currentLookYaw) * lerpFactor;
+    this.currentLookPitch += (lookTargetPitch - this.currentLookPitch) * lerpFactor;
+
+    // Procedural facial expressions: petting / joy, sleeping, blinking, or open with gaze tracking
     if (!this.currentPhoto && this.faceContext && !this.reducedMotion) {
       if (this.isPetting && now < this.petEndTime) {
         if (this.lastFaceMode !== "joy") {
@@ -882,16 +921,35 @@ export class DollViewer {
         }
       } else if (!this.isBlinking && now > this.nextBlinkTime) {
         this.isBlinking = true;
-        this.blinkEndTime = now + 140;
+        this.blinkEndTime = now + 130;
         drawDollFace(this.faceContext, "closed");
         this.defaultTexture.needsUpdate = true;
         this.lastFaceMode = "closed";
       } else if (this.isBlinking && now > this.blinkEndTime) {
         this.isBlinking = false;
-        this.nextBlinkTime = now + 3200 + Math.random() * 3200;
-        drawDollFace(this.faceContext, "open");
+        if (!this.pendingDoubleBlink && Math.random() < 0.28) {
+          this.pendingDoubleBlink = true;
+          this.nextBlinkTime = now + 90;
+        } else {
+          this.pendingDoubleBlink = false;
+          this.nextBlinkTime = now + 2800 + Math.random() * 3200;
+        }
+        drawDollFace(this.faceContext, "open", this.currentLookYaw, this.currentLookPitch);
         this.defaultTexture.needsUpdate = true;
         this.lastFaceMode = "open";
+        this.lastDrawnLookYaw = this.currentLookYaw;
+        this.lastDrawnLookPitch = this.currentLookPitch;
+      } else if (this.lastFaceMode === "open") {
+        const gazeDelta = Math.hypot(
+          this.currentLookYaw - this.lastDrawnLookYaw,
+          this.currentLookPitch - this.lastDrawnLookPitch,
+        );
+        if (gazeDelta > 0.035) {
+          drawDollFace(this.faceContext, "open", this.currentLookYaw, this.currentLookPitch);
+          this.defaultTexture.needsUpdate = true;
+          this.lastDrawnLookYaw = this.currentLookYaw;
+          this.lastDrawnLookPitch = this.currentLookPitch;
+        }
       } else if (
         this.lastFaceMode !== "open" &&
         (!this.isPetting || now >= this.petEndTime) &&
@@ -899,9 +957,11 @@ export class DollViewer {
         !this.isBlinking
       ) {
         this.isPetting = false;
-        drawDollFace(this.faceContext, "open");
+        drawDollFace(this.faceContext, "open", this.currentLookYaw, this.currentLookPitch);
         this.defaultTexture.needsUpdate = true;
         this.lastFaceMode = "open";
+        this.lastDrawnLookYaw = this.currentLookYaw;
+        this.lastDrawnLookPitch = this.currentLookPitch;
       }
     }
 
@@ -916,13 +976,6 @@ export class DollViewer {
       this.targetRotation = this.reducedMotion ? 0 : Math.sin(elapsed * 0.45) * 0.16;
       this.userRotation = this.targetRotation;
     }
-
-    // Head Tracking & Eye Contact
-    const lerpFactor = 0.06;
-    const lookTargetYaw = this.dragging ? 0 : this.targetLookYaw;
-    const lookTargetPitch = this.dragging ? 0 : this.targetLookPitch;
-    this.currentLookYaw += (lookTargetYaw - this.currentLookYaw) * lerpFactor;
-    this.currentLookPitch += (lookTargetPitch - this.currentLookPitch) * lerpFactor;
 
     this.doll.rotation.y += (this.targetRotation + this.currentLookYaw - this.doll.rotation.y) * 0.08;
 
