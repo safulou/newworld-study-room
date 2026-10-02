@@ -835,6 +835,16 @@
               <input id="inviteLink" readonly value="正在建立邀請連結" aria-label="邀請連結" />
               <button
                 class="icon-btn"
+                id="btnShowInviteQr"
+                type="button"
+                aria-label="顯示手機掃描 QR Code"
+                title="顯示手機掃描 QR Code"
+                disabled
+              >
+                <i data-lucide="qr-code"></i>
+              </button>
+              <button
+                class="icon-btn"
                 id="copyInvite"
                 type="button"
                 aria-label="複製邀請連結"
@@ -1166,9 +1176,42 @@
                 <i data-lucide="send"></i>
                 <span>空中推送本機資料至房內夥伴裝置</span>
               </button>
+              <button class="migration-btn secondary" id="btnShowMigrationQr" type="button">
+                <i data-lucide="qr-code"></i>
+                <span>顯示新裝置配對 QR Code</span>
+              </button>
             </div>
             <p class="migration-p2p-status" id="migrationP2PStatus" aria-live="polite"></p>
           </div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="qr-modal" id="qrModal">
+      <div class="qr-dialog-card">
+        <div class="qr-card-header">
+          <div class="qr-title-group">
+            <h2 id="qrModalTitle">📱 掃描 QR Code 快速連線</h2>
+            <span class="qr-subtitle" id="qrModalSubtitle">純前端即時生成，免外掛套件</span>
+          </div>
+          <button class="icon-btn subtle close-btn" id="closeQrModal" type="button" aria-label="關閉 QR Code 視窗">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="qr-card-body">
+          <div class="qr-canvas-container">
+            <canvas id="qrCanvas" class="qr-canvas" aria-label="房間連線 QR Code"></canvas>
+          </div>
+          <p class="qr-desc" id="qrModalDesc">用手機或第二台裝置相機掃描，即可直接加入同一個伴讀房間。</p>
+          <div class="qr-link-preview">
+            <input type="text" id="qrModalUrlInput" class="qr-url-input" readonly aria-label="QR Code 連結" />
+            <button class="icon-btn" id="btnCopyQrUrl" type="button" aria-label="複製連結" title="複製連結">
+              <i data-lucide="copy"></i>
+            </button>
+          </div>
+        </div>
+        <div class="qr-card-footer">
+          <button class="action-btn secondary" id="btnCloseQrModalDialog" type="button">關閉</button>
         </div>
       </div>
     </dialog>

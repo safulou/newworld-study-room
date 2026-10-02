@@ -43,6 +43,7 @@ import {
   Play,
   Plus,
   PlusCircle,
+  QrCode,
   RefreshCw,
   RotateCcw,
   Search,
@@ -71,6 +72,7 @@ import { NotificationManager } from "./services/notification-manager.js";
 import { StudyStatsManager } from "./services/study-stats.js";
 import { TaskTracker } from "./services/task-tracker.js";
 import { FocusPosterGenerator } from "./services/poster-generator.js";
+import { renderQrToCanvas } from "./services/qr-generator.js";
 import { WeatherEngine } from "./services/weather-engine.js";
 import { createStore } from "./state/store.js";
 
@@ -118,6 +120,7 @@ const icons = {
   Play,
   Plus,
   PlusCircle,
+  QrCode,
   RefreshCw,
   RotateCcw,
   Search,
@@ -271,6 +274,7 @@ const elements = {
   musicVolume: $("#musicVolume"),
   musicVolumeValue: $("#musicVolumeValue"),
   inviteLink: $("#inviteLink"),
+  btnShowInviteQr: $("#btnShowInviteQr"),
   copyInvite: $("#copyInvite"),
   roleBadge: $("#roleBadge"),
   connectionStatus: $("#connectionStatus"),
@@ -339,7 +343,17 @@ const elements = {
   migrationImportText: $("#migrationImportText"),
   btnApplyMigration: $("#btnApplyMigration"),
   btnP2PLivePush: $("#btnP2PLivePush"),
+  btnShowMigrationQr: $("#btnShowMigrationQr"),
   migrationP2PStatus: $("#migrationP2PStatus"),
+  qrModal: $("#qrModal"),
+  closeQrModal: $("#closeQrModal"),
+  btnCloseQrModalDialog: $("#btnCloseQrModalDialog"),
+  qrCanvas: $("#qrCanvas"),
+  qrModalTitle: $("#qrModalTitle"),
+  qrModalSubtitle: $("#qrModalSubtitle"),
+  qrModalDesc: $("#qrModalDesc"),
+  qrModalUrlInput: $("#qrModalUrlInput"),
+  btnCopyQrUrl: $("#btnCopyQrUrl"),
 };
 
 const store = createStore({
@@ -2009,6 +2023,74 @@ function bindMigrationModal() {
   });
 }
 
+function openQrModal({ title, subtitle, desc, url }) {
+  if (!url) return;
+  if (elements.qrModalTitle && title) elements.qrModalTitle.textContent = title;
+  if (elements.qrModalSubtitle && subtitle) elements.qrModalSubtitle.textContent = subtitle;
+  if (elements.qrModalDesc && desc) elements.qrModalDesc.textContent = desc;
+  if (elements.qrModalUrlInput) elements.qrModalUrlInput.value = url;
+  if (elements.qrCanvas) {
+    renderQrToCanvas(elements.qrCanvas, url, { size: 220, margin: 3 });
+  }
+  elements.qrModal?.showModal();
+}
+
+function bindQrModal() {
+  elements.btnShowInviteQr?.addEventListener("click", () => {
+    const url = elements.inviteLink?.value;
+    if (!url || !url.startsWith("http")) {
+      showToast("尚未產生有效的邀請連結。");
+      return;
+    }
+    openQrModal({
+      title: "📱 掃描 QR Code 加入自習室",
+      subtitle: "純前端即時生成，免外掛套件",
+      desc: "用手機相機掃描此 QR Code，即可直接同步加入同一個伴讀房間。",
+      url,
+    });
+  });
+
+  elements.btnShowMigrationQr?.addEventListener("click", () => {
+    const url = elements.inviteLink?.value;
+    if (!url || !url.startsWith("http")) {
+      showToast("尚未產生有效的配對連結。");
+      return;
+    }
+    openQrModal({
+      title: "📱 新裝置空中配對 QR Code",
+      subtitle: "純前端即時生成，掃碼即配對",
+      desc: "使用新裝置掃描此 QR Code，連入同一房間後即可透過方案 C 接收空中推送。",
+      url,
+    });
+  });
+
+  elements.closeQrModal?.addEventListener("click", () => {
+    elements.qrModal?.close();
+  });
+
+  elements.btnCloseQrModalDialog?.addEventListener("click", () => {
+    elements.qrModal?.close();
+  });
+
+  elements.qrModal?.addEventListener("click", (e) => {
+    if (!e.target.closest(".qr-dialog-card")) {
+      elements.qrModal?.close();
+    }
+  });
+
+  elements.btnCopyQrUrl?.addEventListener("click", async () => {
+    const url = elements.qrModalUrlInput?.value || "";
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast("已複製 QR Code 連結至剪貼簿！📋");
+    } catch {
+      elements.qrModalUrlInput?.select();
+      showToast("已選取連結文字。");
+    }
+  });
+}
+
 let currentPosterCanvas = null;
 
 function bindPosterModal() {
@@ -2531,6 +2613,7 @@ async function startP2P() {
     elements.roomCode.textContent = `room://${info.hostId.slice(0, 16)}`;
     elements.inviteLink.value = info.invite;
     elements.copyInvite.disabled = false;
+    if (elements.btnShowInviteQr) elements.btnShowInviteQr.disabled = false;
     elements.shareRoom.disabled = false;
     elements.mobileShareRoom.disabled = false;
     elements.roleBadge.textContent = info.role === "host" ? "房主" : "夥伴";
@@ -2640,6 +2723,7 @@ async function restartP2P() {
   if (p2pStartPromise) return;
   p2p?.destroy();
   elements.copyInvite.disabled = true;
+  if (elements.btnShowInviteQr) elements.btnShowInviteQr.disabled = true;
   elements.shareRoom.disabled = true;
   elements.mobileShareRoom.disabled = true;
   p2pStartPromise = startP2P()
@@ -3207,6 +3291,7 @@ function init() {
   bindFocusIntention();
   bindExports();
   bindMigrationModal();
+  bindQrModal();
   bindPosterModal();
   bindHeatmapControls();
   renderStats();

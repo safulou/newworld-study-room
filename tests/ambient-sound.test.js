@@ -93,4 +93,16 @@ describe("AmbientSoundscapeManager", () => {
     expect(manager.getTrackPan("rain")).toBe(0);
     expect(manager.getTrackPan("campfire")).toBe(0);
   });
+
+  it("supports smooth crossfade transitions when stopping and mixing tracks", () => {
+    const manager = new AmbientSoundscapeManager();
+    expect(manager.stopTrack("non_existent", 0.5)).toBe(false);
+
+    manager.applyTrackMix({ rain: 0.5, wind: 0.3 }, {}, 0.5);
+    expect(manager.getTrackVolume("rain")).toBe(0.5);
+    expect(manager.getTrackVolume("wind")).toBe(0.3);
+
+    manager.stopAll(0.2);
+    expect(manager.getActiveTracks().length).toBe(0);
+  });
 });

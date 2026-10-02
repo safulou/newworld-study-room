@@ -171,10 +171,15 @@ export class DollViewer {
     this.petEndTime = 0;
     this.petStrokeCount = 0;
     this.lastPetX = 0;
-    this.onPet = null;
     this.isSleeping = false;
     this.lastFaceMode = "open";
     this.studyBook = null;
+    this.targetLookYaw = 0;
+    this.targetLookPitch = 0;
+    this.currentLookYaw = 0;
+    this.currentLookPitch = 0;
+    this.onWindowPointerMove = null;
+    this.onWindowPointerLeave = null;
     this.init();
   }
 
@@ -585,6 +590,33 @@ export class DollViewer {
     };
     this.canvas.addEventListener("pointerup", stop);
     this.canvas.addEventListener("pointercancel", stop);
+
+    const updatePointer = (clientX, clientY) => {
+      if (this.reducedMotion) return;
+      const rect = this.canvas.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height * 0.4;
+      const dx = (clientX - centerX) / (rect.width * 1.2);
+      const dy = (clientY - centerY) / (rect.height * 1.2);
+      const clampedX = Math.max(-1, Math.min(1, dx));
+      const clampedY = Math.max(-1, Math.min(1, dy));
+      this.targetLookYaw = clampedX * 0.32;
+      this.targetLookPitch = -clampedY * 0.18;
+    };
+
+    this.onWindowPointerMove = (e) => {
+      if (!this.dragging) {
+        updatePointer(e.clientX, e.clientY);
+      }
+    };
+
+    this.onWindowPointerLeave = () => {
+      this.targetLookYaw = 0;
+      this.targetLookPitch = 0;
+    };
+
+    window.addEventListener("pointermove", this.onWindowPointerMove);
+    document.addEventListener("pointerleave", this.onWindowPointerLeave);
   }
 
   pet() {
@@ -884,7 +916,15 @@ export class DollViewer {
       this.targetRotation = this.reducedMotion ? 0 : Math.sin(elapsed * 0.45) * 0.16;
       this.userRotation = this.targetRotation;
     }
-    this.doll.rotation.y += (this.targetRotation - this.doll.rotation.y) * 0.08;
+
+    // Head Tracking & Eye Contact
+    const lerpFactor = 0.06;
+    const lookTargetYaw = this.dragging ? 0 : this.targetLookYaw;
+    const lookTargetPitch = this.dragging ? 0 : this.targetLookPitch;
+    this.currentLookYaw += (lookTargetYaw - this.currentLookYaw) * lerpFactor;
+    this.currentLookPitch += (lookTargetPitch - this.currentLookPitch) * lerpFactor;
+
+    this.doll.rotation.y += (this.targetRotation + this.currentLookYaw - this.doll.rotation.y) * 0.08;
 
     // Joy spin 360-degree acrobatic animation
     if (this.spinStartTime) {
@@ -901,7 +941,7 @@ export class DollViewer {
     }
 
     const targetTilt = this.timerState === "focusing" ? -0.12 : -0.04;
-    this.doll.rotation.x += (targetTilt - this.doll.rotation.x) * 0.06;
+    this.doll.rotation.x += (targetTilt + this.currentLookPitch - this.doll.rotation.x) * 0.06;
 
     const breatheSpeed = this.timerState === "focusing" ? 1.0 : 1.8;
     const breatheAmp = this.timerState === "focusing" ? 0.022 : 0.035;
@@ -937,10 +977,14 @@ export class DollViewer {
     }
 
     if (this.standee) {
-      this.standee.rotation.y += (this.targetRotation - this.standee.rotation.y) * 0.08;
+      this.standee.rotation.y += (this.targetRotation + this.currentLookYaw * 0.6 - this.standee.rotation.y) * 0.08;
+      this.standee.rotation.x = this.currentLookPitch * 0.4;
       this.standee.position.y = this.reducedMotion ? 0 : Math.sin(elapsed * 1.45) * 0.018;
     }
-    if (this.generatedModel && !this.reducedMotion) this.generatedModel.rotation.y = Math.sin(elapsed * 0.4) * 0.12;
+    if (this.generatedModel && !this.reducedMotion) {
+      this.generatedModel.rotation.y = Math.sin(elapsed * 0.4) * 0.12 + this.currentLookYaw;
+      this.generatedModel.rotation.x = this.currentLookPitch * 0.6;
+    }
     if (this.scanRing.visible) {
       this.scanRing.position.y = Math.sin(elapsed * 2.7) * 1.15 + 0.18;
       this.scanMaterial.opacity = 0.45 + Math.sin(elapsed * 5) * 0.2;
@@ -953,6 +997,12 @@ export class DollViewer {
     this.resizeObserver.disconnect();
     this.intersectionObserver.disconnect();
     document.removeEventListener("visibilitychange", this.handleVisibility);
+    if (this.onWindowPointerMove) {
+      window.removeEventListener("pointermove", this.onWindowPointerMove);
+    }
+    if (this.onWindowPointerLeave) {
+      document.removeEventListener("pointerleave", this.onWindowPointerLeave);
+    }
     this.clock.dispose();
     this.scene.traverse((object) => {
       object.geometry?.dispose();

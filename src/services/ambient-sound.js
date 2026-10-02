@@ -163,7 +163,7 @@ export class AmbientSoundscapeManager {
     return buffer;
   }
 
-  startTrack(name, volume = 0.3, pan = 0) {
+  startTrack(name, volume = 0.3, pan = 0, fadeDuration = 0.8) {
     const ctx = this.ensureContext();
     if (!ctx) return false;
     if (this.nodes.has(name)) return true;
@@ -174,7 +174,13 @@ export class AmbientSoundscapeManager {
     this.trackPans[name] = initialPan;
 
     const trackGain = ctx.createGain();
-    trackGain.gain.setValueAtTime(initialVolume, ctx.currentTime);
+    const now = ctx.currentTime;
+    if (fadeDuration > 0 && trackGain.gain.linearRampToValueAtTime) {
+      trackGain.gain.setValueAtTime(0.0001, now);
+      trackGain.gain.linearRampToValueAtTime(initialVolume, now + fadeDuration);
+    } else {
+      trackGain.gain.setValueAtTime(initialVolume, now);
+    }
 
     let panner = null;
     if (ctx.createStereoPanner) {
@@ -414,14 +420,10 @@ export class AmbientSoundscapeManager {
     return true;
   }
 
-  stopTrack(name) {
-    const track = this.nodes.get(name);
-    if (!track) return false;
-
+  cleanupTrack(track) {
+    if (!track) return;
     try {
-      if (track.stopTimer) {
-        track.stopTimer();
-      }
+      if (track.stopTimer) track.stopTimer();
       if (track.lfo) {
         track.lfo.stop();
         track.lfo.disconnect();
@@ -440,8 +442,31 @@ export class AmbientSoundscapeManager {
       if (track.gain) track.gain.disconnect();
       if (track.panner) track.panner.disconnect();
     } catch {}
+  }
+
+  stopTrack(name, fadeDuration = 0.8) {
+    const track = this.nodes.get(name);
+    if (!track) return false;
 
     this.nodes.delete(name);
+
+    const ctx = this.audioCtx;
+    if (ctx && track.gain && fadeDuration > 0 && track.gain.gain.linearRampToValueAtTime) {
+      const now = ctx.currentTime;
+      try {
+        track.gain.gain.setValueAtTime(track.gain.gain.value, now);
+        track.gain.gain.linearRampToValueAtTime(0.0001, now + fadeDuration);
+      } catch {}
+      window.setTimeout(
+        () => {
+          this.cleanupTrack(track);
+        },
+        fadeDuration * 1000 + 40,
+      );
+      return true;
+    }
+
+    this.cleanupTrack(track);
     return true;
   }
 
@@ -476,13 +501,23 @@ export class AmbientSoundscapeManager {
     } catch {}
   }
 
-  setTrackVolume(name, volume) {
+  setTrackVolume(name, volume, rampDuration = 0.3) {
     const clamped = Math.max(0, Math.min(1, volume));
     this.trackVolumes[name] = clamped;
     const track = this.nodes.get(name);
     if (!track || !this.audioCtx) return true;
     track.volume = clamped;
-    track.gain.gain.setValueAtTime(clamped, this.audioCtx.currentTime);
+    if (rampDuration > 0 && track.gain?.gain?.linearRampToValueAtTime) {
+      try {
+        const now = this.audioCtx.currentTime;
+        track.gain.gain.setValueAtTime(track.gain.gain.value, now);
+        track.gain.gain.linearRampToValueAtTime(clamped, now + rampDuration);
+      } catch {
+        track.gain.gain.setValueAtTime(clamped, this.audioCtx.currentTime);
+      }
+    } else if (track.gain?.gain) {
+      track.gain.gain.setValueAtTime(clamped, this.audioCtx.currentTime);
+    }
     return true;
   }
 
@@ -555,17 +590,38 @@ export class AmbientSoundscapeManager {
     return mix;
   }
 
-  applyTrackMix(tracksObj, pansObj = {}) {
+  applyTrackMix(tracksObj, pansObj = {}, crossfadeDuration = 0.8) {
     if (!tracksObj || typeof tracksObj !== "object") return [];
-    this.stopAll();
+    const targetTracks = new Set(
+      Object.entries(tracksObj)
+        .filter(([, vol]) => Number.isFinite(Number(vol)) && Number(vol) > 0)
+        .map(([name]) => name),
+    );
+
+    // Fade out tracks that are not part of the new mix
+    for (const name of Array.from(this.nodes.keys())) {
+      if (!targetTracks.has(name)) {
+        this.stopTrack(name, crossfadeDuration);
+      }
+    }
+
+    // Adjust or start tracks in the new mix
     for (const [trackName, vol] of Object.entries(tracksObj)) {
       const numVol = Number(vol);
       if (Number.isFinite(numVol) && numVol > 0) {
-        this.trackVolumes[trackName] = Math.max(0, Math.min(1, numVol));
+        const cleanVol = Math.max(0, Math.min(1, numVol));
+        this.trackVolumes[trackName] = cleanVol;
         if (pansObj && pansObj[trackName] !== undefined && Number.isFinite(Number(pansObj[trackName]))) {
           this.trackPans[trackName] = Math.max(-1, Math.min(1, Number(pansObj[trackName])));
         }
-        this.startTrack(trackName, this.trackVolumes[trackName], this.trackPans[trackName] || 0);
+        if (this.nodes.has(trackName)) {
+          this.setTrackVolume(trackName, cleanVol, crossfadeDuration);
+          if (pansObj && pansObj[trackName] !== undefined) {
+            this.setTrackPan(trackName, this.trackPans[trackName]);
+          }
+        } else {
+          this.startTrack(trackName, cleanVol, this.trackPans[trackName] || 0, crossfadeDuration);
+        }
       }
     }
     return this.getActiveTracks();
@@ -578,9 +634,9 @@ export class AmbientSoundscapeManager {
     return this.applyTrackMix(preset.tracks, preset.pans);
   }
 
-  stopAll() {
+  stopAll(fadeDuration = 0.6) {
     for (const name of Array.from(this.nodes.keys())) {
-      this.stopTrack(name);
+      this.stopTrack(name, fadeDuration);
     }
   }
 }

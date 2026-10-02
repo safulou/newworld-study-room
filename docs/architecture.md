@@ -59,6 +59,9 @@ The status response exposes `status`, `progress`, `message`, and `modelUrl`. Job
 ## Performance and quality
 
 - Three.js, PeerJS, and GLTFLoader are split into lazy chunks.
+- Natural 3D head-tracking eye contact uses normalized device coordinates with smooth Slerp/lerp yaw (±18°) and pitch (±10°) bounds, damping during manual rotation drags.
+- Web Audio ambient soundscape engine applies gentle 0.8s linear gain crossfade ramps for starts, stops, and preset changes without destroying existing AudioBufferSourceNodes.
+- Pure client-side zero-dependency QR Code Model 2 engine renders ISO/IEC 18004 compliant 2x Retina QR codes directly to HTML5 Canvas using Galois Field GF(256) Reed-Solomon error correction.
 - WebGL rendering stops outside the viewport and while the page is hidden.
 - A process ID prevents an older image task from overwriting a newer upload.
 - ESLint, Vitest, Vite build, Playwright, and axe run locally; GitHub CI runs unit/build checks and desktop browser tests.
