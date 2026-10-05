@@ -609,7 +609,7 @@ export class AmbientSoundscapeManager {
     for (const [trackName, vol] of Object.entries(tracksObj)) {
       const numVol = Number(vol);
       if (Number.isFinite(numVol) && numVol > 0) {
-        const cleanVol = Math.max(0, Math.min(1, numVol));
+        const cleanVol = Math.max(0, Math.min(1, numVol > 1 ? numVol / 100 : numVol));
         this.trackVolumes[trackName] = cleanVol;
         if (pansObj && pansObj[trackName] !== undefined && Number.isFinite(Number(pansObj[trackName]))) {
           this.trackPans[trackName] = Math.max(-1, Math.min(1, Number(pansObj[trackName])));
@@ -638,5 +638,99 @@ export class AmbientSoundscapeManager {
     for (const name of Array.from(this.nodes.keys())) {
       this.stopTrack(name, fadeDuration);
     }
+  }
+}
+
+/**
+ * Encode a soundscape preset ({ name, tracks, pans }) into a compact, URL-safe string
+ * @param {Object} preset
+ * @returns {string}
+ */
+export function encodeSoundscapeCode(preset) {
+  if (!preset || typeof preset !== "object") return "";
+  const name = String(preset.name || "自訂音景").slice(0, 30);
+  const cleanTracks = {};
+  const cleanPans = {};
+
+  if (preset.tracks && typeof preset.tracks === "object") {
+    AMBIENT_SOUND_TYPES.forEach((type) => {
+      const vol = Number(preset.tracks[type]);
+      if (Number.isFinite(vol) && vol > 0) {
+        cleanTracks[type] = Math.max(0, Math.min(100, Math.round(vol <= 1 ? vol * 100 : vol)));
+      }
+    });
+  }
+
+  if (preset.pans && typeof preset.pans === "object") {
+    AMBIENT_SOUND_TYPES.forEach((type) => {
+      const pan = Number(preset.pans[type]);
+      if (Number.isFinite(pan) && Math.abs(pan) > 0.01) {
+        cleanPans[type] = Math.max(-1, Math.min(1, Math.round(pan * 100) / 100));
+      }
+    });
+  }
+
+  if (Object.keys(cleanTracks).length === 0) return "";
+
+  const payload = { n: name, t: cleanTracks, p: cleanPans };
+  try {
+    const jsonStr = JSON.stringify(payload);
+    const bytes = new TextEncoder().encode(jsonStr);
+    let binStr = "";
+    bytes.forEach((b) => (binStr += String.fromCharCode(b)));
+    return "sc_" + btoa(binStr).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Decode and validate a soundscape code into a clean preset object
+ * @param {string} code
+ * @returns {{ name: string, tracks: Object, pans: Object } | null}
+ */
+export function decodeSoundscapeCode(code) {
+  if (!code || typeof code !== "string") return null;
+  const raw = code.trim().replace(/^sc_/, "").replace(/-/g, "+").replace(/_/g, "/");
+  try {
+    const binStr = atob(raw);
+    const bytes = new Uint8Array(binStr.length);
+    for (let i = 0; i < binStr.length; i++) {
+      bytes[i] = binStr.charCodeAt(i);
+    }
+    const jsonStr = new TextDecoder().decode(bytes);
+    const parsed = JSON.parse(jsonStr);
+    if (!parsed || typeof parsed !== "object") return null;
+
+    const name = String(parsed.n || parsed.name || "分享音景")
+      .trim()
+      .slice(0, 30);
+    const tracks = {};
+    const pans = {};
+
+    const rawTracks = parsed.t || parsed.tracks || {};
+    AMBIENT_SOUND_TYPES.forEach((type) => {
+      if (rawTracks[type] !== undefined) {
+        const val = Number(rawTracks[type]);
+        if (Number.isFinite(val) && val > 0) {
+          tracks[type] = Math.max(0, Math.min(100, Math.round(val)));
+        }
+      }
+    });
+
+    const rawPans = parsed.p || parsed.pans || {};
+    AMBIENT_SOUND_TYPES.forEach((type) => {
+      if (rawPans[type] !== undefined) {
+        const val = Number(rawPans[type]);
+        if (Number.isFinite(val)) {
+          pans[type] = Math.max(-1, Math.min(1, Math.round(val * 100) / 100));
+        }
+      }
+    });
+
+    if (Object.keys(tracks).length === 0) return null;
+    return { name, tracks, pans };
+  } catch {
+    return null;
   }
 }

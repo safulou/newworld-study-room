@@ -63,7 +63,12 @@ import {
   Zap,
   createIcons,
 } from "lucide";
-import { AmbientSoundscapeManager, SOUNDSCAPE_PRESETS } from "./services/ambient-sound.js";
+import {
+  AmbientSoundscapeManager,
+  SOUNDSCAPE_PRESETS,
+  encodeSoundscapeCode,
+  decodeSoundscapeCode,
+} from "./services/ambient-sound.js";
 import { BackgroundMusic } from "./services/background-music.js";
 import { CompanionSoundManager } from "./services/companion-sound.js";
 import { createCompanionAsset } from "./services/doll-generation.js";
@@ -212,6 +217,7 @@ const elements = {
   customPresetsRow: $("#customPresetsRow"),
   customPresetsList: $("#customPresetsList"),
   saveCustomPresetBtn: $("#saveCustomPresetBtn"),
+  btnImportSoundscape: $("#btnImportSoundscape"),
   taskPanel: $("#taskPanel"),
   taskForm: $("#taskForm"),
   taskInput: $("#taskInput"),
@@ -831,13 +837,23 @@ function renderSessionTimeline() {
     const cat = categoryConfigs[session.category] || categoryConfigs.dev;
     const plantEmoji = plantEmojis[session.plantHarvested] || "🌱";
 
+    const ratingBadges = {
+      flow: { label: "深度心流", icon: "🔥" },
+      steady: { label: "穩定推進", icon: "✨" },
+      warmup: { label: "漸入佳境", icon: "🌱" },
+    };
+    const rat = ratingBadges[session.rating] || ratingBadges.flow;
+    const noteHtml = session.note ? `<span class="timeline-note" title="${session.note}">${session.note}</span>` : "";
+
     item.innerHTML = `
       <span class="timeline-time">${timeStr}</span>
       <span class="timeline-category-badge" style="background: ${cat.bg}; color: ${cat.color};">
         <span>${cat.icon}</span>
         <span>${cat.label}</span>
       </span>
+      <span class="timeline-rating" title="${rat.label}">${rat.icon}</span>
       <span class="timeline-task-title" title="${session.taskTitle || "自主專注"}">${session.taskTitle || "自主專注"}</span>
+      ${noteHtml}
       <span class="timeline-duration">${session.durationMinutes}m</span>
       <span class="timeline-plant" title="收穫 ${session.plantHarvested || "植物"}">${plantEmoji}</span>
     `;
@@ -1403,6 +1419,7 @@ function bindTimer() {
         plantHarvested: store.get().plantType,
         taskId: completedTaskId,
         category: store.get().focusCategory || "dev",
+        note: store.get().focusIntention || "",
       });
       renderStats();
 
@@ -1683,6 +1700,57 @@ function bindPresets() {
   });
 }
 
+function handleImportSoundscape(rawInput) {
+  if (!rawInput || typeof rawInput !== "string") return;
+  let code = rawInput.trim();
+  if (code.includes("soundscape=")) {
+    const match = code.match(/soundscape=([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      code = match[1];
+    }
+  }
+
+  const decoded = decodeSoundscapeCode(code);
+  if (!decoded) {
+    showToast("無法解析音景分享碼，格式可能不正確。");
+    return;
+  }
+
+  const defaultName = decoded.name || "匯入音景";
+  const inputName = window.prompt("請確認匯入音景名稱：", defaultName);
+  if (inputName === null) return;
+  const finalName = (inputName.trim() || defaultName).slice(0, 16);
+
+  const normalizedTracks = {};
+  for (const [k, v] of Object.entries(decoded.tracks)) {
+    const num = Number(v);
+    normalizedTracks[k] = num > 1 ? Math.round((num / 100) * 100) / 100 : num;
+  }
+
+  const newPreset = {
+    id: crypto.randomUUID(),
+    name: finalName,
+    tracks: normalizedTracks,
+    pans: decoded.pans || {},
+  };
+
+  const currentPresets = store.get().customPresets || [];
+  store.update({ customPresets: [...currentPresets, newPreset] });
+  renderCustomPresets();
+
+  ambientSound.applyTrackMix(newPreset.tracks, newPreset.pans);
+  elements.ambientChips.forEach((chipEl) => {
+    const sound = chipEl.dataset.sound;
+    if (sound === "lofi") return;
+    const isPlaying = sound in newPreset.tracks && newPreset.tracks[sound] > 0;
+    chipEl.classList.toggle("active", isPlaying);
+    chipEl.setAttribute("aria-pressed", String(isPlaying));
+  });
+  syncWeatherAtmosphere();
+  renderAmbientMixer();
+  showToast(`已成功匯入並套用「${finalName}」音景！🎧`);
+}
+
 function renderCustomPresets() {
   if (!elements.customPresetsList) return;
   elements.customPresetsList.innerHTML = "";
@@ -1700,6 +1768,13 @@ function renderCustomPresets() {
     nameBtn.style.padding = "0";
     nameBtn.textContent = preset.name;
     nameBtn.title = `套用「${preset.name}」混音`;
+
+    const shareBtn = document.createElement("button");
+    shareBtn.type = "button";
+    shareBtn.className = "preset-share-btn";
+    shareBtn.title = `複製「${preset.name}」音景分享連結`;
+    shareBtn.setAttribute("aria-label", `複製分享連結 ${preset.name}`);
+    shareBtn.innerHTML = "🔗";
 
     const delBtn = document.createElement("button");
     delBtn.type = "button";
@@ -1722,6 +1797,22 @@ function renderCustomPresets() {
       showToast(`已套用自訂預設「${preset.name}」。`);
     });
 
+    shareBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      try {
+        const code = encodeSoundscapeCode(preset);
+        const url = `${window.location.origin}${window.location.pathname}#soundscape=${code}`;
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(url);
+          showToast(`已複製「${preset.name}」音景分享連結！🔗`);
+        } else {
+          window.prompt("音景分享網址：", url);
+        }
+      } catch {
+        showToast("產生分享連結失敗。");
+      }
+    });
+
     delBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       const updated = (store.get().customPresets || []).filter((p) => p.id !== preset.id);
@@ -1730,7 +1821,7 @@ function renderCustomPresets() {
       showToast(`已刪除「${preset.name}」自訂預設。`);
     });
 
-    chip.append(nameBtn, delBtn);
+    chip.append(nameBtn, shareBtn, delBtn);
     elements.customPresetsList.append(chip);
   });
 }
@@ -1760,6 +1851,12 @@ function bindCustomPresets() {
     store.update({ customPresets: [...currentPresets, newPreset] });
     renderCustomPresets();
     showToast(`已儲存「${trimmed}」自訂音景！⭐`);
+  });
+
+  elements.btnImportSoundscape?.addEventListener("click", () => {
+    const input = window.prompt("請貼上音景分享碼或分享網址：");
+    if (!input) return;
+    handleImportSoundscape(input.trim());
   });
 }
 
@@ -3437,6 +3534,55 @@ async function startViewer() {
   }
 }
 
+function checkSoundscapeUrlHash() {
+  const hash = window.location.hash;
+  if (!hash || !hash.includes("soundscape=")) return;
+  const match = hash.match(/soundscape=([a-zA-Z0-9_-]+)/);
+  if (!match || !match[1]) return;
+  const code = match[1];
+  const decoded = decodeSoundscapeCode(code);
+  if (!decoded) return;
+
+  try {
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+  } catch {
+    // Ignore in non-standard environments
+  }
+
+  const name = decoded.name || "分享音景";
+  const shouldImport = window.confirm(`檢測到分享的「${name}」音景，是否立即匯入並套用？`);
+  if (!shouldImport) return;
+
+  const normalizedTracks = {};
+  for (const [k, v] of Object.entries(decoded.tracks)) {
+    const num = Number(v);
+    normalizedTracks[k] = num > 1 ? Math.round((num / 100) * 100) / 100 : num;
+  }
+
+  const newPreset = {
+    id: crypto.randomUUID(),
+    name,
+    tracks: normalizedTracks,
+    pans: decoded.pans || {},
+  };
+
+  const currentPresets = store.get().customPresets || [];
+  store.update({ customPresets: [...currentPresets, newPreset] });
+  renderCustomPresets();
+
+  ambientSound.applyTrackMix(newPreset.tracks, newPreset.pans);
+  elements.ambientChips.forEach((chipEl) => {
+    const sound = chipEl.dataset.sound;
+    if (sound === "lofi") return;
+    const isPlaying = sound in newPreset.tracks && newPreset.tracks[sound] > 0;
+    chipEl.classList.toggle("active", isPlaying);
+    chipEl.setAttribute("aria-pressed", String(isPlaying));
+  });
+  syncWeatherAtmosphere();
+  renderAmbientMixer();
+  showToast(`已載入分享音景「${name}」！🎧`);
+}
+
 function init() {
   store.subscribe(renderState);
   bindImageUpload();
@@ -3453,6 +3599,7 @@ function init() {
   bindPresets();
   bindCustomPresets();
   renderCustomPresets();
+  checkSoundscapeUrlHash();
   bindZenMode();
   bindZenTools();
   bindBreathingGuide();

@@ -158,4 +158,27 @@ describe("StudyStatsManager Service", () => {
 
     expect(stats.deleteSession("non_existent_id")).toBeNull();
   });
+
+  it("records and updates post-session flow rating and note reflection", () => {
+    const s = stats.recordSession({
+      durationMinutes: 25,
+      category: "dev",
+      rating: "steady",
+      note: "完成演算法重構",
+    });
+
+    expect(s.rating).toBe("steady");
+    expect(s.note).toBe("完成演算法重構");
+
+    const updated = stats.updateSession(s.id, { rating: "flow", note: "突破核心難題！" });
+    expect(updated).not.toBeNull();
+    expect(updated.rating).toBe("flow");
+    expect(updated.note).toBe("突破核心難題！");
+
+    // Invalid rating falls back to flow
+    stats.updateSession(s.id, { rating: "invalid_rating" });
+    expect(stats.history.find((h) => h.id === s.id).rating).toBe("flow");
+
+    expect(stats.updateSession("non_existent", { rating: "steady" })).toBeNull();
+  });
 });

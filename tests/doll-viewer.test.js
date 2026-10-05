@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { drawDollFace } from "../src/services/doll-viewer.js";
+import { DollViewer, drawDollFace } from "../src/services/doll-viewer.js";
 
 describe("drawDollFace", () => {
   let context;
@@ -80,5 +80,33 @@ describe("drawDollFace", () => {
 
     expect(context.arc).toHaveBeenCalled();
     expect(context.stroke).toHaveBeenCalled();
+  });
+
+  it("transitions timer states between focusing, resting, and idle", () => {
+    const fakeViewer = {
+      timerState: "idle",
+      studyBook: { visible: false },
+      celebrationStartTime: 0,
+      triggerBounce: vi.fn(),
+      arms: [{ rotation: { set: vi.fn() } }, { rotation: { set: vi.fn() } }],
+      head: { rotation: { x: 0 } },
+    };
+    fakeViewer.setTimerState = DollViewer.prototype.setTimerState.bind(fakeViewer);
+
+    fakeViewer.setTimerState("focusing");
+    expect(fakeViewer.timerState).toBe("focusing");
+    expect(fakeViewer.studyBook.visible).toBe(true);
+
+    fakeViewer.setTimerState("resting");
+    expect(fakeViewer.timerState).toBe("resting");
+    expect(fakeViewer.studyBook.visible).toBe(false);
+
+    fakeViewer.setTimerState("completed");
+    expect(fakeViewer.timerState).toBe("completed");
+    expect(fakeViewer.triggerBounce).toHaveBeenCalled();
+
+    fakeViewer.setTimerState("idle");
+    expect(fakeViewer.timerState).toBe("idle");
+    expect(fakeViewer.arms[0].rotation.set).toHaveBeenCalledWith(0, 0, -0.48);
   });
 });

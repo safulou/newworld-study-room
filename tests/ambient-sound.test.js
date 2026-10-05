@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { AmbientSoundscapeManager, AMBIENT_SOUND_TYPES, SOUNDSCAPE_PRESETS } from "../src/services/ambient-sound.js";
+import {
+  AmbientSoundscapeManager,
+  AMBIENT_SOUND_TYPES,
+  SOUNDSCAPE_PRESETS,
+  encodeSoundscapeCode,
+  decodeSoundscapeCode,
+} from "../src/services/ambient-sound.js";
 
 describe("AmbientSoundscapeManager", () => {
   it("exposes valid ambient sound types including binaural beats and ASMR", () => {
@@ -104,5 +110,34 @@ describe("AmbientSoundscapeManager", () => {
 
     manager.stopAll(0.2);
     expect(manager.getActiveTracks().length).toBe(0);
+  });
+
+  it("encodes and decodes soundscape preset codes safely", () => {
+    const original = {
+      name: "林中夜讀",
+      tracks: { rain: 45, campfire: 35, ocean_waves: 0 },
+      pans: { rain: -0.6, campfire: 0.6 },
+    };
+
+    const code = encodeSoundscapeCode(original);
+    expect(code).toBeDefined();
+    expect(code.startsWith("sc_")).toBe(true);
+
+    const decoded = decodeSoundscapeCode(code);
+    expect(decoded).not.toBeNull();
+    expect(decoded.name).toBe("林中夜讀");
+    expect(decoded.tracks.rain).toBe(45);
+    expect(decoded.tracks.campfire).toBe(35);
+    expect(decoded.pans.rain).toBe(-0.6);
+    expect(decoded.pans.campfire).toBe(0.6);
+    expect(decoded.tracks.ocean_waves).toBeUndefined(); // filtered 0 volume
+  });
+
+  it("gracefully handles invalid, corrupted or empty soundscape codes", () => {
+    expect(encodeSoundscapeCode(null)).toBe("");
+    expect(encodeSoundscapeCode({})).toBe("");
+    expect(decodeSoundscapeCode("")).toBeNull();
+    expect(decodeSoundscapeCode("invalid_garbage_base64!!!")).toBeNull();
+    expect(decodeSoundscapeCode("sc_eyJuYW1lIjoiIn0")).toBeNull(); // no tracks
   });
 });

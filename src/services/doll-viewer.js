@@ -682,9 +682,12 @@ export class DollViewer {
       this.triggerBounce();
     } else {
       this.celebrationStartTime = 0;
-      if (this.arms && this.arms.length === 2) {
-        this.arms[0].rotation.z = -0.48;
-        this.arms[1].rotation.z = 0.48;
+      if (this.arms && this.arms.length === 2 && state !== "focusing" && state !== "resting") {
+        this.arms[0].rotation.set(0, 0, -0.48);
+        this.arms[1].rotation.set(0, 0, 0.48);
+      }
+      if (this.head && state !== "focusing" && state !== "resting") {
+        this.head.rotation.x = 0;
       }
     }
   }
@@ -1026,6 +1029,39 @@ export class DollViewer {
       if (this.arms && this.arms.length === 2) {
         this.arms[0].rotation.z = -0.85 + wave;
         this.arms[1].rotation.z = 0.85 - wave;
+      }
+    } else if (this.timerState === "focusing" && !this.reducedMotion) {
+      const writeJiggle = Math.sin(elapsed * 4.2) * 0.04;
+      const breathe = Math.sin(elapsed * 1.8) * 0.02;
+      if (this.arms && this.arms.length === 2) {
+        this.arms[0].rotation.z = -0.22 + writeJiggle * 0.5;
+        this.arms[0].rotation.x = 0.42 + breathe;
+        this.arms[1].rotation.z = 0.22 - writeJiggle;
+        this.arms[1].rotation.x = 0.46 + breathe;
+      }
+      if (this.head) {
+        this.head.rotation.x = 0.14 + breathe * 0.5;
+      }
+    } else if (this.timerState === "resting" && !this.reducedMotion) {
+      const stretch = Math.sin(elapsed * 1.2) * 0.06;
+      if (this.arms && this.arms.length === 2) {
+        this.arms[0].rotation.z = -0.72 - stretch;
+        this.arms[0].rotation.x = -0.15;
+        this.arms[1].rotation.z = 0.72 + stretch;
+        this.arms[1].rotation.x = -0.15;
+      }
+      if (this.head) {
+        this.head.rotation.x = -0.08 + stretch * 0.3;
+      }
+    } else {
+      if (this.arms && this.arms.length === 2) {
+        this.arms[0].rotation.z = -0.48;
+        this.arms[0].rotation.x = 0;
+        this.arms[1].rotation.z = 0.48;
+        this.arms[1].rotation.x = 0;
+      }
+      if (this.head) {
+        this.head.rotation.x = 0;
       }
     }
 

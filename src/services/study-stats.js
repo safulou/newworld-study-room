@@ -27,8 +27,16 @@ export class StudyStatsManager {
     } catch {}
   }
 
-  recordSession({ durationMinutes = 25, plantHarvested = "rose", taskId = null, category = "dev" }) {
+  recordSession({
+    durationMinutes = 25,
+    plantHarvested = "rose",
+    taskId = null,
+    category = "dev",
+    rating = "flow",
+    note = "",
+  }) {
     const validCategory = FOCUS_CATEGORIES[category] ? category : "dev";
+    const validRatings = ["flow", "steady", "warmup"];
     const entry = {
       id: "session_" + Date.now(),
       timestamp: new Date().toISOString(),
@@ -37,8 +45,24 @@ export class StudyStatsManager {
       plantHarvested,
       taskId,
       category: validCategory,
+      rating: validRatings.includes(rating) ? rating : "flow",
+      note: String(note || "").slice(0, 100),
     };
     this.history.push(entry);
+    this.saveHistory();
+    return entry;
+  }
+
+  updateSession(sessionId, updates = {}) {
+    const entry = this.history.find((h) => h.id === sessionId);
+    if (!entry) return null;
+    if (updates.rating !== undefined) {
+      const validRatings = ["flow", "steady", "warmup"];
+      entry.rating = validRatings.includes(updates.rating) ? updates.rating : "flow";
+    }
+    if (updates.note !== undefined) {
+      entry.note = String(updates.note || "").slice(0, 100);
+    }
     this.saveHistory();
     return entry;
   }

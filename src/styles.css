@@ -2602,8 +2602,7 @@ h1 {
 }
 
 .session-timeline-item {
-  display: grid;
-  grid-template-columns: 46px 68px 1fr auto auto auto;
+  display: flex;
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
@@ -2622,6 +2621,7 @@ h1 {
   font-family: ui-monospace, monospace;
   font-size: 11px;
   color: var(--muted);
+  white-space: nowrap;
 }
 
 .timeline-category-badge {
@@ -2632,6 +2632,12 @@ h1 {
   font-weight: 600;
   padding: 1px 6px;
   border-radius: 4px;
+  white-space: nowrap;
+}
+
+.timeline-rating {
+  font-size: 11px;
+  line-height: 1;
 }
 
 .timeline-task-title {
@@ -2640,6 +2646,16 @@ h1 {
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 11px;
+  flex: 1;
+}
+
+.timeline-note {
+  font-size: 11px;
+  color: var(--muted);
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .timeline-duration {
@@ -2651,6 +2667,7 @@ h1 {
 
 .timeline-plant {
   font-size: 12px;
+  white-space: nowrap;
 }
 
 .timeline-del-btn {
@@ -3790,6 +3807,33 @@ body.zen-mode.zen-inactive .zen-focus-intention {
 .add-preset-btn:hover {
   background: rgba(255, 224, 163, 0.18);
   transform: translateY(-1px);
+}
+
+.add-preset-btn.subtle {
+  border-color: var(--teal);
+  background: rgba(105, 200, 189, 0.08);
+  color: var(--teal);
+}
+
+.add-preset-btn.subtle:hover {
+  background: rgba(105, 200, 189, 0.18);
+}
+
+.preset-share-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 2px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.preset-share-btn:hover {
+  color: var(--teal);
 }
 
 /* Breathing Modal & Halo */
