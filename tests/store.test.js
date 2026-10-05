@@ -54,6 +54,15 @@ describe("room-scoped store", () => {
     expect(store.get().heatmapTheme).toBe("emerald");
   });
 
+  it("validates and defaults posterTheme", () => {
+    const store = createStore({ roomId: "room-a", includeStarterTips: false });
+    expect(store.get().posterTheme).toBe("midnight");
+    store.update({ posterTheme: "aurora" });
+    expect(store.get().posterTheme).toBe("aurora");
+    store.update({ posterTheme: "invalid_poster_theme" });
+    expect(store.get().posterTheme).toBe("midnight");
+  });
+
   it("persists outbox delivery state", () => {
     const store = createStore({ roomId: "room-a", includeStarterTips: false });
     store.addTip(tip, "outgoing");

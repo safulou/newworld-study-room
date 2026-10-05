@@ -88,4 +88,34 @@ describe("P2P protocol validation", () => {
       }),
     ).toBe(false);
   });
+
+  it("validates peer-status payload with bounded length", () => {
+    expect(p2pInternals.isPeerStatus).toBeDefined();
+    expect(
+      p2pInternals.isPeerStatus({
+        type: "peer-status",
+        by: "Arsen",
+        status: "focusing",
+        intention: "優化系統架構",
+        weather: "snow",
+        sprintPreset: "deep",
+      }),
+    ).toBe(true);
+
+    expect(
+      p2pInternals.isPeerStatus({
+        type: "peer-status",
+        by: "",
+        status: "focusing",
+      }),
+    ).toBe(false);
+
+    expect(
+      p2pInternals.isPeerStatus({
+        type: "peer-status",
+        by: "A".repeat(20),
+        status: "focusing",
+      }),
+    ).toBe(false);
+  });
 });

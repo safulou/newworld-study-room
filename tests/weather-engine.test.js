@@ -94,9 +94,45 @@ describe("WeatherEngine Service", () => {
     engine.stop();
   });
 
+  it("supports dynamic wind breeze tilting and drift", () => {
+    const engine = new WeatherEngine(canvas);
+    engine.setMode("rain");
+    engine.setWind(1.5);
+    expect(engine.targetWind).toBe(1.5);
+
+    // Call renderFrame multiple times to test interpolation
+    engine.renderFrame();
+    expect(engine.wind).toBeGreaterThan(0);
+
+    engine.setWind(-3.0); // should clamp to -2
+    expect(engine.targetWind).toBe(-2);
+    engine.stop();
+  });
+
+  it("supports intensity adjustments (gentle, normal, stormy)", () => {
+    const engine = new WeatherEngine(canvas);
+    engine.setMode("rain");
+    expect(engine.particles.length).toBe(28);
+
+    engine.setIntensity("gentle");
+    expect(engine.intensity).toBe("gentle");
+    expect(engine.particles.length).toBe(17);
+
+    engine.setIntensity("stormy");
+    expect(engine.intensity).toBe("stormy");
+    expect(engine.particles.length).toBe(45);
+
+    engine.setIntensity("invalid_level");
+    expect(engine.intensity).toBe("normal");
+    expect(engine.particles.length).toBe(28);
+    engine.stop();
+  });
+
   it("falls back gracefully when canvas getContext is unavailable", () => {
     const engine = new WeatherEngine(null);
     expect(() => engine.setMode("rain")).not.toThrow();
+    expect(() => engine.setWind(1)).not.toThrow();
+    expect(() => engine.setIntensity("gentle")).not.toThrow();
     expect(() => engine.renderFrame()).not.toThrow();
     expect(() => engine.stop()).not.toThrow();
     expect(() => engine.dispose()).not.toThrow();

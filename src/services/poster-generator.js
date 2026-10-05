@@ -20,6 +20,89 @@ const CATEGORY_MAP = {
   review: { label: "複習 Review", icon: "🧠", color: "#a78bfa" },
 };
 
+export const POSTER_THEMES = {
+  midnight: {
+    id: "midnight",
+    name: "午夜木屋",
+    emoji: "🌙",
+    bgGradient: ["#0e1a2b", "#152438", "#0a111c"],
+    aura: ["rgba(45, 212, 191, 0.12)", "rgba(255, 224, 163, 0.05)", "rgba(0, 0, 0, 0)"],
+    stars: "rgba(255, 255, 255, 0.25)",
+    outerBorder: "rgba(255, 224, 163, 0.35)",
+    innerBorder: "rgba(45, 212, 191, 0.2)",
+    brandTitle: "#ffe0a3",
+    accent: "#2dd4bf",
+    cardBg: "rgba(255, 255, 255, 0.035)",
+    cardBorder: "rgba(255, 255, 255, 0.08)",
+    plantTitle: "#ffe0a3",
+    signature: "#7dd3fc",
+  },
+  aurora: {
+    id: "aurora",
+    name: "晨曦極光",
+    emoji: "🌌",
+    bgGradient: ["#092026", "#0c2f38", "#041418"],
+    aura: ["rgba(52, 211, 153, 0.18)", "rgba(56, 189, 248, 0.08)", "rgba(0, 0, 0, 0)"],
+    stars: "rgba(167, 243, 208, 0.35)",
+    outerBorder: "rgba(110, 231, 183, 0.38)",
+    innerBorder: "rgba(56, 189, 248, 0.25)",
+    brandTitle: "#6ee7b7",
+    accent: "#34d399",
+    cardBg: "rgba(20, 184, 166, 0.05)",
+    cardBorder: "rgba(94, 234, 212, 0.15)",
+    plantTitle: "#a7f3d0",
+    signature: "#67e8f9",
+  },
+  sunset: {
+    id: "sunset",
+    name: "暮光晚霞",
+    emoji: "🌅",
+    bgGradient: ["#2d151e", "#3a1c22", "#180a11"],
+    aura: ["rgba(251, 146, 60, 0.18)", "rgba(244, 114, 182, 0.08)", "rgba(0, 0, 0, 0)"],
+    stars: "rgba(254, 215, 170, 0.3)",
+    outerBorder: "rgba(251, 146, 60, 0.4)",
+    innerBorder: "rgba(244, 114, 182, 0.25)",
+    brandTitle: "#fdba74",
+    accent: "#fb923c",
+    cardBg: "rgba(251, 146, 60, 0.05)",
+    cardBorder: "rgba(251, 146, 60, 0.15)",
+    plantTitle: "#fed7aa",
+    signature: "#f472b6",
+  },
+  forest: {
+    id: "forest",
+    name: "秘境森野",
+    emoji: "🌲",
+    bgGradient: ["#0f241a", "#142e22", "#08150f"],
+    aura: ["rgba(74, 222, 128, 0.15)", "rgba(250, 204, 21, 0.06)", "rgba(0, 0, 0, 0)"],
+    stars: "rgba(187, 247, 208, 0.3)",
+    outerBorder: "rgba(74, 222, 128, 0.35)",
+    innerBorder: "rgba(250, 204, 21, 0.2)",
+    brandTitle: "#86efac",
+    accent: "#4ade80",
+    cardBg: "rgba(34, 197, 94, 0.04)",
+    cardBorder: "rgba(74, 222, 128, 0.12)",
+    plantTitle: "#bbf7d0",
+    signature: "#a3e635",
+  },
+  cyber: {
+    id: "cyber",
+    name: "霓虹夜行",
+    emoji: "🔮",
+    bgGradient: ["#1e1035", "#261343", "#10061e"],
+    aura: ["rgba(192, 132, 252, 0.18)", "rgba(244, 114, 182, 0.08)", "rgba(0, 0, 0, 0)"],
+    stars: "rgba(233, 213, 255, 0.35)",
+    outerBorder: "rgba(192, 132, 252, 0.4)",
+    innerBorder: "rgba(244, 114, 182, 0.25)",
+    brandTitle: "#d8b4fe",
+    accent: "#c084fc",
+    cardBg: "rgba(168, 85, 247, 0.05)",
+    cardBorder: "rgba(192, 132, 252, 0.15)",
+    plantTitle: "#e9d5ff",
+    signature: "#f472b6",
+  },
+};
+
 export class FocusPosterGenerator {
   /**
    * Render a high-resolution 2x Retina polaroid card
@@ -32,6 +115,7 @@ export class FocusPosterGenerator {
    * @param {string} [options.harvestedPlant] - Plant type id
    * @param {string} [options.nickname] - User nickname
    * @param {string} [options.quote] - Encouraging quote
+   * @param {string} [options.theme] - Theme key ('midnight'|'aurora'|'sunset'|'forest'|'cyber')
    * @returns {HTMLCanvasElement}
    */
   static generate({
@@ -43,6 +127,7 @@ export class FocusPosterGenerator {
     harvestedPlant = "rose",
     nickname = "旅人",
     quote = "每一分鐘的專注，都是給未來的禮物 ✨",
+    theme = "midnight",
   } = {}) {
     const canvas = document.createElement("canvas");
     const width = 440;
@@ -59,24 +144,26 @@ export class FocusPosterGenerator {
 
     ctx.scale(scale, scale);
 
-    // 1. Background gradient (Midnight cabin atmosphere)
+    const themeConfig = POSTER_THEMES[theme] || POSTER_THEMES.midnight;
+
+    // 1. Background gradient
     const bgGrad = ctx.createLinearGradient(0, 0, width, height);
-    bgGrad.addColorStop(0, "#0e1a2b");
-    bgGrad.addColorStop(0.5, "#152438");
-    bgGrad.addColorStop(1, "#0a111c");
+    bgGrad.addColorStop(0, themeConfig.bgGradient[0]);
+    bgGrad.addColorStop(0.5, themeConfig.bgGradient[1]);
+    bgGrad.addColorStop(1, themeConfig.bgGradient[2]);
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, width, height);
 
     // Subtle radial aura in center
     const aura = ctx.createRadialGradient(width / 2, height / 2 - 40, 20, width / 2, height / 2 - 40, 240);
-    aura.addColorStop(0, "rgba(45, 212, 191, 0.12)");
-    aura.addColorStop(0.6, "rgba(255, 224, 163, 0.05)");
-    aura.addColorStop(1, "rgba(0, 0, 0, 0)");
+    aura.addColorStop(0, themeConfig.aura[0]);
+    aura.addColorStop(0.6, themeConfig.aura[1]);
+    aura.addColorStop(1, themeConfig.aura[2]);
     ctx.fillStyle = aura;
     ctx.fillRect(0, 0, width, height);
 
     // 2. Starry sparkles (pseudo-random deterministic pattern)
-    ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
+    ctx.fillStyle = themeConfig.stars;
     const stars = [
       [36, 45],
       [120, 28],
@@ -97,17 +184,17 @@ export class FocusPosterGenerator {
 
     // 3. Double framed border with rounded corners
     const pad = 16;
-    ctx.strokeStyle = "rgba(255, 224, 163, 0.35)";
+    ctx.strokeStyle = themeConfig.outerBorder;
     ctx.lineWidth = 1;
     this.strokeRoundRect(ctx, pad, pad, width - pad * 2, height - pad * 2, 14);
 
-    ctx.strokeStyle = "rgba(45, 212, 191, 0.2)";
+    ctx.strokeStyle = themeConfig.innerBorder;
     ctx.lineWidth = 1;
     this.strokeRoundRect(ctx, pad + 4, pad + 4, width - (pad + 4) * 2, height - (pad + 4) * 2, 11);
 
     // 4. Header branding
     ctx.textAlign = "center";
-    ctx.fillStyle = "#ffe0a3";
+    ctx.fillStyle = themeConfig.brandTitle;
     ctx.font = "bold 13px ui-sans-serif, system-ui, sans-serif";
     ctx.fillText("✦ NEWWORLD STUDY ROOM ✦", width / 2, 46);
 
@@ -121,9 +208,9 @@ export class FocusPosterGenerator {
     const cardW = width - cardX * 2;
     const cardH = 200;
 
-    ctx.fillStyle = "rgba(255, 255, 255, 0.035)";
+    ctx.fillStyle = themeConfig.cardBg;
     this.fillRoundRect(ctx, cardX, cardY, cardW, cardH, 12);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+    ctx.strokeStyle = themeConfig.cardBorder;
     this.strokeRoundRect(ctx, cardX, cardY, cardW, cardH, 12);
 
     // Today Focus Big Number
@@ -131,7 +218,7 @@ export class FocusPosterGenerator {
     ctx.font = "bold 56px ui-monospace, SFMono-Regular, Consolas, monospace";
     ctx.fillText(String(todayMinutes), width / 2, cardY + 76);
 
-    ctx.fillStyle = "#2dd4bf";
+    ctx.fillStyle = themeConfig.accent;
     ctx.font = "bold 12px ui-sans-serif, system-ui, sans-serif";
     ctx.fillText("TODAY'S FOCUS MINUTES", width / 2, cardY + 102);
 
@@ -170,7 +257,7 @@ export class FocusPosterGenerator {
     ctx.font = "44px sans-serif";
     ctx.fillText(plantInfo.emoji, width / 2, plantY + 36);
 
-    ctx.fillStyle = "#ffe0a3";
+    ctx.fillStyle = themeConfig.plantTitle;
     ctx.font = "bold 14px ui-sans-serif, system-ui, sans-serif";
     ctx.fillText(`今日收穫：${plantInfo.name}`, width / 2, plantY + 70);
 
@@ -187,7 +274,7 @@ export class FocusPosterGenerator {
     ctx.lineTo(370, 455);
     ctx.stroke();
 
-    ctx.fillStyle = "#2dd4bf";
+    ctx.fillStyle = themeConfig.accent;
     ctx.font = "12px ui-sans-serif, system-ui, sans-serif";
     ctx.fillText("❖", width / 2, 459);
 
@@ -197,7 +284,7 @@ export class FocusPosterGenerator {
     const quoteStr = quote.length > 28 ? `${quote.slice(0, 26)}...` : quote;
     ctx.fillText(`「${quoteStr}」`, width / 2, 498);
 
-    ctx.fillStyle = "#7dd3fc";
+    ctx.fillStyle = themeConfig.signature;
     ctx.font = "600 12px ui-sans-serif, system-ui, sans-serif";
     ctx.fillText(`—— 伴讀夥伴 · ${nickname}`, width / 2, 524);
 

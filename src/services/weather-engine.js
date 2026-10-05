@@ -12,15 +12,30 @@ export class WeatherEngine {
     this.width = canvas?.width || 88;
     this.height = canvas?.height || 96;
     this.particles = [];
+    this.wind = 0;
+    this.targetWind = 0;
+    this.intensity = "normal"; // "gentle" | "normal" | "stormy"
+    this.initParticles();
+  }
+
+  setWind(wind) {
+    this.targetWind = Math.max(-2, Math.min(2, Number(wind) || 0));
+  }
+
+  setIntensity(level) {
+    const valid = ["gentle", "normal", "stormy"];
+    this.intensity = valid.includes(level) ? level : "normal";
     this.initParticles();
   }
 
   initParticles() {
     const w = this.width;
     const h = this.height;
+    const multiplier = this.intensity === "gentle" ? 0.6 : this.intensity === "stormy" ? 1.6 : 1.0;
 
     if (this.mode === "rain") {
-      this.particles = Array.from({ length: 28 }, () => ({
+      const count = Math.round(28 * multiplier);
+      this.particles = Array.from({ length: count }, () => ({
         x: Math.random() * w,
         y: Math.random() * h,
         length: 6 + Math.random() * 8,
@@ -28,7 +43,8 @@ export class WeatherEngine {
         opacity: 0.3 + Math.random() * 0.5,
       }));
     } else if (this.mode === "snow") {
-      this.particles = Array.from({ length: 24 }, () => ({
+      const count = Math.round(24 * multiplier);
+      this.particles = Array.from({ length: count }, () => ({
         x: Math.random() * w,
         y: Math.random() * h,
         radius: 1 + Math.random() * 1.6,
@@ -38,8 +54,9 @@ export class WeatherEngine {
         opacity: 0.4 + Math.random() * 0.5,
       }));
     } else if (this.mode === "leaves") {
+      const count = Math.round(16 * multiplier);
       const colors = ["rgba(246, 200, 81, 0.75)", "rgba(224, 130, 90, 0.75)", "rgba(105, 200, 189, 0.65)"];
-      this.particles = Array.from({ length: 16 }, () => ({
+      this.particles = Array.from({ length: count }, () => ({
         x: Math.random() * w,
         y: Math.random() * h,
         size: 2.5 + Math.random() * 2.5,
@@ -50,7 +67,8 @@ export class WeatherEngine {
         color: colors[Math.floor(Math.random() * colors.length)],
       }));
     } else if (this.mode === "clear") {
-      this.particles = Array.from({ length: 12 }, () => ({
+      const count = Math.round(12 * multiplier);
+      this.particles = Array.from({ length: count }, () => ({
         x: Math.random() * w,
         y: Math.random() * h,
         radius: 0.8 + Math.random() * 1.2,
@@ -117,6 +135,9 @@ export class WeatherEngine {
     const w = this.width;
     const h = this.height;
 
+    // Smoothly interpolate wind toward target
+    this.wind += (this.targetWind - this.wind) * 0.08;
+
     ctx.clearRect(0, 0, w, h);
 
     if (this.mode === "rain") {
@@ -126,32 +147,34 @@ export class WeatherEngine {
         ctx.strokeStyle = `rgba(180, 220, 255, ${drop.opacity})`;
         ctx.beginPath();
         ctx.moveTo(drop.x, drop.y);
-        ctx.lineTo(drop.x - 0.5, drop.y + drop.length);
+        ctx.lineTo(drop.x - 0.5 + this.wind * 1.6, drop.y + drop.length);
         ctx.stroke();
 
         drop.y += drop.speed;
-        drop.x -= 0.2;
+        drop.x += -0.2 + this.wind * 0.8;
         if (drop.y > h) {
           drop.y = -drop.length;
           drop.x = Math.random() * w;
         }
-        if (drop.x < 0) {
-          drop.x = w;
+        if (drop.x < -10) {
+          drop.x = w + 5;
+        } else if (drop.x > w + 10) {
+          drop.x = -5;
         }
       }
     } else if (this.mode === "snow") {
       for (const flake of this.particles) {
         flake.swayAngle += flake.swaySpeed;
         const swayX = Math.sin(flake.swayAngle) * 0.6;
-        flake.x += swayX;
+        flake.x += swayX + this.wind * 0.6;
         flake.y += flake.speed;
 
         if (flake.y > h) {
           flake.y = -2;
           flake.x = Math.random() * w;
         }
-        if (flake.x < 0) flake.x = w;
-        if (flake.x > w) flake.x = 0;
+        if (flake.x < -5) flake.x = w + 5;
+        if (flake.x > w + 5) flake.x = -5;
 
         ctx.fillStyle = `rgba(240, 248, 255, ${flake.opacity})`;
         ctx.beginPath();
@@ -160,13 +183,15 @@ export class WeatherEngine {
       }
     } else if (this.mode === "leaves") {
       for (const leaf of this.particles) {
-        leaf.x += leaf.speedX;
+        leaf.x += leaf.speedX + this.wind * 1.1;
         leaf.y += leaf.speedY;
-        leaf.angle += leaf.rotSpeed;
+        leaf.angle += leaf.rotSpeed + this.wind * 0.02;
 
-        if (leaf.x > w || leaf.y > h) {
+        if (leaf.x > w + 10 || leaf.y > h) {
           leaf.x = Math.random() * (w * 0.5);
           leaf.y = -leaf.size;
+        } else if (leaf.x < -10) {
+          leaf.x = w + 5;
         }
 
         ctx.save();
@@ -184,10 +209,13 @@ export class WeatherEngine {
         const alpha = 0.2 + (Math.sin(dust.pulse) + 1) * 0.25;
 
         dust.y -= 0.2;
+        dust.x += this.wind * 0.4;
         if (dust.y < 0) {
           dust.y = h;
           dust.x = Math.random() * w;
         }
+        if (dust.x < 0) dust.x = w;
+        if (dust.x > w) dust.x = 0;
 
         ctx.fillStyle = `rgba(255, 224, 163, ${alpha})`;
         ctx.beginPath();

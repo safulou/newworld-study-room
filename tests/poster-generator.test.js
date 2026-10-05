@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { FocusPosterGenerator, PLANT_FLOWER_LANGUAGES } from "../src/services/poster-generator.js";
+import { FocusPosterGenerator, PLANT_FLOWER_LANGUAGES, POSTER_THEMES } from "../src/services/poster-generator.js";
 
 describe("FocusPosterGenerator", () => {
   let originalGetContext;
@@ -42,6 +42,39 @@ describe("FocusPosterGenerator", () => {
     expect(PLANT_FLOWER_LANGUAGES.cactus).toBeDefined();
     expect(PLANT_FLOWER_LANGUAGES.succulent).toBeDefined();
     expect(PLANT_FLOWER_LANGUAGES.pine).toBeDefined();
+  });
+
+  it("exposes all predefined poster ambience themes", () => {
+    expect(POSTER_THEMES.midnight).toBeDefined();
+    expect(POSTER_THEMES.aurora).toBeDefined();
+    expect(POSTER_THEMES.sunset).toBeDefined();
+    expect(POSTER_THEMES.forest).toBeDefined();
+    expect(POSTER_THEMES.cyber).toBeDefined();
+
+    Object.values(POSTER_THEMES).forEach((theme) => {
+      expect(theme.name).toBeDefined();
+      expect(theme.emoji).toBeDefined();
+      expect(theme.bgGradient).toHaveLength(3);
+      expect(theme.aura).toHaveLength(3);
+      expect(theme.outerBorder).toBeDefined();
+      expect(theme.accent).toBeDefined();
+    });
+  });
+
+  it("generates cards with each supported theme without throwing", () => {
+    const themes = ["midnight", "aurora", "sunset", "forest", "cyber", "unknown_fallback"];
+    themes.forEach((theme) => {
+      const canvas = FocusPosterGenerator.generate({
+        date: "2026-10-02",
+        todayMinutes: 90,
+        totalHours: 15,
+        streakDays: 5,
+        theme,
+      });
+      expect(canvas).toBeDefined();
+      expect(canvas.width).toBe(880);
+      expect(canvas.height).toBe(1240);
+    });
   });
 
   it("generates a 2x retina canvas without throwing", () => {

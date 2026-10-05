@@ -246,6 +246,8 @@ const elements = {
   posterModal: $("#posterModal"),
   closePoster: $("#closePoster"),
   posterCanvasWrapper: $("#posterCanvasWrapper"),
+  posterThemeRow: $("#posterThemeRow"),
+  posterThemeChips: document.querySelectorAll(".poster-theme-chip"),
   btnDownloadPoster: $("#btnDownloadPoster"),
   btnCopyPoster: $("#btnCopyPoster"),
   photoInput: $("#photoInput"),
@@ -1339,11 +1341,25 @@ function bindTimer() {
     if (isFocus) {
       elements.focusGarden.classList.toggle("growing", event.detail);
       viewer?.setTimerState(event.detail ? "focusing" : "idle");
-      p2p?.sendStatus(event.detail ? "focusing" : "resting", store.get().nickname, store.get().plantType);
+      p2p?.sendStatus(
+        event.detail ? "focusing" : "resting",
+        store.get().nickname,
+        store.get().plantType,
+        store.get().focusIntention,
+        store.get().windowWeather,
+        store.get().sprintPreset,
+      );
     } else {
       elements.focusGarden.classList.remove("growing");
       viewer?.setTimerState(event.detail ? "resting" : "idle");
-      p2p?.sendStatus("resting", store.get().nickname, store.get().plantType);
+      p2p?.sendStatus(
+        "resting",
+        store.get().nickname,
+        store.get().plantType,
+        store.get().focusIntention,
+        store.get().windowWeather,
+        store.get().sprintPreset,
+      );
     }
 
     if (event.detail) {
@@ -1806,6 +1822,32 @@ function bindAtmosphere() {
     };
     showToast(`窗外景緻已切換為：${names[next] || next}`);
   });
+
+  // Interactive breeze on cabin window
+  elements.cabinWindow?.addEventListener("mousemove", (e) => {
+    const rect = elements.cabinWindow.getBoundingClientRect();
+    if (!rect.width) return;
+    const normX = (e.clientX - rect.left) / rect.width - 0.5;
+    weatherEngine?.setWind(normX * 2.2);
+  });
+  elements.cabinWindow?.addEventListener("mouseleave", () => {
+    weatherEngine?.setWind(0);
+  });
+  elements.cabinWindow?.addEventListener(
+    "touchmove",
+    (e) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+      const rect = elements.cabinWindow.getBoundingClientRect();
+      if (!rect.width) return;
+      const normX = (touch.clientX - rect.left) / rect.width - 0.5;
+      weatherEngine?.setWind(normX * 2.2);
+    },
+    { passive: true },
+  );
+  elements.cabinWindow?.addEventListener("touchend", () => {
+    weatherEngine?.setWind(0);
+  });
 }
 
 function bindAccessories() {
@@ -2172,7 +2214,7 @@ function bindQrModal() {
 let currentPosterCanvas = null;
 
 function bindPosterModal() {
-  elements.btnOpenPoster?.addEventListener("click", () => {
+  const renderCard = (theme = store.get().posterTheme || "midnight") => {
     const summary = studyStats.getExecutiveSummary();
     const today = new Date().toISOString().split("T")[0];
     const todayMinutes = studyStats.history
@@ -2192,11 +2234,28 @@ function bindPosterModal() {
       harvestedPlant: currentPlant,
       nickname,
       quote,
+      theme,
     });
 
     if (elements.posterCanvasWrapper) {
       elements.posterCanvasWrapper.replaceChildren(currentPosterCanvas);
     }
+  };
+
+  elements.posterThemeChips?.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const theme = chip.dataset.posterTheme;
+      if (!theme) return;
+      store.update({ posterTheme: theme });
+      elements.posterThemeChips.forEach((c) => c.classList.toggle("active", c === chip));
+      renderCard(theme);
+    });
+  });
+
+  elements.btnOpenPoster?.addEventListener("click", () => {
+    const activeTheme = store.get().posterTheme || "midnight";
+    elements.posterThemeChips?.forEach((c) => c.classList.toggle("active", c.dataset.posterTheme === activeTheme));
+    renderCard(activeTheme);
     elements.posterModal?.showModal();
   });
 
@@ -2238,6 +2297,16 @@ function bindFocusIntention() {
     if (elements.zenIntentionText) {
       elements.zenIntentionText.textContent = val ? `當前意圖：${val}` : "當前意圖：保持專注";
     }
+    if (timer.running && timer.mode === "focus") {
+      p2p?.sendStatus(
+        "focusing",
+        store.get().nickname,
+        store.get().plantType,
+        val,
+        store.get().windowWeather,
+        store.get().sprintPreset,
+      );
+    }
   };
 
   elements.focusIntentionInput?.addEventListener("change", commitIntention);
@@ -2258,6 +2327,16 @@ function bindFocusIntention() {
       store.update({ focusIntention: text });
       if (elements.zenIntentionText) {
         elements.zenIntentionText.textContent = `當前意圖：${text}`;
+      }
+      if (timer.running && timer.mode === "focus") {
+        p2p?.sendStatus(
+          "focusing",
+          store.get().nickname,
+          store.get().plantType,
+          text,
+          store.get().windowWeather,
+          store.get().sprintPreset,
+        );
       }
       showToast(`已同步當前任務意圖：「${text}」🎯`);
     } else {
@@ -2766,12 +2845,31 @@ async function startP2P() {
   p2p.addEventListener("peer-status", (event) => {
     const detail = event.detail;
     if (elements.peerStatusBar && elements.peerStatusText) {
-      const statusText = detail.status === "focusing" ? "正在專注沈浸中 🎯" : "正在小憩喝水 🍵";
-      elements.peerStatusText.textContent = `${detail.by} ${statusText}`;
+      const weatherEmojiMap = {
+        auto: "✨",
+        rain: "🌧️",
+        snow: "❄️",
+        leaves: "🍂",
+        clear: "🌌",
+      };
+      const presetNameMap = {
+        classic: "黃金 25m",
+        deep: "深度 50m",
+        sprint: "衝刺 15m",
+        ultradian: "晝夜 90m",
+        custom: "自訂",
+      };
+      const statusAction = detail.status === "focusing" ? "正在專注" : "正在小憩喝水 🍵";
+      const intentionSnippet = detail.intention ? `：「${detail.intention}」` : "";
+      const weatherSnippet =
+        detail.weather && detail.weather !== "auto" ? ` · 窗外 ${weatherEmojiMap[detail.weather] || "✨"}` : "";
+      const presetSnippet =
+        detail.sprintPreset && detail.status === "focusing" ? ` · ${presetNameMap[detail.sprintPreset] || ""}` : "";
+      elements.peerStatusText.textContent = `${detail.by} ${statusAction}${intentionSnippet}${weatherSnippet}${presetSnippet}`;
       elements.peerStatusBar.hidden = false;
       window.setTimeout(() => {
         if (elements.peerStatusBar) elements.peerStatusBar.hidden = true;
-      }, 6000);
+      }, 7000);
     }
   });
   p2p.addEventListener("security-event", (event) => showToast(event.detail));

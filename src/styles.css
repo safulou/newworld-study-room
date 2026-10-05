@@ -4073,6 +4073,51 @@ body.zen-mode.zen-inactive .zen-focus-intention {
   display: block;
 }
 
+.poster-theme-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  overflow-x: auto;
+}
+
+.poster-theme-label {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.poster-theme-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+}
+
+.poster-theme-chip {
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface-raised);
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.poster-theme-chip:hover {
+  border-color: var(--teal);
+  color: var(--text);
+}
+
+.poster-theme-chip.active {
+  border-color: var(--teal);
+  background: rgba(105, 200, 189, 0.16);
+  color: var(--teal);
+  box-shadow: 0 0 8px rgba(105, 200, 189, 0.2);
+}
+
 .poster-actions {
   display: flex;
   align-items: center;

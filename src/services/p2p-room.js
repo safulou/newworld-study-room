@@ -56,6 +56,18 @@ function isInteraction(msg) {
   );
 }
 
+function isPeerStatus(msg) {
+  return Boolean(
+    msg &&
+    msg.type === "peer-status" &&
+    typeof msg.by === "string" &&
+    msg.by.length > 0 &&
+    msg.by.length <= 18 &&
+    typeof msg.status === "string" &&
+    msg.status.length <= 20,
+  );
+}
+
 function safeHostId(value) {
   return typeof value === "string" && /^[a-zA-Z0-9_-]{1,80}$/.test(value) ? value : "";
 }
@@ -255,10 +267,24 @@ export class P2PRoom extends EventTarget {
       }
       return;
     }
-    if (message.type === "peer-status") {
-      this.dispatchEvent(new CustomEvent("peer-status", { detail: message }));
+    if (message.type === "peer-status" && isPeerStatus(message)) {
+      const sanitized = {
+        type: "peer-status",
+        version: MESSAGE_VERSION,
+        peerId: String(message.peerId || "").slice(0, 80),
+        by: String(message.by || "夥伴").slice(0, 18),
+        status: String(message.status || "idle").slice(0, 20),
+        plant: String(message.plant || "rose").slice(0, 20),
+        intention: typeof message.intention === "string" ? message.intention.slice(0, 48) : "",
+        weather: ["auto", "rain", "snow", "leaves", "clear"].includes(message.weather) ? message.weather : "auto",
+        sprintPreset: ["classic", "deep", "sprint", "ultradian", "custom"].includes(message.sprintPreset)
+          ? message.sprintPreset
+          : "classic",
+        timestamp: Number(message.timestamp) || Date.now(),
+      };
+      this.dispatchEvent(new CustomEvent("peer-status", { detail: sanitized }));
       if (this.role === "host") {
-        this.broadcast(message, source.peer);
+        this.broadcast(sanitized, source.peer);
       }
       return;
     }
@@ -357,7 +383,11 @@ export class P2PRoom extends EventTarget {
     this.broadcast({ type: "room-meta", version: MESSAGE_VERSION, roomName: String(roomName).trim().slice(0, 24) });
   }
 
-  sendStatus(status, nickname, plant) {
+  sendStatus(status, nickname, plant, intention = "", weather = "auto", sprintPreset = "classic") {
+    const validWeather = ["auto", "rain", "snow", "leaves", "clear"].includes(weather) ? weather : "auto";
+    const validPreset = ["classic", "deep", "sprint", "ultradian", "custom"].includes(sprintPreset)
+      ? sprintPreset
+      : "classic";
     const msg = {
       type: "peer-status",
       version: MESSAGE_VERSION,
@@ -365,6 +395,9 @@ export class P2PRoom extends EventTarget {
       by: String(nickname || "夥伴").slice(0, 18),
       status: String(status || "idle").slice(0, 20),
       plant: String(plant || "rose").slice(0, 20),
+      intention: String(intention || "").slice(0, 48),
+      weather: validWeather,
+      sprintPreset: validPreset,
       timestamp: Date.now(),
     };
     if (this.role === "host") {
@@ -555,6 +588,7 @@ export const p2pInternals = {
   publicTip,
   isTimerSync,
   isInteraction,
+  isPeerStatus,
   safeHostId,
   safeRoomToken,
   roomParams,

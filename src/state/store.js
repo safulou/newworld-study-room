@@ -59,6 +59,7 @@ const profileDefaults = {
   sprintPreset: "classic",
   parkingLot: [],
   windowWeather: "auto",
+  posterTheme: "midnight",
   flowAutopilot: false,
   windDownAlert: true,
   customPresets: [],
@@ -167,6 +168,9 @@ function sanitizeProfile(value = {}) {
     windowWeather: ["auto", "rain", "snow", "leaves", "clear"].includes(value.windowWeather)
       ? value.windowWeather
       : profileDefaults.windowWeather,
+    posterTheme: ["midnight", "aurora", "sunset", "forest", "cyber"].includes(value.posterTheme)
+      ? value.posterTheme
+      : profileDefaults.posterTheme,
     flowAutopilot: Boolean(value.flowAutopilot),
     windDownAlert: value.windDownAlert !== undefined ? Boolean(value.windDownAlert) : profileDefaults.windDownAlert,
     parkingLot: Array.isArray(value.parkingLot)
