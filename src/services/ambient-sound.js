@@ -12,6 +12,7 @@ export const AMBIENT_SOUND_TYPES = [
   "brown_noise",
   "pink_noise",
   "ocean_waves",
+  "binaural_theta",
   "binaural_alpha",
   "binaural_gamma",
   "keyboard",
@@ -47,6 +48,13 @@ export const SOUNDSCAPE_PRESETS = {
     tracks: { ocean_waves: 0.38, pink_noise: 0.22 },
     pans: { ocean_waves: 0.15, pink_noise: -0.35 },
   },
+  zen_meditation: {
+    id: "zen_meditation",
+    name: "禪修冥想",
+    icon: "moon",
+    tracks: { binaural_theta: 0.25, ocean_waves: 0.2 },
+    pans: { binaural_theta: 0, ocean_waves: -0.25 },
+  },
   study_library: {
     id: "study_library",
     name: "圖書館自習",
@@ -69,6 +77,7 @@ export const SPATIAL_SCENARIOS = {
       brown_noise: 0.4,
       pink_noise: -0.25,
       ocean_waves: 0.25,
+      binaural_theta: 0,
       binaural_alpha: 0,
       binaural_gamma: 0,
     },
@@ -85,6 +94,7 @@ export const SPATIAL_SCENARIOS = {
       brown_noise: 0,
       pink_noise: 0,
       ocean_waves: 0,
+      binaural_theta: 0,
       binaural_alpha: 0,
       binaural_gamma: 0,
     },
@@ -100,6 +110,36 @@ export class AmbientSoundscapeManager {
     this.masterVolume = 0.5;
     this.trackVolumes = {};
     this.trackPans = {};
+    this.binauralFrequencies = {
+      binaural_theta: { base: 196, diff: 6 },
+      binaural_alpha: { base: 210, diff: 10 },
+      binaural_gamma: { base: 220, diff: 40 },
+    };
+  }
+
+  setBinauralBeatFrequency(name, baseFreq, diffFreq) {
+    if (!this.binauralFrequencies[name]) return false;
+    const clampedBase = Math.max(100, Math.min(400, Number(baseFreq) || 200));
+    const clampedDiff = Math.max(1, Math.min(60, Number(diffFreq) || 10));
+    this.binauralFrequencies[name] = { base: clampedBase, diff: clampedDiff };
+
+    const track = this.nodes.get(name);
+    if (track && track.sources && track.sources.length >= 2 && this.audioCtx) {
+      const [oscL, oscR] = track.sources;
+      const now = this.audioCtx.currentTime;
+      if (oscL.frequency?.setTargetAtTime) {
+        oscL.frequency.setTargetAtTime(clampedBase, now, 0.05);
+        oscR.frequency.setTargetAtTime(clampedBase + clampedDiff, now, 0.05);
+      } else {
+        oscL.frequency.setValueAtTime(clampedBase, now);
+        oscR.frequency.setValueAtTime(clampedBase + clampedDiff, now);
+      }
+    }
+    return true;
+  }
+
+  getBinauralBeatFrequency(name) {
+    return this.binauralFrequencies[name] ? { ...this.binauralFrequencies[name] } : null;
   }
 
   ensureContext() {
@@ -192,10 +232,14 @@ export class AmbientSoundscapeManager {
       trackGain.connect(this.masterGain);
     }
 
-    // Procedural Binaural Beat Synthesis (Alpha 10Hz or Gamma 40Hz)
-    if (name === "binaural_alpha" || name === "binaural_gamma") {
-      const baseFreq = name === "binaural_alpha" ? 210 : 200;
-      const diffFreq = name === "binaural_alpha" ? 10 : 40;
+    // Procedural Binaural Beat Synthesis (Theta 6Hz, Alpha 10Hz, or Gamma 40Hz)
+    if (name === "binaural_theta" || name === "binaural_alpha" || name === "binaural_gamma") {
+      const freqConfig = this.binauralFrequencies[name] || {
+        base: name === "binaural_theta" ? 196 : name === "binaural_alpha" ? 210 : 220,
+        diff: name === "binaural_theta" ? 6 : name === "binaural_alpha" ? 10 : 40,
+      };
+      const baseFreq = freqConfig.base;
+      const diffFreq = freqConfig.diff;
 
       const oscL = ctx.createOscillator();
       const oscR = ctx.createOscillator();

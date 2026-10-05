@@ -350,6 +350,21 @@
             </div>
           </div>
 
+          <div class="flow-reflection-prompt" id="flowReflectionPrompt" hidden>
+            <span class="reflection-prompt-title">剛才的專注狀態：</span>
+            <div class="reflection-prompt-options">
+              <button class="reflection-btn" type="button" data-rating="flow" title="深度心流：高度沉浸，物我兩忘">
+                🔥 深度心流
+              </button>
+              <button class="reflection-btn" type="button" data-rating="steady" title="穩定推進：按部就班，專心致志">
+                ✨ 穩定推進
+              </button>
+              <button class="reflection-btn" type="button" data-rating="warmup" title="漸入佳境：暖身調適，漸進專注">
+                🌱 漸入佳境
+              </button>
+            </div>
+          </div>
+
           <div class="ambient-bar" id="ambientBar" hidden>
             <div class="ambient-presets">
               <span class="ambient-preset-title">場景預設：</span>
@@ -357,6 +372,7 @@
               <button class="preset-btn" type="button" data-preset="forest_breeze">🌲 林間微風</button>
               <button class="preset-btn" type="button" data-preset="ocean_tide">🌊 潮汐漫步</button>
               <button class="preset-btn" type="button" data-preset="deep_flow">🧘 深度心流</button>
+              <button class="preset-btn" type="button" data-preset="zen_meditation">🌙 禪修冥想</button>
               <button class="preset-btn" type="button" data-preset="study_library">📚 圖書館自習</button>
             </div>
             <div class="custom-presets-row" id="customPresetsRow">
@@ -412,6 +428,10 @@
               <button class="ambient-chip" type="button" data-sound="lofi" id="lofiChip" aria-pressed="false">
                 <i data-lucide="music"></i>
                 <span>Lo-Fi琴弦</span>
+              </button>
+              <button class="ambient-chip" type="button" data-sound="binaural_theta" aria-pressed="false">
+                <i data-lucide="moon"></i>
+                <span>Theta波</span>
               </button>
               <button class="ambient-chip" type="button" data-sound="binaural_alpha" aria-pressed="false">
                 <i data-lucide="sparkles"></i>
@@ -649,6 +669,19 @@
                 <span class="stat-caption">收穫植物數</span>
               </div>
             </div>
+            <div class="weekly-trend-card" id="weeklyTrendCard">
+              <div class="weekly-trend-header">
+                <span class="weekly-trend-title">
+                  <i data-lucide="trending-up"></i>
+                  <span>本週心流趨勢</span>
+                </span>
+                <span class="weekly-trend-badge" id="weeklyTrendDiffBadge">+0%</span>
+              </div>
+              <div class="weekly-trend-body">
+                <span class="weekly-trend-stat" id="weeklyTrendStat">本週 0h · 巔峰：無</span>
+                <span class="weekly-trend-flow" id="weeklyTrendFlowRate">🌊 心流率 0%</span>
+              </div>
+            </div>
             <div class="heatmap-section" id="heatmapSection" data-theme="emerald">
               <div class="heatmap-head">
                 <div class="heatmap-title-col">
@@ -750,6 +783,15 @@
               <button class="stats-action-btn" id="copyMarkdownLog" type="button" title="複製今日專注 Markdown 日誌">
                 <i data-lucide="clipboard-copy"></i>
                 <span>複製 Markdown 日誌</span>
+              </button>
+              <button
+                class="stats-action-btn"
+                id="btnExportWeeklyReport"
+                type="button"
+                title="導出週度心流復盤 Markdown 週報"
+              >
+                <i data-lucide="file-text"></i>
+                <span>復盤週報</span>
               </button>
               <button class="stats-action-btn" id="exportBackupJson" type="button" title="匯出學習歷史 JSON 備份檔">
                 <i data-lucide="download"></i>

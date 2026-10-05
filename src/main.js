@@ -246,7 +246,14 @@ const elements = {
   sessionTimelineSection: $("#sessionTimelineSection"),
   sessionTimelineCount: $("#sessionTimelineCount"),
   sessionTimelineList: $("#sessionTimelineList"),
+  flowReflectionPrompt: $("#flowReflectionPrompt"),
+  flowReflectionBtns: [...document.querySelectorAll(".reflection-btn")],
+  weeklyTrendCard: $("#weeklyTrendCard"),
+  weeklyTrendDiffBadge: $("#weeklyTrendDiffBadge"),
+  weeklyTrendStat: $("#weeklyTrendStat"),
+  weeklyTrendFlowRate: $("#weeklyTrendFlowRate"),
   copyMarkdownLog: $("#copyMarkdownLog"),
+  btnExportWeeklyReport: $("#btnExportWeeklyReport"),
   exportBackupJson: $("#exportBackupJson"),
   btnOpenPoster: $("#btnOpenPoster"),
   posterModal: $("#posterModal"),
@@ -404,6 +411,8 @@ let meteorAnimation = null;
 let photoProcessId = 0;
 let p2pStartPromise = null;
 let lastGardenStage = "";
+let lastRecordedSessionId = null;
+let flowReflectionTimer = null;
 
 const plantLabels = {
   rose: "玫瑰",
@@ -765,7 +774,24 @@ function renderStats() {
   renderHeatmap();
   renderHourlyDistribution();
   renderCategoryBreakdown();
+  renderWeeklyTrend();
   renderSessionTimeline();
+}
+
+function renderWeeklyTrend() {
+  if (!elements.weeklyTrendCard) return;
+  const trend = studyStats.getWeeklyTrend();
+  if (elements.weeklyTrendDiffBadge) {
+    const sign = trend.diffPercent >= 0 ? `+${trend.diffPercent}%` : `${trend.diffPercent}%`;
+    elements.weeklyTrendDiffBadge.textContent = sign;
+    elements.weeklyTrendDiffBadge.classList.toggle("negative", trend.diffPercent < 0);
+  }
+  if (elements.weeklyTrendStat) {
+    elements.weeklyTrendStat.textContent = `本週 ${trend.currentHours}h · 巔峰：${trend.mostProductiveDay}`;
+  }
+  if (elements.weeklyTrendFlowRate) {
+    elements.weeklyTrendFlowRate.textContent = `🌊 心流率 ${trend.flowRate}%`;
+  }
 }
 
 function renderCategoryBreakdown() {
@@ -851,12 +877,20 @@ function renderSessionTimeline() {
         <span>${cat.icon}</span>
         <span>${cat.label}</span>
       </span>
-      <span class="timeline-rating" title="${rat.label}">${rat.icon}</span>
+      <button type="button" class="timeline-rating" title="心流狀態：${rat.label} (點擊切換)" aria-label="切換心流狀態：${rat.label}">${rat.icon}</button>
       <span class="timeline-task-title" title="${session.taskTitle || "自主專注"}">${session.taskTitle || "自主專注"}</span>
       ${noteHtml}
       <span class="timeline-duration">${session.durationMinutes}m</span>
       <span class="timeline-plant" title="收穫 ${session.plantHarvested || "植物"}">${plantEmoji}</span>
     `;
+
+    const ratBtn = item.querySelector(".timeline-rating");
+    ratBtn?.addEventListener("click", () => {
+      const nextRating = session.rating === "flow" ? "steady" : session.rating === "steady" ? "warmup" : "flow";
+      studyStats.updateSession(session.id, { rating: nextRating });
+      renderStats();
+      showToast(`已將此記錄調整為「${ratingBadges[nextRating].label}」！`);
+    });
 
     const delBtn = document.createElement("button");
     delBtn.type = "button";
@@ -1414,13 +1448,15 @@ function bindTimer() {
         taskTracker.incrementPomodoro(completedTaskId);
         renderTasks();
       }
-      studyStats.recordSession({
+      const recorded = studyStats.recordSession({
         durationMinutes: timer.focusMinutes,
         plantHarvested: store.get().plantType,
         taskId: completedTaskId,
         category: store.get().focusCategory || "dev",
         note: store.get().focusIntention || "",
       });
+      lastRecordedSessionId = recorded?.id || null;
+      showFlowReflectionPrompt();
       renderStats();
 
       if (store.get().desktopNotifications) {
@@ -1484,6 +1520,36 @@ function bindTimer() {
   });
 }
 
+function showFlowReflectionPrompt() {
+  if (!elements.flowReflectionPrompt) return;
+  elements.flowReflectionPrompt.hidden = false;
+  clearTimeout(flowReflectionTimer);
+  flowReflectionTimer = setTimeout(() => {
+    hideFlowReflectionPrompt();
+  }, 10000);
+}
+
+function hideFlowReflectionPrompt() {
+  if (!elements.flowReflectionPrompt) return;
+  elements.flowReflectionPrompt.hidden = true;
+  clearTimeout(flowReflectionTimer);
+}
+
+function bindFlowReflection() {
+  elements.flowReflectionBtns?.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const rating = btn.dataset.rating;
+      if (lastRecordedSessionId) {
+        studyStats.updateSession(lastRecordedSessionId, { rating });
+        renderStats();
+        const ratingNames = { flow: "🔥 深度心流", steady: "✨ 穩定推進", warmup: "🌱 漸入佳境" };
+        showToast(`心流狀態已標記為「${ratingNames[rating] || rating}」！`);
+      }
+      hideFlowReflectionPrompt();
+    });
+  });
+}
+
 function bindMusic() {
   music.addEventListener("running", (event) => {
     replaceButtonIcon(
@@ -1528,8 +1594,9 @@ const TRACK_METAS = {
   brown_noise: { name: "潮汐", icon: "waves" },
   keyboard: { name: "機械鍵盤", icon: "keyboard" },
   pencil: { name: "鉛筆書寫", icon: "pencil" },
-  binaural_alpha: { name: "Alpha波", icon: "sparkles" },
-  binaural_gamma: { name: "Gamma波", icon: "zap" },
+  binaural_theta: { name: "Theta波 (6Hz 冥想)", icon: "moon" },
+  binaural_alpha: { name: "Alpha波 (10Hz 心流)", icon: "sparkles" },
+  binaural_gamma: { name: "Gamma波 (40Hz 敏捷)", icon: "zap" },
   pink_noise: { name: "粉紅噪", icon: "activity" },
   ocean_waves: { name: "潮汐海浪", icon: "waves" },
 };
@@ -2057,6 +2124,16 @@ function bindExports() {
     try {
       await navigator.clipboard.writeText(md);
       showToast("今日 Markdown 伴讀日誌已複製到剪貼簿！📋");
+    } catch {
+      showToast("無法存取剪貼簿，請稍後重試。");
+    }
+  });
+
+  elements.btnExportWeeklyReport?.addEventListener("click", async () => {
+    const md = studyStats.exportExecutiveMarkdownReport(store.get().nickname, taskTracker.tasks);
+    try {
+      await navigator.clipboard.writeText(md);
+      showToast("週度心流復盤週報已複製到剪貼簿！📋");
     } catch {
       showToast("無法存取剪貼簿，請稍後重試。");
     }
@@ -3591,6 +3668,7 @@ function init() {
   bindAccessories();
   bindAtmosphere();
   bindTimer();
+  bindFlowReflection();
   bindMusic();
   bindCategoryPicker();
   bindShortcuts();

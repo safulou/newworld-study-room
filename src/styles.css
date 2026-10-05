@@ -5138,10 +5138,155 @@ body.zen-mode.zen-inactive .zen-focus-intention {
   color: #0b1320;
 }
 
-.qr-card-footer {
-  width: 100%;
+/* Flow Reflection Prompt Bar */
+.flow-reflection-prompt {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 14px;
+  margin: 8px auto;
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    0 0 12px rgba(255, 215, 0, 0.15);
+  backdrop-filter: blur(8px);
+  animation: slideDownFade 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 90%;
+  box-sizing: border-box;
+}
+
+@keyframes slideDownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.reflection-prompt-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f8fafc;
+  white-space: nowrap;
+}
+
+.reflection-prompt-options {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.reflection-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.reflection-btn:hover {
+  background: rgba(255, 215, 0, 0.2);
+  border-color: rgba(255, 215, 0, 0.5);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.reflection-btn:active {
+  transform: scale(0.96);
+}
+
+/* Interactive Timeline Rating Button */
+button.timeline-rating {
+  background: transparent;
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+
+button.timeline-rating:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: scale(1.15);
+}
+
+/* Weekly Trend Card in Stats Panel */
+.weekly-trend-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  margin-top: 12px;
+  margin-bottom: 4px;
+  background: linear-gradient(135deg, rgba(20, 32, 50, 0.7), rgba(12, 20, 34, 0.8));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+.weekly-trend-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.weekly-trend-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.weekly-trend-title i {
+  width: 14px;
+  height: 14px;
+  color: var(--teal);
+}
+
+.weekly-trend-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(105, 200, 189, 0.2);
+  border: 1px solid rgba(105, 200, 189, 0.4);
+  color: var(--teal);
+}
+
+.weekly-trend-badge.negative {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #f87171;
+}
+
+.weekly-trend-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.weekly-trend-flow {
+  font-weight: 600;
+  color: var(--gold-soft);
 }
 
 @media (prefers-reduced-motion: reduce) {

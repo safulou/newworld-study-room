@@ -181,4 +181,75 @@ describe("StudyStatsManager Service", () => {
 
     expect(stats.updateSession("non_existent", { rating: "steady" })).toBeNull();
   });
+
+  it("calculates weekly trend analytics and compares against previous week", () => {
+    const now = new Date("2026-10-05T12:00:00Z");
+    stats.history = [
+      {
+        id: "s1",
+        timestamp: "2026-10-05T10:00:00Z",
+        date: "2026-10-05",
+        durationMinutes: 50,
+        category: "dev",
+        rating: "flow",
+        plantHarvested: "rose",
+      },
+      {
+        id: "s2",
+        timestamp: "2026-10-04T10:00:00Z",
+        date: "2026-10-04",
+        durationMinutes: 25,
+        category: "read",
+        rating: "steady",
+        plantHarvested: "tulip",
+      },
+      {
+        id: "s3",
+        timestamp: "2026-09-26T10:00:00Z",
+        date: "2026-09-26",
+        durationMinutes: 50,
+        category: "dev",
+        rating: "warmup",
+        plantHarvested: "cactus",
+      },
+    ];
+
+    const trend = stats.getWeeklyTrend(now);
+    expect(trend.currentMinutes).toBe(75);
+    expect(trend.previousMinutes).toBe(50);
+    expect(trend.diffPercent).toBe(50);
+    expect(trend.totalSessions).toBe(2);
+    expect(trend.flowRate).toBe(50);
+    expect(trend.mostProductiveDay).toBe("週一");
+    expect(trend.peakDayMinutes).toBe(50);
+  });
+
+  it("exports comprehensive executive markdown weekly review report", () => {
+    stats.history = [
+      {
+        id: "s1",
+        timestamp: new Date().toISOString(),
+        date: new Date().toISOString().split("T")[0],
+        durationMinutes: 50,
+        category: "dev",
+        rating: "flow",
+        plantHarvested: "rose",
+        note: "重構核心服務架構",
+      },
+    ];
+
+    const tasks = [{ id: "t1", title: "優化雙耳節律", completed: true, pomodoros: 2 }];
+    const report = stats.exportExecutiveMarkdownReport("Arsen", tasks);
+
+    expect(report).toContain("心流復盤週報");
+    expect(report).toContain("旅人暱稱：Arsen");
+    expect(report).toContain("核心心流與專注成效");
+    expect(report).toContain("領域時間分配");
+    expect(report).toContain("植栽花語收穫庫");
+    expect(report).toContain("近期任務清單完成狀態");
+    expect(report).toContain("優化雙耳節律 (🍅 2)");
+    expect(report).toContain("今日專注時序與心流筆記");
+    expect(report).toContain("🔥 深度心流");
+    expect(report).toContain("重構核心服務架構");
+  });
 });

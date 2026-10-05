@@ -15,6 +15,7 @@ describe("AmbientSoundscapeManager", () => {
     expect(AMBIENT_SOUND_TYPES).toContain("brown_noise");
     expect(AMBIENT_SOUND_TYPES).toContain("pink_noise");
     expect(AMBIENT_SOUND_TYPES).toContain("ocean_waves");
+    expect(AMBIENT_SOUND_TYPES).toContain("binaural_theta");
     expect(AMBIENT_SOUND_TYPES).toContain("binaural_alpha");
     expect(AMBIENT_SOUND_TYPES).toContain("binaural_gamma");
     expect(AMBIENT_SOUND_TYPES).toContain("keyboard");
@@ -26,6 +27,7 @@ describe("AmbientSoundscapeManager", () => {
     expect(SOUNDSCAPE_PRESETS.forest_breeze).toBeDefined();
     expect(SOUNDSCAPE_PRESETS.deep_flow).toBeDefined();
     expect(SOUNDSCAPE_PRESETS.ocean_tide).toBeDefined();
+    expect(SOUNDSCAPE_PRESETS.zen_meditation).toBeDefined();
     expect(SOUNDSCAPE_PRESETS.study_library).toBeDefined();
   });
 
@@ -139,5 +141,19 @@ describe("AmbientSoundscapeManager", () => {
     expect(decodeSoundscapeCode("")).toBeNull();
     expect(decodeSoundscapeCode("invalid_garbage_base64!!!")).toBeNull();
     expect(decodeSoundscapeCode("sc_eyJuYW1lIjoiIn0")).toBeNull(); // no tracks
+  });
+
+  it("supports tuning binaural beat brainwave frequencies and Theta wave", () => {
+    const manager = new AmbientSoundscapeManager();
+    const thetaFreq = manager.getBinauralBeatFrequency("binaural_theta");
+    expect(thetaFreq).toEqual({ base: 196, diff: 6 });
+
+    const updated = manager.setBinauralBeatFrequency("binaural_theta", 205, 7);
+    expect(updated).toBe(true);
+    expect(manager.getBinauralBeatFrequency("binaural_theta")).toEqual({ base: 205, diff: 7 });
+
+    // Invalid track name
+    expect(manager.setBinauralBeatFrequency("non_existent", 200, 10)).toBe(false);
+    expect(manager.getBinauralBeatFrequency("non_existent")).toBeNull();
   });
 });

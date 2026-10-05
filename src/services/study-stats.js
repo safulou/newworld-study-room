@@ -126,6 +126,65 @@ export class StudyStatsManager {
       .reduce((sum, h) => sum + (h.durationMinutes || 0), 0);
   }
 
+  getWeeklyTrend(referenceDate = new Date()) {
+    const refTime = referenceDate instanceof Date ? referenceDate.getTime() : new Date(referenceDate).getTime();
+    const oneDayMs = 86400000;
+    const sevenDaysMs = 7 * oneDayMs;
+    const currentWeekStart = refTime - sevenDaysMs;
+    const previousWeekStart = refTime - 14 * oneDayMs;
+
+    const currentSessions = this.history.filter((h) => {
+      const t = new Date(h.timestamp).getTime();
+      return t >= currentWeekStart && t <= refTime;
+    });
+
+    const previousSessions = this.history.filter((h) => {
+      const t = new Date(h.timestamp).getTime();
+      return t >= previousWeekStart && t < currentWeekStart;
+    });
+
+    const currentMinutes = currentSessions.reduce((sum, h) => sum + (h.durationMinutes || 0), 0);
+    const previousMinutes = previousSessions.reduce((sum, h) => sum + (h.durationMinutes || 0), 0);
+
+    let diffPercent = 0;
+    if (previousMinutes > 0) {
+      diffPercent = Math.round(((currentMinutes - previousMinutes) / previousMinutes) * 100);
+    } else if (currentMinutes > 0) {
+      diffPercent = 100;
+    }
+
+    const dayNames = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
+    const dayMinutesMap = {};
+    currentSessions.forEach((h) => {
+      const dayIdx = new Date(h.timestamp).getDay();
+      dayMinutesMap[dayIdx] = (dayMinutesMap[dayIdx] || 0) + (h.durationMinutes || 0);
+    });
+
+    let bestDayIdx = -1;
+    let peakMinutes = 0;
+    for (const [dayIdx, mins] of Object.entries(dayMinutesMap)) {
+      if (mins > peakMinutes) {
+        peakMinutes = mins;
+        bestDayIdx = Number(dayIdx);
+      }
+    }
+
+    const mostProductiveDay = bestDayIdx !== -1 ? dayNames[bestDayIdx] : "無";
+    const flowCount = currentSessions.filter((h) => h.rating === "flow").length;
+    const flowRate = currentSessions.length > 0 ? Math.round((flowCount / currentSessions.length) * 100) : 0;
+
+    return {
+      currentMinutes,
+      currentHours: Math.round((currentMinutes / 60) * 10) / 10,
+      previousMinutes,
+      diffPercent,
+      mostProductiveDay,
+      peakDayMinutes: peakMinutes,
+      flowRate,
+      totalSessions: currentSessions.length,
+    };
+  }
+
   getHarvestCounts() {
     const counts = {};
     for (const item of this.history) {
@@ -297,6 +356,83 @@ export class StudyStatsManager {
         md += `- ${check} ${t.title}${pomo}\n`;
       });
     }
+    return md;
+  }
+
+  exportExecutiveMarkdownReport(nickname = "自習旅人", tasks = []) {
+    const summary = this.getExecutiveSummary();
+    const trend = this.getWeeklyTrend();
+    const breakdown = this.getCategoryBreakdown();
+    const plantNames = {
+      rose: "玫瑰",
+      tulip: "鬱金香",
+      cactus: "仙人掌",
+      succulent: "多肉植物",
+      pine: "松樹",
+      sunflower: "向日葵",
+      lavender: "薰衣草",
+    };
+
+    let md = `# 🌿 NewWorld Study Room · 心流復盤週報\n`;
+    md += `> 產生時間：${new Date().toLocaleString("zh-TW", { hour12: false })}\n`;
+    md += `> 旅人暱稱：${nickname || "自習旅人"}\n\n`;
+    md += `---\n\n`;
+
+    md += `## 📊 核心心流與專注成效\n`;
+    md += `- 🔥 連續專注天數：**${summary.streakDays} 天**\n`;
+    md += `- ⏱️ 本週累積時數：**${trend.currentHours} 小時** (${trend.currentMinutes} 分鐘)\n`;
+    const diffSign = trend.diffPercent >= 0 ? `+${trend.diffPercent}%` : `${trend.diffPercent}%`;
+    md += `- 📈 週度時數成長：**${diffSign}** (上週 ${Math.round(trend.previousMinutes / 60)} 小時)\n`;
+    md += `- ⚡ 最佳效率巔峰：**${trend.mostProductiveDay}** (${trend.peakDayMinutes} 分鐘)\n`;
+    md += `- 🌊 深度心流比例：**${trend.flowRate}%** (本週 ${trend.totalSessions} 輪專注)\n`;
+    md += `- 🏆 累計歷史總量：**${summary.totalHours} 小時** (${summary.totalSessions} 次完成)\n\n`;
+
+    md += `## 📈 領域時間分配\n`;
+    if (breakdown.totalMinutes > 0) {
+      breakdown.categories.forEach((c) => {
+        md += `- ${c.icon} **${c.label}**：${c.minutes} 分鐘 (${c.percent}%)\n`;
+      });
+    } else {
+      md += `*尚無領域標籤記錄*\n`;
+    }
+    md += `\n`;
+
+    md += `## 🌱 植栽花語收穫庫\n`;
+    const harvestEntries = Object.entries(summary.harvestCounts);
+    if (harvestEntries.length > 0) {
+      const harvestStr = harvestEntries.map(([k, v]) => `${plantNames[k] || k} x${v}`).join("、 ");
+      md += `- 收穫總計：${harvestStr}\n\n`;
+    } else {
+      md += `*尚無收穫植物記錄*\n\n`;
+    }
+
+    if (tasks && tasks.length > 0) {
+      md += `## 📋 近期任務清單完成狀態\n`;
+      tasks.forEach((t) => {
+        const check = t.completed ? "[x]" : "[ ]";
+        const pomo = t.pomodoros ? ` (🍅 ${t.pomodoros})` : "";
+        md += `- ${check} ${t.title}${pomo}\n`;
+      });
+      md += `\n`;
+    }
+
+    const todaySessions = this.getTodaySessions();
+    if (todaySessions && todaySessions.length > 0) {
+      const ratingBadges = {
+        flow: "🔥 深度心流",
+        steady: "✨ 穩定推進",
+        warmup: "🌱 漸入佳境",
+      };
+      md += `## 📝 今日專注時序與心流筆記\n`;
+      todaySessions.forEach((s) => {
+        const timeStr = s.timestamp ? new Date(s.timestamp).toTimeString().slice(0, 5) : "--:--";
+        const rat = ratingBadges[s.rating] || ratingBadges.flow;
+        const noteStr = s.note ? ` · 筆記：「${s.note}」` : "";
+        md += `- [${timeStr}] ${s.durationMinutes}m [${rat}] ${s.taskTitle || "自主專注"}${noteStr}\n`;
+      });
+      md += `\n`;
+    }
+
     return md;
   }
 
