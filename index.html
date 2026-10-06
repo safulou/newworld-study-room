@@ -318,6 +318,9 @@
 
           <div class="focus-bar">
             <span class="timer" id="timer">25:00</span>
+            <div class="timer-pendulum-indicator" id="timerPendulumIndicator" title="鐘擺節奏指示燈">
+              <span class="pendulum-dot"></span>
+            </div>
             <button class="icon-btn primary" id="toggleTimer" type="button" aria-label="開始專注" title="開始專注">
               <i data-lucide="play"></i>
             </button>
@@ -1017,6 +1020,21 @@
                 <span>暫停時音效舒緩微降 (Ducking)</span>
               </label>
             </div>
+            <label class="field">
+              <span>鐘錶機械節拍</span>
+              <select id="clockworkTickSound">
+                <option value="off">🔇 靜音（關閉滴答聲）</option>
+                <option value="wood">🪵 復古木鐘（溫潤木質點擊）</option>
+                <option value="crisp">⏱️ 機械懷錶（清脆齒輪擒縱）</option>
+              </select>
+            </label>
+            <label class="field volume-field" id="clockworkTickVolumeRow">
+              <span>鐘錶音量</span>
+              <span class="range-control">
+                <input id="clockworkTickVolume" type="range" min="0" max="100" step="5" value="25" />
+                <output id="clockworkTickVolumeValue" for="clockworkTickVolume">25%</output>
+              </span>
+            </label>
             <label class="field">
               <span>專注植物</span>
               <select id="plantType">

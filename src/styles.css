@@ -1279,6 +1279,43 @@ h1 {
   }
 }
 
+.timer-pendulum-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-left: -2px;
+  margin-right: 4px;
+  position: relative;
+  pointer-events: none;
+}
+
+.timer-pendulum-indicator .pendulum-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gold-soft);
+  opacity: 0.35;
+  transition:
+    transform 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s ease,
+    background 0.3s ease;
+  transform: translateX(0);
+}
+
+.timer-pendulum-indicator.swing-left .pendulum-dot {
+  transform: translateX(-4px);
+  opacity: 0.85;
+  background: #fcd34d;
+}
+
+.timer-pendulum-indicator.swing-right .pendulum-dot {
+  transform: translateX(4px);
+  opacity: 0.85;
+  background: #38bdf8;
+}
+
 /* Focus Intention Bar & HUD */
 .focus-intention-bar {
   position: absolute;
@@ -3885,6 +3922,33 @@ body.zen-mode.zen-inactive .zen-focus-intention {
 
 .preset-poster-btn:hover {
   color: var(--gold-soft);
+}
+
+.preset-rename-btn,
+.preset-move-btn,
+.preset-pin-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 1px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  line-height: 1;
+  transition: all 0.15s;
+}
+
+.preset-rename-btn:hover {
+  color: #60a5fa;
+}
+
+.preset-pin-btn:hover {
+  color: #facc15;
+}
+
+.preset-move-btn:hover {
+  color: var(--teal);
 }
 
 /* Breathing Modal & Halo */

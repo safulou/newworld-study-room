@@ -449,4 +449,55 @@ export class CompanionSoundManager {
       osc.stop(now + delay + dur + 0.05);
     });
   }
+
+  /**
+   * Play an antique mechanical clockwork / wooden escapement tick
+   * @param {Object} [options]
+   * @param {boolean} [options.isTock=false] - Alternate between tick and tock
+   * @param {string} [options.mode='wood'] - 'wood' (soft wooden click) or 'crisp' (antique gear watch escapement)
+   * @param {number} [options.volume=1] - Volume multiplier (0~1)
+   */
+  playClockworkTick({ isTock = false, mode = "wood", volume = 1 } = {}) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const masterGain = Math.max(0, Math.min(1, volume)) * this.volume;
+    if (masterGain <= 0.0001) return;
+
+    if (mode === "crisp") {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const freq = isTock ? 2489 : 3136;
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.45, now + 0.015);
+
+      const peak = 0.08 * masterGain;
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(peak, now + 0.001);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.018);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.022);
+    } else {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const baseFreq = isTock ? 620 : 880;
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(baseFreq, now);
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.35, now + 0.028);
+
+      const peak = 0.12 * masterGain;
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(peak, now + 0.001);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.035);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.04);
+    }
+  }
 }

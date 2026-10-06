@@ -67,6 +67,8 @@ const profileDefaults = {
   companionAura: "auto",
   audioDuckingOnPause: true,
   syncWithHostSoundscape: false,
+  clockworkTickSound: "off",
+  clockworkTickVolume: 0.25,
 };
 
 export const AFFINITY_RANKS = [
@@ -297,6 +299,13 @@ function sanitizeProfile(value = {}) {
         ? Boolean(value.audioDuckingOnPause)
         : profileDefaults.audioDuckingOnPause,
     syncWithHostSoundscape: Boolean(value.syncWithHostSoundscape),
+    clockworkTickSound: ["off", "wood", "crisp"].includes(value.clockworkTickSound)
+      ? value.clockworkTickSound
+      : profileDefaults.clockworkTickSound,
+    clockworkTickVolume:
+      value.clockworkTickVolume !== undefined
+        ? Math.max(0, Math.min(1, Number(value.clockworkTickVolume) || 0))
+        : profileDefaults.clockworkTickVolume,
   };
 }
 
@@ -448,6 +457,58 @@ export function createStore({ roomId = "local-draft", includeStarterTips = true,
         generationProgress: 0,
       };
       emit({ saveProfile: true, saveRoom: false });
+    },
+    renameCustomPreset(id, newName) {
+      const trimmed = String(newName || "")
+        .trim()
+        .slice(0, 16);
+      if (!trimmed) return false;
+      const current = profile.customPresets || [];
+      const updated = current.map((p) => (p.id === id ? { ...p, name: trimmed } : p));
+      profile = sanitizeProfile({ ...profile, customPresets: updated });
+      emit({ saveProfile: true, saveRoom: false });
+      return true;
+    },
+    reorderCustomPreset(id, direction) {
+      const current = [...(profile.customPresets || [])];
+      const idx = current.findIndex((p) => p.id === id);
+      if (idx === -1) return false;
+      if (direction === "top") {
+        if (idx === 0) return false;
+        const [target] = current.splice(idx, 1);
+        current.unshift(target);
+      } else if (direction === "up") {
+        if (idx === 0) return false;
+        const temp = current[idx - 1];
+        current[idx - 1] = current[idx];
+        current[idx] = temp;
+      } else if (direction === "down") {
+        if (idx >= current.length - 1) return false;
+        const temp = current[idx + 1];
+        current[idx + 1] = current[idx];
+        current[idx] = temp;
+      } else {
+        return false;
+      }
+      profile = sanitizeProfile({ ...profile, customPresets: current });
+      emit({ saveProfile: true, saveRoom: false });
+      return true;
+    },
+    duplicateCustomPreset(id) {
+      const current = [...(profile.customPresets || [])];
+      if (current.length >= 12) return false;
+      const target = current.find((p) => p.id === id);
+      if (!target) return false;
+      const copy = {
+        ...target,
+        id: crypto.randomUUID(),
+        name: `${target.name} 副本`.slice(0, 16),
+      };
+      const idx = current.indexOf(target);
+      current.splice(idx + 1, 0, copy);
+      profile = sanitizeProfile({ ...profile, customPresets: current });
+      emit({ saveProfile: true, saveRoom: false });
+      return true;
     },
   };
 }

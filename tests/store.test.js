@@ -268,4 +268,60 @@ describe("room-scoped store", () => {
     expect(store.get().audioDuckingOnPause).toBe(false);
     expect(store.get().syncWithHostSoundscape).toBe(true);
   });
+
+  it("sanitizes clockworkTickSound and clockworkTickVolume settings", () => {
+    const store = createStore({ roomId: "room-c", includeStarterTips: false });
+    expect(store.get().clockworkTickSound).toBe("off");
+    expect(store.get().clockworkTickVolume).toBe(0.25);
+
+    store.update({ clockworkTickSound: "wood", clockworkTickVolume: 0.6 });
+    expect(store.get().clockworkTickSound).toBe("wood");
+    expect(store.get().clockworkTickVolume).toBe(0.6);
+
+    store.update({ clockworkTickSound: "crisp", clockworkTickVolume: 1.5 });
+    expect(store.get().clockworkTickSound).toBe("crisp");
+    expect(store.get().clockworkTickVolume).toBe(1.0);
+
+    store.update({ clockworkTickSound: "invalid_tick", clockworkTickVolume: -0.2 });
+    expect(store.get().clockworkTickSound).toBe("off");
+    expect(store.get().clockworkTickVolume).toBe(0.0);
+  });
+
+  it("manages custom presets with rename, reorder, and duplicate", () => {
+    const store = createStore({ roomId: "room-c", includeStarterTips: false });
+    const p1 = { id: "p1", name: "Preset 1", tracks: { rain: 0.3 } };
+    const p2 = { id: "p2", name: "Preset 2", tracks: { fire: 0.5 } };
+    const p3 = { id: "p3", name: "Preset 3", tracks: { birds: 0.4 } };
+    store.update({ customPresets: [p1, p2, p3] });
+
+    // Rename
+    expect(store.renameCustomPreset("p2", "Renamed 2")).toBe(true);
+    expect(store.get().customPresets[1].name).toBe("Renamed 2");
+    expect(store.renameCustomPreset("non-existent", "Test")).toBe(true); // array maps without match
+    expect(store.renameCustomPreset("p2", "")).toBe(false);
+
+    // Reorder: down
+    expect(store.reorderCustomPreset("p1", "down")).toBe(true);
+    expect(store.get().customPresets.map((p) => p.id)).toEqual(["p2", "p1", "p3"]);
+
+    // Reorder: up
+    expect(store.reorderCustomPreset("p3", "up")).toBe(true);
+    expect(store.get().customPresets.map((p) => p.id)).toEqual(["p2", "p3", "p1"]);
+
+    // Reorder: top
+    expect(store.reorderCustomPreset("p1", "top")).toBe(true);
+    expect(store.get().customPresets.map((p) => p.id)).toEqual(["p1", "p2", "p3"]);
+
+    // Invalid reorder boundary
+    expect(store.reorderCustomPreset("p1", "up")).toBe(false);
+    expect(store.reorderCustomPreset("p1", "top")).toBe(false);
+    expect(store.reorderCustomPreset("p3", "down")).toBe(false);
+
+    // Duplicate
+    expect(store.duplicateCustomPreset("p1")).toBe(true);
+    const presets = store.get().customPresets;
+    expect(presets).toHaveLength(4);
+    expect(presets[1].name).toBe("Preset 1 副本");
+    expect(presets[1].id).not.toBe("p1");
+  });
 });

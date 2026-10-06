@@ -446,6 +446,12 @@ const elements = {
   audioDuckingOnPause: $("#audioDuckingOnPause"),
   posterModalTitle: $("#posterModalTitle"),
   posterModalSubtitle: $("#posterModalSubtitle"),
+
+  // Clockwork Tick & Pendulum
+  timerPendulumIndicator: $("#timerPendulumIndicator"),
+  clockworkTickSound: $("#clockworkTickSound"),
+  clockworkTickVolume: $("#clockworkTickVolume"),
+  clockworkTickVolumeValue: $("#clockworkTickVolumeValue"),
 };
 
 const store = createStore({
@@ -529,6 +535,77 @@ const focusQuotes = [
   "雜念退散～眼前這一段馬上就能完成 💫",
   "心無旁騖，你認真的樣子特別耀眼 🌟",
 ];
+
+function getCompanionContextGreeting({
+  isFocus = false,
+  hour = new Date().getHours(),
+  weather = store.get().windowWeather || "auto",
+  affinityLevel = getAffinityRank(store.get().companionAffinityExp).level,
+  intention = store.get().focusIntention || "",
+} = {}) {
+  if (isFocus) {
+    const focusPool = [...focusQuotes];
+    if (intention) {
+      focusPool.push(`「${intention}」——保持節奏，我們一定能完成！🎯`);
+      focusPool.push(`心無旁騖，朝著「${intention}」大步前進 💫`);
+    }
+    if (weather === "rain") {
+      focusPool.push("窗外雨聲淅淅瀝瀝，維持這個靜謐專注的節奏 🌧️");
+    } else if (weather === "snow") {
+      focusPool.push("壁爐裡柴火劈啪作響，溫暖中心無旁騖 ❄️");
+    } else if (weather === "leaves") {
+      focusPool.push("秋風吹落落葉，全神貫注推進手邊任務 🍂");
+    } else if (weather === "clear") {
+      focusPool.push("繁星在窗外閃耀，心流狀態漸入佳境 🌌");
+    }
+    if (hour >= 22 || hour < 5) {
+      focusPool.push("夜深人靜時，心靈的專注力格外清澈 🌙");
+    } else if (hour >= 5 && hour < 10) {
+      focusPool.push("早晨思維最清晰，乘著好狀態全力以赴 ☀️");
+    }
+    return focusPool[Math.floor(Math.random() * focusPool.length)];
+  }
+
+  const pool = [...companionQuotes];
+  if (hour >= 5 && hour < 9) {
+    pool.push("清晨第一縷微光灑在木屋裡，新的一天我們元氣滿滿！☀️");
+    pool.push("早安！深吸一口森林清新的空氣，準備開啟心流 🌲");
+  } else if (hour >= 9 && hour < 14) {
+    pool.push("陽光正好，窗外的草木都在茁壯成長呢 🌱");
+    pool.push("專注的時光最踏實，我們一步一步推進 ✍️");
+  } else if (hour >= 14 && hour < 18) {
+    pool.push("午後溫暖的微風拂過，喝口茶提提神再出發 🍵");
+    pool.push("給自己一個大大的深呼吸，保持穩健的節奏 🍃");
+  } else if (hour >= 18 && hour < 22) {
+    pool.push("窗外染上了黃昏的晚霞，今天也累積了滿滿的成就呢 🌇");
+    pool.push("點亮小木屋溫暖的燈火，陪你度過充實的夜晚 🕯️");
+  } else {
+    pool.push("夜深了，整座森林都安靜了下來，小木屋裡只有我們和星光 🌌");
+    pool.push("夜間心流格外純粹，但也別忘了適時讓眼睛休息喔 🌙");
+  }
+
+  if (weather === "rain") {
+    pool.push("淅淅瀝瀝的雨聲是最好的天然白噪音，心很平靜呢 🌧️");
+  } else if (weather === "snow") {
+    pool.push("壁爐木柴劈啪響著，在溫暖的小木屋裡讀書真幸福 ❄️");
+  } else if (weather === "leaves") {
+    pool.push("一片落葉捎來秋天的問候，每分每秒都是金黃色的收穫 🍂");
+  } else if (weather === "clear") {
+    pool.push("今晚星空好美，每一顆星辰都在為你的努力閃爍 🌟");
+  }
+
+  if (affinityLevel >= 10) {
+    pool.push("靈魂相伴～無論走向多遠的未來，我都永遠是你的專屬書伴 👑");
+  } else if (affinityLevel >= 5) {
+    pool.push("我們的心流已經同頻共振了，有你在身邊特別安心 ✨");
+  }
+
+  if (intention) {
+    pool.push(`記得今日焦點「${intention}」，我們一起實現它！🌸`);
+  }
+
+  return pool[Math.floor(Math.random() * pool.length)];
+}
 
 function showCompanionBubble(text, duration = 3600) {
   if (!elements.companionBubble || !elements.bubbleText) return;
@@ -1227,6 +1304,16 @@ function renderState(state) {
   if (elements.windDownAlert && document.activeElement !== elements.windDownAlert) {
     elements.windDownAlert.checked = Boolean(state.windDownAlert);
   }
+  if (elements.clockworkTickSound && document.activeElement !== elements.clockworkTickSound) {
+    elements.clockworkTickSound.value = state.clockworkTickSound || "off";
+  }
+  if (elements.clockworkTickVolume && document.activeElement !== elements.clockworkTickVolume) {
+    const volPct = Math.round((state.clockworkTickVolume ?? 0.25) * 100);
+    elements.clockworkTickVolume.value = String(volPct);
+    if (elements.clockworkTickVolumeValue) {
+      elements.clockworkTickVolumeValue.textContent = `${volPct}%`;
+    }
+  }
   if (elements.pillShortBreakText) {
     elements.pillShortBreakText.textContent = `☕ 短休 ${state.shortBreakMinutes}m`;
   }
@@ -1668,6 +1755,7 @@ function broadcastTimerSyncIfHost() {
 
 function bindTimer() {
   let lastWindDownPlayedSec = 0;
+  let tickPhase = false;
 
   timer.addEventListener("tick", (event) => {
     const minutes = Math.floor(event.detail / 60)
@@ -1685,6 +1773,19 @@ function bindTimer() {
       totalSeconds: timer.minutes * 60,
     });
 
+    tickPhase = !tickPhase;
+    if (elements.timerPendulumIndicator) {
+      elements.timerPendulumIndicator.classList.toggle("swing-left", tickPhase);
+      elements.timerPendulumIndicator.classList.toggle("swing-right", !tickPhase);
+    }
+    if (timer.mode === "focus" && timer.interval && store.get().clockworkTickSound !== "off") {
+      companionSound.playClockworkTick({
+        isTock: tickPhase,
+        mode: store.get().clockworkTickSound,
+        volume: store.get().clockworkTickVolume ?? 0.25,
+      });
+    }
+
     if (timer.mode === "focus" && store.get().windDownAlert) {
       if ((event.detail === 180 || event.detail === 60) && lastWindDownPlayedSec !== event.detail) {
         lastWindDownPlayedSec = event.detail;
@@ -1697,6 +1798,7 @@ function bindTimer() {
 
   timer.addEventListener("modechange", (event) => {
     elements.timer.classList.remove("paused", "final-stretch");
+    elements.timerPendulumIndicator?.classList.remove("swing-left", "swing-right");
     if (store.get().audioDuckingOnPause) {
       ambientSound.unduck(0.8);
       music.unduck(0.8);
@@ -1713,6 +1815,9 @@ function bindTimer() {
     broadcastTimerSyncIfHost();
 
     elements.timer.classList.toggle("paused", !event.detail && timer.remaining > 0);
+    if (!event.detail) {
+      elements.timerPendulumIndicator?.classList.remove("swing-left", "swing-right");
+    }
     if (store.get().audioDuckingOnPause) {
       if (event.detail) {
         ambientSound.unduck(0.8);
@@ -1753,7 +1858,8 @@ function bindTimer() {
 
     if (event.detail) {
       if (isFocus) {
-        showCompanionBubble("專注計時開始～我們一起加油！✨", 3000);
+        const greeting = getCompanionContextGreeting({ isFocus: true });
+        showCompanionBubble(greeting, 3200);
       } else {
         showCompanionBubble("休息時間開始，放鬆一下眼睛與肩膀～🍵", 3000);
       }
@@ -1774,6 +1880,7 @@ function bindTimer() {
   timer.addEventListener("complete", () => {
     notificationManager.updateTitle({ isCompleted: true });
     elements.timer.classList.remove("paused", "final-stretch");
+    elements.timerPendulumIndicator?.classList.remove("swing-left", "swing-right");
     if (store.get().audioDuckingOnPause) {
       ambientSound.unduck(0.8);
       music.unduck(0.8);
@@ -1862,6 +1969,7 @@ function bindTimer() {
   elements.resetTimer.addEventListener("click", () => {
     timer.reset();
     elements.timer.classList.remove("paused", "final-stretch");
+    elements.timerPendulumIndicator?.classList.remove("swing-left", "swing-right");
     if (store.get().audioDuckingOnPause) {
       ambientSound.unduck(0.8);
       music.unduck(0.8);
@@ -2345,7 +2453,7 @@ function renderCustomPresets() {
   if (!elements.customPresetsList) return;
   elements.customPresetsList.innerHTML = "";
   const customPresets = store.get().customPresets || [];
-  customPresets.forEach((preset) => {
+  customPresets.forEach((preset, idx) => {
     const chip = document.createElement("div");
     chip.className = "custom-preset-chip";
 
@@ -2358,27 +2466,6 @@ function renderCustomPresets() {
     nameBtn.style.padding = "0";
     nameBtn.textContent = preset.name;
     nameBtn.title = `套用「${preset.name}」混音`;
-
-    const shareBtn = document.createElement("button");
-    shareBtn.type = "button";
-    shareBtn.className = "preset-share-btn";
-    shareBtn.title = `複製「${preset.name}」音景分享連結`;
-    shareBtn.setAttribute("aria-label", `複製分享連結 ${preset.name}`);
-    shareBtn.innerHTML = "🔗";
-
-    const posterBtn = document.createElement("button");
-    posterBtn.type = "button";
-    posterBtn.className = "preset-poster-btn";
-    posterBtn.title = `製作「${preset.name}」音景拍立得分享卡`;
-    posterBtn.setAttribute("aria-label", `製作音景拍立得 ${preset.name}`);
-    posterBtn.innerHTML = "🎴";
-
-    const delBtn = document.createElement("button");
-    delBtn.type = "button";
-    delBtn.className = "preset-del-btn";
-    delBtn.title = `刪除「${preset.name}」預設`;
-    delBtn.setAttribute("aria-label", `刪除預設 ${preset.name}`);
-    delBtn.innerHTML = "&times;";
 
     nameBtn.addEventListener("click", () => {
       ambientSound.applyTrackMix(preset.tracks, preset.pans || {});
@@ -2401,6 +2488,46 @@ function renderCustomPresets() {
       showToast(`已套用自訂預設「${preset.name}」。`);
     });
 
+    const renameBtn = document.createElement("button");
+    renameBtn.type = "button";
+    renameBtn.className = "preset-rename-btn";
+    renameBtn.title = `重新命名「${preset.name}」`;
+    renameBtn.setAttribute("aria-label", `重新命名 ${preset.name}`);
+    renameBtn.innerHTML = "✏️";
+    renameBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const input = window.prompt("請輸入新的音景預設名稱：", preset.name);
+      if (!input) return;
+      const trimmed = input.trim().slice(0, 16);
+      if (!trimmed || trimmed === preset.name) return;
+      store.renameCustomPreset(preset.id, trimmed);
+      renderCustomPresets();
+      showToast(`已將預設更名為「${trimmed}」！✏️`);
+    });
+
+    const dupBtn = document.createElement("button");
+    dupBtn.type = "button";
+    dupBtn.className = "preset-rename-btn";
+    dupBtn.title = `複製「${preset.name}」副本`;
+    dupBtn.setAttribute("aria-label", `複製預設 ${preset.name}`);
+    dupBtn.innerHTML = "📋";
+    dupBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const success = store.duplicateCustomPreset(preset.id);
+      if (success) {
+        renderCustomPresets();
+        showToast(`已建立「${preset.name}」混音副本！📋`);
+      } else {
+        showToast("已達自訂預設上限 (12 組)。");
+      }
+    });
+
+    const shareBtn = document.createElement("button");
+    shareBtn.type = "button";
+    shareBtn.className = "preset-share-btn";
+    shareBtn.title = `複製「${preset.name}」音景分享連結`;
+    shareBtn.setAttribute("aria-label", `複製分享連結 ${preset.name}`);
+    shareBtn.innerHTML = "🔗";
     shareBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
       try {
@@ -2417,11 +2544,23 @@ function renderCustomPresets() {
       }
     });
 
+    const posterBtn = document.createElement("button");
+    posterBtn.type = "button";
+    posterBtn.className = "preset-poster-btn";
+    posterBtn.title = `製作「${preset.name}」音景拍立得分享卡`;
+    posterBtn.setAttribute("aria-label", `製作音景拍立得 ${preset.name}`);
+    posterBtn.innerHTML = "🎴";
     posterBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       openSoundscapePosterModal(preset);
     });
 
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "preset-del-btn";
+    delBtn.title = `刪除「${preset.name}」預設`;
+    delBtn.setAttribute("aria-label", `刪除預設 ${preset.name}`);
+    delBtn.innerHTML = "&times;";
     delBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       const updated = (store.get().customPresets || []).filter((p) => p.id !== preset.id);
@@ -2430,7 +2569,54 @@ function renderCustomPresets() {
       showToast(`已刪除「${preset.name}」自訂預設。`);
     });
 
-    chip.append(nameBtn, shareBtn, posterBtn, delBtn);
+    chip.append(nameBtn, renameBtn, dupBtn);
+
+    if (customPresets.length > 1) {
+      if (idx > 0) {
+        const pinBtn = document.createElement("button");
+        pinBtn.type = "button";
+        pinBtn.className = "preset-pin-btn";
+        pinBtn.title = `置頂「${preset.name}」`;
+        pinBtn.setAttribute("aria-label", `置頂 ${preset.name}`);
+        pinBtn.innerHTML = "⭐";
+        pinBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          store.reorderCustomPreset(preset.id, "top");
+          renderCustomPresets();
+          showToast(`已將「${preset.name}」置頂！⭐`);
+        });
+
+        const upBtn = document.createElement("button");
+        upBtn.type = "button";
+        upBtn.className = "preset-move-btn";
+        upBtn.title = `上移「${preset.name}」`;
+        upBtn.setAttribute("aria-label", `上移 ${preset.name}`);
+        upBtn.innerHTML = "▲";
+        upBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          store.reorderCustomPreset(preset.id, "up");
+          renderCustomPresets();
+        });
+        chip.append(pinBtn, upBtn);
+      }
+
+      if (idx < customPresets.length - 1) {
+        const downBtn = document.createElement("button");
+        downBtn.type = "button";
+        downBtn.className = "preset-move-btn";
+        downBtn.title = `下移「${preset.name}」`;
+        downBtn.setAttribute("aria-label", `下移 ${preset.name}`);
+        downBtn.innerHTML = "▼";
+        downBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          store.reorderCustomPreset(preset.id, "down");
+          renderCustomPresets();
+        });
+        chip.append(downBtn);
+      }
+    }
+
+    chip.append(posterBtn, shareBtn, delBtn);
     elements.customPresetsList.append(chip);
   });
 }
@@ -3564,6 +3750,39 @@ function bindSettings() {
     store.update({ audioDuckingOnPause });
     showToast(audioDuckingOnPause ? "已開啟「暫停時音效舒緩微降」" : "已關閉暫停音效衰減");
   });
+  elements.clockworkTickSound?.addEventListener("change", () => {
+    const val = elements.clockworkTickSound.value;
+    store.update({ clockworkTickSound: val });
+    const labels = {
+      off: "已關閉鐘錶滴答節奏",
+      wood: "已開啟「復古木鐘」溫潤滴答聲 🪵",
+      crisp: "已開啟「機械懷錶」清脆齒輪聲 ⏱️",
+    };
+    if (val !== "off") {
+      companionSound.playClockworkTick({
+        isTock: false,
+        mode: val,
+        volume: store.get().clockworkTickVolume ?? 0.25,
+      });
+    }
+    showToast(labels[val] || "已更新鐘錶節奏設定");
+  });
+  elements.clockworkTickVolume?.addEventListener("input", () => {
+    const volPct = Number(elements.clockworkTickVolume.value);
+    store.update({ clockworkTickVolume: volPct / 100 });
+    if (elements.clockworkTickVolumeValue) {
+      elements.clockworkTickVolumeValue.textContent = `${volPct}%`;
+    }
+  });
+  elements.clockworkTickVolume?.addEventListener("change", () => {
+    if (store.get().clockworkTickSound !== "off") {
+      companionSound.playClockworkTick({
+        isTock: false,
+        mode: store.get().clockworkTickSound,
+        volume: store.get().clockworkTickVolume ?? 0.25,
+      });
+    }
+  });
   elements.plantType.addEventListener("change", () => {
     lastGardenStage = "";
     store.update({ plantType: elements.plantType.value });
@@ -4410,9 +4629,8 @@ async function startViewer() {
     viewer.onTap = () => {
       companionSound.playTapChime();
       const isRunning = elements.focusGarden.classList.contains("growing");
-      const quotes = isRunning ? focusQuotes : companionQuotes;
-      const quote = quotes[Math.floor(Math.random() * quotes.length)];
-      showCompanionBubble(quote);
+      const greeting = getCompanionContextGreeting({ isFocus: isRunning });
+      showCompanionBubble(greeting);
     };
     viewer.onJoySpin = () => {
       companionSound.playCelebrationFanfare();
