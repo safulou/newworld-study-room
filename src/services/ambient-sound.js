@@ -819,6 +819,27 @@ export class AmbientSoundscapeManager {
     return this.isMuted;
   }
 
+  duck(targetRatio = 0.25, duration = 0.8) {
+    if (!this.audioCtx || !this.masterGain || this.isMuted) return;
+    const now = this.audioCtx.currentTime;
+    const target = Math.max(0, this.masterVolume * targetRatio);
+    try {
+      this.masterGain.gain.cancelScheduledValues(now);
+      this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, now);
+      this.masterGain.gain.linearRampToValueAtTime(target, now + Math.max(0.05, duration));
+    } catch {}
+  }
+
+  unduck(duration = 0.8) {
+    if (!this.audioCtx || !this.masterGain || this.isMuted) return;
+    const now = this.audioCtx.currentTime;
+    try {
+      this.masterGain.gain.cancelScheduledValues(now);
+      this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, now);
+      this.masterGain.gain.linearRampToValueAtTime(this.masterVolume, now + Math.max(0.05, duration));
+    } catch {}
+  }
+
   getActiveTracks() {
     return Array.from(this.nodes.keys());
   }

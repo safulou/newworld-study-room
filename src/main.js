@@ -45,6 +45,7 @@ import {
   Plus,
   PlusCircle,
   QrCode,
+  Radio,
   RefreshCw,
   RotateCcw,
   Search,
@@ -131,6 +132,7 @@ const icons = {
   Plus,
   PlusCircle,
   QrCode,
+  Radio,
   RefreshCw,
   RotateCcw,
   Search,
@@ -435,6 +437,15 @@ const elements = {
   smartBreakSuggestion: $("#smartBreakSuggestion"),
   smartBreakText: $("#smartBreakText"),
   btnApplySmartBreak: $("#btnApplySmartBreak"),
+
+  // Soundscape Share Card & P2P Broadcast
+  btnShareActiveSoundscapePoster: $("#btnShareActiveSoundscapePoster"),
+  btnBroadcastSoundscape: $("#btnBroadcastSoundscape"),
+  p2pSoundscapeSyncRow: $("#p2pSoundscapeSyncRow"),
+  syncWithHostSoundscape: $("#syncWithHostSoundscape"),
+  audioDuckingOnPause: $("#audioDuckingOnPause"),
+  posterModalTitle: $("#posterModalTitle"),
+  posterModalSubtitle: $("#posterModalSubtitle"),
 };
 
 const store = createStore({
@@ -1204,6 +1215,12 @@ function renderState(state) {
   if (elements.syncWithHostTimer && document.activeElement !== elements.syncWithHostTimer) {
     elements.syncWithHostTimer.checked = Boolean(state.syncWithHostTimer);
   }
+  if (elements.syncWithHostSoundscape && document.activeElement !== elements.syncWithHostSoundscape) {
+    elements.syncWithHostSoundscape.checked = Boolean(state.syncWithHostSoundscape);
+  }
+  if (elements.audioDuckingOnPause && document.activeElement !== elements.audioDuckingOnPause) {
+    elements.audioDuckingOnPause.checked = Boolean(state.audioDuckingOnPause);
+  }
   if (elements.flowAutopilot && document.activeElement !== elements.flowAutopilot) {
     elements.flowAutopilot.checked = Boolean(state.flowAutopilot);
   }
@@ -1219,6 +1236,12 @@ function renderState(state) {
   const isGuest = p2p?.role === "guest";
   if (elements.p2pSyncRow) {
     elements.p2pSyncRow.hidden = !isGuest;
+  }
+  if (elements.p2pSoundscapeSyncRow) {
+    elements.p2pSoundscapeSyncRow.hidden = !isGuest;
+  }
+  if (elements.btnBroadcastSoundscape) {
+    elements.btnBroadcastSoundscape.hidden = isGuest || !p2p?.selfId;
   }
   if (elements.timerSyncBadge) {
     elements.timerSyncBadge.hidden = !isGuest || !state.syncWithHostTimer;
@@ -1655,6 +1678,7 @@ function bindTimer() {
       .padStart(2, "0");
     elements.timer.textContent = `${minutes}:${seconds}`;
     updateGarden(event.detail);
+    elements.timer.classList.toggle("final-stretch", timer.mode === "focus" && event.detail <= 60 && event.detail > 0);
     notificationManager.updateTitle({
       remaining: event.detail,
       isRunning: true,
@@ -1672,6 +1696,11 @@ function bindTimer() {
   });
 
   timer.addEventListener("modechange", (event) => {
+    elements.timer.classList.remove("paused", "final-stretch");
+    if (store.get().audioDuckingOnPause) {
+      ambientSound.unduck(0.8);
+      music.unduck(0.8);
+    }
     updateTimerModeUI(event.detail.mode, event.detail.cycleRound);
     broadcastTimerSyncIfHost();
   });
@@ -1682,6 +1711,17 @@ function bindTimer() {
     const pauseTitle = isFocus ? "暫停專注" : "暫停休息";
     replaceButtonIcon(elements.toggleTimer, event.detail ? "pause" : "play", event.detail ? pauseTitle : playTitle);
     broadcastTimerSyncIfHost();
+
+    elements.timer.classList.toggle("paused", !event.detail && timer.remaining > 0);
+    if (store.get().audioDuckingOnPause) {
+      if (event.detail) {
+        ambientSound.unduck(0.8);
+        music.unduck(0.8);
+      } else {
+        ambientSound.duck(0.25, 0.8);
+        music.duck(0.25, 0.8);
+      }
+    }
 
     if (event.detail) {
       lastWindDownPlayedSec = 0;
@@ -1733,6 +1773,11 @@ function bindTimer() {
 
   timer.addEventListener("complete", () => {
     notificationManager.updateTitle({ isCompleted: true });
+    elements.timer.classList.remove("paused", "final-stretch");
+    if (store.get().audioDuckingOnPause) {
+      ambientSound.unduck(0.8);
+      music.unduck(0.8);
+    }
 
     if (timer.mode === "focus") {
       viewer?.setTimerState("completed");
@@ -1816,6 +1861,11 @@ function bindTimer() {
   elements.toggleTimer.addEventListener("click", () => timer.toggle());
   elements.resetTimer.addEventListener("click", () => {
     timer.reset();
+    elements.timer.classList.remove("paused", "final-stretch");
+    if (store.get().audioDuckingOnPause) {
+      ambientSound.unduck(0.8);
+      music.unduck(0.8);
+    }
     viewer?.setTimerState("idle");
     notificationManager.updateTitle({ remaining: null, isRunning: false });
     broadcastTimerSyncIfHost();
@@ -2316,6 +2366,13 @@ function renderCustomPresets() {
     shareBtn.setAttribute("aria-label", `複製分享連結 ${preset.name}`);
     shareBtn.innerHTML = "🔗";
 
+    const posterBtn = document.createElement("button");
+    posterBtn.type = "button";
+    posterBtn.className = "preset-poster-btn";
+    posterBtn.title = `製作「${preset.name}」音景拍立得分享卡`;
+    posterBtn.setAttribute("aria-label", `製作音景拍立得 ${preset.name}`);
+    posterBtn.innerHTML = "🎴";
+
     const delBtn = document.createElement("button");
     delBtn.type = "button";
     delBtn.className = "preset-del-btn";
@@ -2360,6 +2417,11 @@ function renderCustomPresets() {
       }
     });
 
+    posterBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openSoundscapePosterModal(preset);
+    });
+
     delBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       const updated = (store.get().customPresets || []).filter((p) => p.id !== preset.id);
@@ -2368,12 +2430,51 @@ function renderCustomPresets() {
       showToast(`已刪除「${preset.name}」自訂預設。`);
     });
 
-    chip.append(nameBtn, shareBtn, delBtn);
+    chip.append(nameBtn, shareBtn, posterBtn, delBtn);
     elements.customPresetsList.append(chip);
   });
 }
 
 function bindCustomPresets() {
+  elements.btnShareActiveSoundscapePoster?.addEventListener("click", () => {
+    const activeTracks = ambientSound.getActiveTracks();
+    if (activeTracks.length === 0) {
+      showToast("請先開啟至少一種白噪音軌道。");
+      return;
+    }
+    openSoundscapePosterModal({
+      name: "當前專注音景",
+      tracks: ambientSound.getCurrentTrackMix(),
+      pans: ambientSound.getCurrentTrackPans(),
+      eq: ambientSound.getMasterEQ(),
+      reverb: ambientSound.getMasterReverb(),
+    });
+  });
+
+  elements.btnBroadcastSoundscape?.addEventListener("click", () => {
+    const activeTracks = ambientSound.getActiveTracks();
+    if (activeTracks.length === 0) {
+      showToast("請先開啟至少一種白噪音軌道再廣播。");
+      return;
+    }
+    if (!p2p) {
+      showToast("P2P 尚未連線，無法廣播音景。");
+      return;
+    }
+    const currentMix = ambientSound.getCurrentTrackMix();
+    const currentPans = ambientSound.getCurrentTrackPans();
+    const soundscapeData = {
+      name: "小木屋共鳴音景",
+      tracks: currentMix,
+      pans: currentPans,
+      eq: ambientSound.getMasterEQ(),
+      reverb: ambientSound.getMasterReverb(),
+      senderNickname: store.get().nickname || "房主",
+    };
+    p2p.sendSoundscapeSync(soundscapeData);
+    showToast("📻 已向同房夥伴即時廣播專注音景！");
+  });
+
   elements.saveCustomPresetBtn?.addEventListener("click", () => {
     const activeTracks = ambientSound.getActiveTracks();
     if (activeTracks.length === 0) {
@@ -2886,16 +2987,57 @@ function bindQrModal() {
 }
 
 let currentPosterCanvas = null;
+let currentPosterMode = "focus";
+let currentSoundscapeData = null;
 
-function bindPosterModal() {
-  const renderCard = (theme = store.get().posterTheme || "midnight") => {
+function renderPosterCard(theme = store.get().posterTheme || "midnight") {
+  const today = new Date().toISOString().split("T")[0];
+  const nickname = store.get().nickname || "旅人";
+
+  if (currentPosterMode === "soundscape") {
+    if (elements.posterModalTitle) elements.posterModalTitle.textContent = "🎴 音景調音拍立得分享卡";
+    if (elements.posterModalSubtitle)
+      elements.posterModalSubtitle.textContent = "純前端 Retina 2x 高解析度繪製 · 頻譜波形與調音參數 · 內嵌 QR Code";
+
+    const preset = currentSoundscapeData || {
+      name: "當前專注音景",
+      tracks: ambientSound.getCurrentTrackMix(),
+      pans: ambientSound.getCurrentTrackPans(),
+      eq: ambientSound.getMasterEQ(),
+      reverb: ambientSound.getMasterReverb(),
+    };
+
+    let qrCanvas = null;
+    try {
+      const code = encodeSoundscapeCode(preset);
+      const url = `${window.location.origin}${window.location.pathname}#soundscape=${code}`;
+      const canvas = document.createElement("canvas");
+      renderQrToCanvas(canvas, url, { size: 100, margin: 1 });
+      qrCanvas = canvas;
+    } catch {
+      // proceed without QR on error
+    }
+
+    currentPosterCanvas = FocusPosterGenerator.generateSoundscapeCard({
+      name: preset.name || "當前專注音景",
+      tracks: preset.tracks || {},
+      pans: preset.pans || {},
+      eq: preset.eq || null,
+      reverb: preset.reverb || null,
+      nickname,
+      theme,
+      qrCanvas,
+    });
+  } else {
+    if (elements.posterModalTitle) elements.posterModalTitle.textContent = "📸 心流拍立得分享卡";
+    if (elements.posterModalSubtitle)
+      elements.posterModalSubtitle.textContent = "純前端 Retina 2x 高解析度繪製 · 免費下載或複製剪貼簿";
+
     const summary = studyStats.getExecutiveSummary();
-    const today = new Date().toISOString().split("T")[0];
     const todayMinutes = studyStats.history
       .filter((h) => h.date === today)
       .reduce((sum, h) => sum + (h.durationMinutes || 0), 0);
     const currentPlant = store.get().plantType || "rose";
-    const nickname = store.get().nickname || "旅人";
     const intention = store.get().focusIntention;
     const quote = intention ? `今日專注焦點：「${intention}」` : "每一分鐘的專注，都是給未來的禮物 ✨";
 
@@ -2910,26 +3052,45 @@ function bindPosterModal() {
       quote,
       theme,
     });
+  }
 
-    if (elements.posterCanvasWrapper) {
-      elements.posterCanvasWrapper.replaceChildren(currentPosterCanvas);
-    }
+  if (elements.posterCanvasWrapper && currentPosterCanvas) {
+    elements.posterCanvasWrapper.replaceChildren(currentPosterCanvas);
+  }
+}
+
+function openSoundscapePosterModal(preset = null) {
+  currentPosterMode = "soundscape";
+  currentSoundscapeData = preset || {
+    name: "當前專注音景",
+    tracks: ambientSound.getCurrentTrackMix(),
+    pans: ambientSound.getCurrentTrackPans(),
+    eq: ambientSound.getMasterEQ(),
+    reverb: ambientSound.getMasterReverb(),
   };
+  const activeTheme = store.get().posterTheme || "midnight";
+  elements.posterThemeChips?.forEach((c) => c.classList.toggle("active", c.dataset.posterTheme === activeTheme));
+  renderPosterCard(activeTheme);
+  elements.posterModal?.showModal();
+}
 
+function bindPosterModal() {
   elements.posterThemeChips?.forEach((chip) => {
     chip.addEventListener("click", () => {
       const theme = chip.dataset.posterTheme;
       if (!theme) return;
       store.update({ posterTheme: theme });
       elements.posterThemeChips.forEach((c) => c.classList.toggle("active", c === chip));
-      renderCard(theme);
+      renderPosterCard(theme);
     });
   });
 
   elements.btnOpenPoster?.addEventListener("click", () => {
+    currentPosterMode = "focus";
+    currentSoundscapeData = null;
     const activeTheme = store.get().posterTheme || "midnight";
     elements.posterThemeChips?.forEach((c) => c.classList.toggle("active", c.dataset.posterTheme === activeTheme));
-    renderCard(activeTheme);
+    renderPosterCard(activeTheme);
     elements.posterModal?.showModal();
   });
 
@@ -2946,18 +3107,26 @@ function bindPosterModal() {
   elements.btnDownloadPoster?.addEventListener("click", () => {
     if (!currentPosterCanvas) return;
     const today = new Date().toISOString().split("T")[0];
-    FocusPosterGenerator.download(currentPosterCanvas, `focus-flow-${today}.png`);
-    showToast("拍立得卡片已開始下載 📸");
+    const filename =
+      currentPosterMode === "soundscape"
+        ? `soundscape-${(currentSoundscapeData?.name || "mix").replace(/\s+/g, "_")}-${today}.png`
+        : `focus-flow-${today}.png`;
+    FocusPosterGenerator.download(currentPosterCanvas, filename);
+    showToast(currentPosterMode === "soundscape" ? "音景拍立得卡片已開始下載 📸" : "拍立得卡片已開始下載 📸");
   });
 
   elements.btnCopyPoster?.addEventListener("click", async () => {
     if (!currentPosterCanvas) return;
     const today = new Date().toISOString().split("T")[0];
+    const filename =
+      currentPosterMode === "soundscape"
+        ? `soundscape-${(currentSoundscapeData?.name || "mix").replace(/\s+/g, "_")}-${today}.png`
+        : `focus-flow-${today}.png`;
     const success = await FocusPosterGenerator.copyToClipboard(currentPosterCanvas);
     if (success) {
-      showToast("拍立得卡片已複製至剪貼簿 📋");
+      showToast(currentPosterMode === "soundscape" ? "音景拍立得卡片已複製至剪貼簿 📋" : "拍立得卡片已複製至剪貼簿 📋");
     } else {
-      FocusPosterGenerator.download(currentPosterCanvas, `focus-flow-${today}.png`);
+      FocusPosterGenerator.download(currentPosterCanvas, filename);
       showToast("因瀏覽器安全限制，已自動為您下載 PNG 📸");
     }
   });
@@ -3375,6 +3544,11 @@ function bindSettings() {
     }
     showToast(syncWithHostTimer ? "已開啟「跟隨房主番茄鐘倒數」同步" : "已關閉房主番茄鐘同步");
   });
+  elements.syncWithHostSoundscape?.addEventListener("change", () => {
+    const syncWithHostSoundscape = elements.syncWithHostSoundscape.checked;
+    store.update({ syncWithHostSoundscape });
+    showToast(syncWithHostSoundscape ? "已開啟「跟隨房主音景與調音」同步 🎧" : "已關閉房主音景同步");
+  });
   elements.flowAutopilot?.addEventListener("change", () => {
     const flowAutopilot = elements.flowAutopilot.checked;
     store.update({ flowAutopilot });
@@ -3384,6 +3558,11 @@ function bindSettings() {
     const windDownAlert = elements.windDownAlert.checked;
     store.update({ windDownAlert });
     showToast(windDownAlert ? "已開啟收尾溫柔提示音（3m / 1m 水晶音）" : "已關閉收尾提示音");
+  });
+  elements.audioDuckingOnPause?.addEventListener("change", () => {
+    const audioDuckingOnPause = elements.audioDuckingOnPause.checked;
+    store.update({ audioDuckingOnPause });
+    showToast(audioDuckingOnPause ? "已開啟「暫停時音效舒緩微降」" : "已關閉暫停音效衰減");
   });
   elements.plantType.addEventListener("change", () => {
     lastGardenStage = "";
@@ -3560,6 +3739,37 @@ async function startP2P() {
       updateTimerModeUI(event.detail.mode, event.detail.cycleRound);
     }
   });
+  p2p.addEventListener("soundscape-sync", (event) => {
+    const detail = event.detail;
+    if (!detail) return;
+    const author = detail.by || "房主";
+    const soundscapeName = detail.name || "同房音景";
+
+    if (store.get().syncWithHostSoundscape && p2p.role === "guest") {
+      if (detail.tracks) {
+        ambientSound.applyTrackMix(detail.tracks, detail.pans || {});
+      }
+      if (detail.eq) {
+        ambientSound.setMasterEQ(detail.eq);
+      }
+      if (detail.reverb) {
+        ambientSound.setMasterReverb(detail.reverb);
+      }
+      syncAcousticUI();
+      elements.ambientChips.forEach((chipEl) => {
+        const sound = chipEl.dataset.sound;
+        if (sound === "lofi") return;
+        const isPlaying = Boolean(detail.tracks && sound in detail.tracks && detail.tracks[sound] > 0);
+        chipEl.classList.toggle("active", isPlaying);
+        chipEl.setAttribute("aria-pressed", String(isPlaying));
+      });
+      syncWeatherAtmosphere();
+      renderAmbientMixer();
+      showToast(`📻 已即時同步 ${author} 的「${soundscapeName}」音景！`);
+    } else {
+      showToast(`📻 ${author} 正在廣播「${soundscapeName}」音景，可至設定開啟自動同步`);
+    }
+  });
   p2p.addEventListener("presence", () => {
     if (p2p.role === "host") {
       broadcastTimerSyncIfHost();
@@ -3568,6 +3778,8 @@ async function startP2P() {
   await p2p.start();
   const isGuest = p2p.role === "guest";
   if (elements.p2pSyncRow) elements.p2pSyncRow.hidden = !isGuest;
+  if (elements.p2pSoundscapeSyncRow) elements.p2pSoundscapeSyncRow.hidden = !isGuest;
+  if (elements.btnBroadcastSoundscape) elements.btnBroadcastSoundscape.hidden = isGuest || !p2p.selfId;
   if (elements.timerSyncBadge) elements.timerSyncBadge.hidden = !isGuest || !store.get().syncWithHostTimer;
   if (!isGuest) {
     broadcastTimerSyncIfHost();

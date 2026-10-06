@@ -21,6 +21,7 @@ describe("FocusPosterGenerator", () => {
       stroke: vi.fn(),
       fillText: vi.fn(),
       strokeText: vi.fn(),
+      drawImage: vi.fn(),
       measureText: vi.fn().mockReturnValue({ width: 50 }),
       save: vi.fn(),
       restore: vi.fn(),
@@ -114,5 +115,44 @@ describe("FocusPosterGenerator", () => {
     expect(canvas.toDataURL).toHaveBeenCalledWith("image/png");
     expect(clickSpy).toHaveBeenCalled();
     clickSpy.mockRestore();
+  });
+
+  it("generates soundscape cards with each supported theme without throwing", () => {
+    const themes = ["midnight", "aurora", "sunset", "forest", "cyber"];
+    themes.forEach((theme) => {
+      const canvas = FocusPosterGenerator.generateSoundscapeCard({
+        name: "暴風雪小木屋",
+        tracks: { wind: 0.6, campfire: 0.4 },
+        pans: { wind: -0.3, campfire: 0.2 },
+        eq: { bass: 2, mid: 0, treble: -1 },
+        reverb: { preset: "cabin", wet: 0.3 },
+        nickname: "Arsen",
+        theme,
+      });
+      expect(canvas).toBeDefined();
+      expect(canvas.width).toBe(880);
+      expect(canvas.height).toBe(1240);
+    });
+  });
+
+  it("generates soundscape card with embedded qrCanvas", () => {
+    const mockQr = document.createElement("canvas");
+    mockQr.width = 100;
+    mockQr.height = 100;
+
+    const canvas = FocusPosterGenerator.generateSoundscapeCard({
+      name: "星空自習室",
+      tracks: { rain: 0.5, ocean_waves: 0.3 },
+      pans: { rain: 0 },
+      eq: { bass: 0, mid: 1, treble: 2 },
+      reverb: { preset: "cathedral", wet: 0.4 },
+      nickname: "Momo",
+      theme: "midnight",
+      qrCanvas: mockQr,
+    });
+
+    expect(canvas).toBeDefined();
+    expect(canvas.width).toBe(880);
+    expect(canvas.height).toBe(1240);
   });
 });

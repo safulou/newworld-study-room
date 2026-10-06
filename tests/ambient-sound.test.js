@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   AmbientSoundscapeManager,
   AMBIENT_SOUND_TYPES,
@@ -252,5 +252,38 @@ describe("AmbientSoundscapeManager", () => {
     expect(legacyDecoded.tracks.wind).toBe(40);
     expect(legacyDecoded.eq).toBeNull();
     expect(legacyDecoded.reverb).toBeNull();
+  });
+
+  it("supports ducking and unducking master volume safely", () => {
+    const manager = new AmbientSoundscapeManager();
+    // Safe execution before audioCtx is created
+    expect(() => manager.duck(0.2, 0.5)).not.toThrow();
+    expect(() => manager.unduck(0.5)).not.toThrow();
+
+    const mockCtx = {
+      currentTime: 10,
+      state: "running",
+      resume: vi.fn().mockResolvedValue(),
+      createGain: vi.fn().mockReturnValue({
+        gain: {
+          value: 0.5,
+          setValueAtTime: vi.fn(),
+          cancelScheduledValues: vi.fn(),
+          linearRampToValueAtTime: vi.fn(),
+        },
+        connect: vi.fn(),
+      }),
+      destination: {},
+    };
+    manager.audioCtx = mockCtx;
+    manager.masterGain = mockCtx.createGain();
+    manager.masterVolume = 0.6;
+
+    manager.duck(0.25, 0.8);
+    expect(manager.masterGain.gain.cancelScheduledValues).toHaveBeenCalledWith(10);
+    expect(manager.masterGain.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.15, 10.8);
+
+    manager.unduck(0.8);
+    expect(manager.masterGain.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.6, 10.8);
   });
 });

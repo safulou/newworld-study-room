@@ -107,6 +107,17 @@ export class BackgroundMusic extends EventTarget {
     }
   }
 
+  duck(targetRatio = 0.25, duration = 0.8) {
+    if (!this.context || !this.running || !this.master) return;
+    const target = (this.volume / 250) * Math.max(0, targetRatio);
+    this.master.gain.setTargetAtTime(target, this.context.currentTime, Math.max(0.05, duration / 3));
+  }
+
+  unduck(duration = 0.8) {
+    if (!this.context || !this.running || !this.master) return;
+    this.master.gain.setTargetAtTime(this.volume / 250, this.context.currentTime, Math.max(0.05, duration / 3));
+  }
+
   createAudioGraph() {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) throw new Error("目前瀏覽器不支援背景音樂。 ");

@@ -1243,6 +1243,40 @@ h1 {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 21px;
   font-variant-numeric: tabular-nums;
+  transition: all 0.25s ease;
+}
+
+.timer.paused {
+  animation: timer-breathe-glow 2.4s ease-in-out infinite;
+}
+
+@keyframes timer-breathe-glow {
+  0%,
+  100% {
+    text-shadow: 0 0 8px rgba(251, 191, 36, 0.2);
+    opacity: 0.82;
+  }
+  50% {
+    text-shadow: 0 0 20px rgba(251, 191, 36, 0.7);
+    opacity: 1;
+  }
+}
+
+.timer.final-stretch {
+  animation: timer-stretch-pulse 1.2s ease-in-out infinite;
+  color: #fcd34d !important;
+}
+
+@keyframes timer-stretch-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    text-shadow: 0 0 10px rgba(252, 211, 77, 0.35);
+  }
+  50% {
+    transform: scale(1.04);
+    text-shadow: 0 0 24px rgba(252, 211, 77, 0.85);
+  }
 }
 
 /* Focus Intention Bar & HUD */
@@ -3834,6 +3868,23 @@ body.zen-mode.zen-inactive .zen-focus-intention {
 
 .preset-share-btn:hover {
   color: var(--teal);
+}
+
+.preset-poster-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 2px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.preset-poster-btn:hover {
+  color: var(--gold-soft);
 }
 
 /* Breathing Modal & Halo */

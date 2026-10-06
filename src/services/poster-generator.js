@@ -296,6 +296,266 @@ export class FocusPosterGenerator {
     return canvas;
   }
 
+  /**
+   * Render a high-resolution 2x Retina soundscape polaroid art card
+   * @param {Object} options
+   * @param {string} [options.name] - Soundscape preset name
+   * @param {Object} [options.tracks] - Map of track volumes
+   * @param {Object} [options.pans] - Map of track pans
+   * @param {Object} [options.eq] - Master EQ { bass, mid, treble }
+   * @param {Object} [options.reverb] - Master Reverb { preset, wet }
+   * @param {string} [options.nickname] - Author nickname
+   * @param {string} [options.theme] - Theme key ('midnight'|'aurora'|'sunset'|'forest'|'cyber')
+   * @param {HTMLCanvasElement} [options.qrCanvas] - Optional pre-rendered QR code canvas
+   * @returns {HTMLCanvasElement}
+   */
+  static generateSoundscapeCard({
+    name = "自訂專注音景",
+    tracks = {},
+    pans = {},
+    eq = null,
+    reverb = null,
+    nickname = "旅人",
+    theme = "midnight",
+    qrCanvas = null,
+  } = {}) {
+    const canvas = document.createElement("canvas");
+    const width = 440;
+    const height = 620;
+    const scale = 2; // Retina 2x
+
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return canvas;
+
+    ctx.scale(scale, scale);
+
+    const themeConfig = POSTER_THEMES[theme] || POSTER_THEMES.midnight;
+
+    // 1. Background gradient
+    const bgGrad = ctx.createLinearGradient(0, 0, width, height);
+    bgGrad.addColorStop(0, themeConfig.bgGradient[0]);
+    bgGrad.addColorStop(0.5, themeConfig.bgGradient[1]);
+    bgGrad.addColorStop(1, themeConfig.bgGradient[2]);
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, width, height);
+
+    // Radial aura
+    const aura = ctx.createRadialGradient(width / 2, height / 2 - 40, 20, width / 2, height / 2 - 40, 240);
+    aura.addColorStop(0, themeConfig.aura[0]);
+    aura.addColorStop(0.6, themeConfig.aura[1]);
+    aura.addColorStop(1, themeConfig.aura[2]);
+    ctx.fillStyle = aura;
+    ctx.fillRect(0, 0, width, height);
+
+    // Starry sparkles
+    ctx.fillStyle = themeConfig.stars;
+    const stars = [
+      [36, 45],
+      [120, 28],
+      [380, 52],
+      [410, 110],
+      [45, 180],
+      [395, 240],
+      [28, 410],
+      [415, 450],
+      [70, 540],
+      [370, 560],
+    ];
+    stars.forEach(([x, y]) => {
+      ctx.beginPath();
+      ctx.arc(x, y, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Double framed border
+    const pad = 16;
+    ctx.strokeStyle = themeConfig.outerBorder;
+    ctx.lineWidth = 1;
+    this.strokeRoundRect(ctx, pad, pad, width - pad * 2, height - pad * 2, 14);
+
+    ctx.strokeStyle = themeConfig.innerBorder;
+    ctx.lineWidth = 1;
+    this.strokeRoundRect(ctx, pad + 4, pad + 4, width - (pad + 4) * 2, height - (pad + 4) * 2, 11);
+
+    // Header branding
+    ctx.textAlign = "center";
+    ctx.fillStyle = themeConfig.brandTitle;
+    ctx.font = "bold 13px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillText("✦ NEWWORLD CABIN · 聲學調音卡 ✦", width / 2, 46);
+
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillText(`氛圍空間調音 · ${nickname} 調配`, width / 2, 64);
+
+    // Main Card (Title + Waveform)
+    const cardX = 36;
+    const cardY = 82;
+    const cardW = width - cardX * 2;
+    const cardH = 205;
+
+    ctx.fillStyle = themeConfig.cardBg;
+    this.fillRoundRect(ctx, cardX, cardY, cardW, cardH, 12);
+    ctx.strokeStyle = themeConfig.cardBorder;
+    this.strokeRoundRect(ctx, cardX, cardY, cardW, cardH, 12);
+
+    // Preset Icon & Title
+    ctx.fillStyle = "#f8fafc";
+    ctx.font = "bold 20px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillText(`🎧 ${name}`, width / 2, cardY + 36);
+
+    // Procedural Audio Waveform / Spectrum Bars
+    const barCount = 24;
+    const barWidth = 6;
+    const barGap = 6;
+    const totalBarsW = barCount * barWidth + (barCount - 1) * barGap;
+    const startBarX = (width - totalBarsW) / 2;
+    const baseY = cardY + 160;
+
+    const trackKeys = Object.keys(tracks).filter((k) => Number(tracks[k]) > 0);
+    const activityFactor = Math.max(0.3, Math.min(1.0, trackKeys.length * 0.25));
+
+    for (let i = 0; i < barCount; i++) {
+      const norm = i / (barCount - 1);
+      const wave = Math.sin(norm * Math.PI * 2.8) * 0.4 + Math.cos(norm * Math.PI * 1.5) * 0.35 + 0.5;
+      const barHeight = Math.max(12, Math.min(85, wave * 75 * activityFactor + 10));
+
+      const bx = startBarX + i * (barWidth + barGap);
+      const by = baseY - barHeight;
+
+      const barGrad = ctx.createLinearGradient(0, by, 0, baseY);
+      barGrad.addColorStop(0, themeConfig.accent);
+      barGrad.addColorStop(1, themeConfig.brandTitle);
+      ctx.fillStyle = barGrad;
+      this.fillRoundRect(ctx, bx, by, barWidth, barHeight, 3);
+    }
+
+    // Spectrum label
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "10px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillText("∼∼ PROCEDURAL AMBIENT HARMONICS ∼∼", width / 2, cardY + 192);
+
+    // Middle Composition Panel: Active Tracks & Acoustics
+    const infoY = 302;
+    const infoH = 150;
+    ctx.fillStyle = themeConfig.cardBg;
+    this.fillRoundRect(ctx, cardX, infoY, cardW, infoH, 10);
+    ctx.strokeStyle = themeConfig.cardBorder;
+    this.strokeRoundRect(ctx, cardX, infoY, cardW, infoH, 10);
+
+    // Track Mix Tags
+    ctx.textAlign = "left";
+    ctx.fillStyle = themeConfig.accent;
+    ctx.font = "bold 12px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillText("🎚️ 軌道配比與空間聲像：", cardX + 16, infoY + 26);
+
+    const trackNameMap = {
+      rain: "雨聲",
+      wind: "微風",
+      campfire: "篝火",
+      keyboard: "鍵盤",
+      pencil: "鉛筆",
+      brown_noise: "褐噪",
+      pink_noise: "粉噪",
+      ocean_waves: "潮汐",
+      binaural_theta: "θ波(6Hz)",
+      binaural_alpha: "α波(10Hz)",
+      binaural_gamma: "γ波(40Hz)",
+    };
+
+    const trackEntries = Object.entries(tracks).filter(([, v]) => Number(v) > 0);
+    const displayTracks = trackEntries.slice(0, 4);
+    let trackLine = displayTracks
+      .map(([k, v]) => {
+        const pan = pans[k];
+        const panStr =
+          pan && Math.abs(pan) >= 0.1
+            ? pan < 0
+              ? `L${Math.round(Math.abs(pan) * 100)}`
+              : `R${Math.round(pan * 100)}`
+            : "C";
+        return `${trackNameMap[k] || k} ${Math.round(v * 100)}% [${panStr}]`;
+      })
+      .join(" · ");
+    if (trackEntries.length > 4) trackLine += ` · +${trackEntries.length - 4}軌`;
+    if (!trackLine) trackLine = "尚未啟動背景音軌";
+
+    ctx.fillStyle = "#e2e8f0";
+    ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillText(trackLine, cardX + 16, infoY + 48);
+
+    // Separator
+    ctx.strokeStyle = themeConfig.cardBorder;
+    ctx.beginPath();
+    ctx.moveTo(cardX + 16, infoY + 66);
+    ctx.lineTo(cardX + cardW - 16, infoY + 66);
+    ctx.stroke();
+
+    // Master Acoustics: EQ & Reverb
+    ctx.fillStyle = themeConfig.accent;
+    ctx.font = "bold 12px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillText("🏛️ 母帶等化與空間殘響：", cardX + 16, infoY + 90);
+
+    const eqBass = eq?.bass ?? 0;
+    const eqMid = eq?.mid ?? 0;
+    const eqTreble = eq?.treble ?? 0;
+    const eqStr = `低頻 ${eqBass > 0 ? "+" : ""}${eqBass}dB · 中頻 ${eqMid > 0 ? "+" : ""}${eqMid}dB · 高頻 ${eqTreble > 0 ? "+" : ""}${eqTreble}dB`;
+
+    const reverbPresetMap = {
+      bypass: "直通 (無殘響)",
+      cabin: "小木屋 🪵",
+      library: "圖書館 📚",
+      cathedral: "大教堂 ⛪",
+      custom: "自訂空間",
+    };
+    const rvPreset = reverbPresetMap[reverb?.preset] || reverb?.preset || "原木木屋";
+    const rvWet = Math.round((reverb?.wet ?? 0.2) * 100);
+    const rvStr = `空間：${rvPreset} (濕度 ${rvWet}%)`;
+
+    ctx.fillStyle = "#cbd5e1";
+    ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillText(`EQ：${eqStr}`, cardX + 16, infoY + 112);
+    ctx.fillText(`殘響：${rvStr}`, cardX + 16, infoY + 132);
+
+    // Bottom Area: QR Code + Scan Instruction
+    const qrY = 466;
+    if (qrCanvas && typeof ctx.drawImage === "function") {
+      const qrSize = 96;
+      const qrX = cardX + 16;
+      ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
+
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#f8fafc";
+      ctx.font = "bold 13px ui-sans-serif, system-ui, sans-serif";
+      ctx.fillText("📷 掃描直接於自習室聆聽", qrX + qrSize + 16, qrY + 36);
+
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
+      ctx.fillText("支援跨裝置手機相機掃描即聽", qrX + qrSize + 16, qrY + 56);
+      ctx.fillText("零伺服器保留 · 100% 離線純代碼合成", qrX + qrSize + 16, qrY + 76);
+    } else {
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#f8fafc";
+      ctx.font = "bold 13px ui-sans-serif, system-ui, sans-serif";
+      ctx.fillText("🎧 歡迎載入此音景配方，進入深度專注心流", width / 2, qrY + 45);
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
+      ctx.fillText("NewWorld Study Room · Cozy Cabin Acoustic", width / 2, qrY + 68);
+    }
+
+    // Signature Footer
+    ctx.textAlign = "center";
+    ctx.fillStyle = themeConfig.signature;
+    ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillText("— 願舒適聲景陪伴你的每一次沉浸 —", width / 2, 592);
+
+    return canvas;
+  }
+
   static strokeRoundRect(ctx, x, y, width, height, radius) {
     ctx.beginPath();
     if (ctx.roundRect) {

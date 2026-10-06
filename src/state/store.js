@@ -65,6 +65,8 @@ const profileDefaults = {
   customPresets: [],
   companionAffinityExp: 0,
   companionAura: "auto",
+  audioDuckingOnPause: true,
+  syncWithHostSoundscape: false,
 };
 
 export const AFFINITY_RANKS = [
@@ -290,6 +292,11 @@ function sanitizeProfile(value = {}) {
     companionAura: ["auto", "none", "warm_glow", "starlight", "aurora", "crown"].includes(value.companionAura)
       ? value.companionAura
       : profileDefaults.companionAura,
+    audioDuckingOnPause:
+      value.audioDuckingOnPause !== undefined
+        ? Boolean(value.audioDuckingOnPause)
+        : profileDefaults.audioDuckingOnPause,
+    syncWithHostSoundscape: Boolean(value.syncWithHostSoundscape),
   };
 }
 

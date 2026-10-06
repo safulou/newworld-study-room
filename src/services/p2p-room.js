@@ -68,6 +68,18 @@ function isPeerStatus(msg) {
   );
 }
 
+function isSoundscapeSync(msg) {
+  return Boolean(
+    msg &&
+    msg.type === "soundscape-sync" &&
+    typeof msg.tracks === "object" &&
+    msg.tracks !== null &&
+    typeof msg.by === "string" &&
+    msg.by.length > 0 &&
+    msg.by.length <= 18,
+  );
+}
+
 function safeHostId(value) {
   return typeof value === "string" && /^[a-zA-Z0-9_-]{1,80}$/.test(value) ? value : "";
 }
@@ -321,6 +333,13 @@ export class P2PRoom extends EventTarget {
       this.dispatchEvent(new CustomEvent("timer-sync", { detail: message }));
       return;
     }
+    if (message.type === "soundscape-sync" && isSoundscapeSync(message)) {
+      this.dispatchEvent(new CustomEvent("soundscape-sync", { detail: message }));
+      if (this.role === "host") {
+        this.broadcast(message, source.peer);
+      }
+      return;
+    }
     if (message.type !== "tip" || !isTip(message.tip)) return;
 
     const tip = publicTip(message.tip);
@@ -501,6 +520,27 @@ export class P2PRoom extends EventTarget {
     return msg;
   }
 
+  sendSoundscapeSync({ name = "房主音景", tracks = {}, pans = {}, eq = null, reverb = null } = {}) {
+    const msg = {
+      type: "soundscape-sync",
+      version: MESSAGE_VERSION,
+      by: String(this.selfId || "房主").slice(0, 18),
+      name: String(name || "房主音景").slice(0, 30),
+      tracks: typeof tracks === "object" && tracks !== null ? tracks : {},
+      pans: typeof pans === "object" && pans !== null ? pans : {},
+      eq: eq && typeof eq === "object" ? eq : null,
+      reverb: reverb && typeof reverb === "object" ? reverb : null,
+      timestamp: Date.now(),
+    };
+    if (this.role === "host") {
+      this.broadcast(msg);
+    } else {
+      const host = this.connections.get(this.hostId);
+      if (host) this.send(host, msg);
+    }
+    return msg;
+  }
+
   broadcast(message, exceptPeer = "") {
     this.connections.forEach((connection, peerId) => {
       if (peerId !== exceptPeer) this.send(connection, message);
@@ -587,6 +627,7 @@ export const p2pInternals = {
   isTip,
   publicTip,
   isTimerSync,
+  isSoundscapeSync,
   isInteraction,
   isPeerStatus,
   safeHostId,

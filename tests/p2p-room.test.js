@@ -118,4 +118,45 @@ describe("P2P protocol validation", () => {
       }),
     ).toBe(false);
   });
+
+  it("validates soundscape-sync payload", () => {
+    expect(p2pInternals.isSoundscapeSync).toBeDefined();
+    expect(
+      p2pInternals.isSoundscapeSync({
+        type: "soundscape-sync",
+        by: "HostArsen",
+        tracks: { rain: 0.6, campfire: 0.3 },
+        pans: { rain: -0.2 },
+        eq: { bass: 2, mid: 0, treble: -1 },
+        reverb: { preset: "cabin", wet: 0.2 },
+      }),
+    ).toBe(true);
+
+    // Invalid type
+    expect(
+      p2pInternals.isSoundscapeSync({
+        type: "invalid",
+        by: "Host",
+        tracks: {},
+      }),
+    ).toBe(false);
+
+    // Missing tracks object
+    expect(
+      p2pInternals.isSoundscapeSync({
+        type: "soundscape-sync",
+        by: "Host",
+        tracks: null,
+      }),
+    ).toBe(false);
+
+    // Nickname too long
+    expect(
+      p2pInternals.isSoundscapeSync({
+        type: "soundscape-sync",
+        by: "A".repeat(20),
+        tracks: {},
+      }),
+    ).toBe(false);
+  });
 });

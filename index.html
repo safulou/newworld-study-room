@@ -421,12 +421,31 @@
               </button>
               <button
                 class="add-preset-btn subtle"
+                id="btnShareActiveSoundscapePoster"
+                type="button"
+                title="為當前運行的音景生成拍立得分享卡片"
+              >
+                <i data-lucide="camera"></i>
+                <span>分享卡片</span>
+              </button>
+              <button
+                class="add-preset-btn subtle"
                 id="btnImportSoundscape"
                 type="button"
                 title="匯入好友分享的音景代碼"
               >
                 <i data-lucide="download"></i>
                 <span>匯入</span>
+              </button>
+              <button
+                class="add-preset-btn subtle"
+                id="btnBroadcastSoundscape"
+                type="button"
+                title="向房間內所有夥伴廣播同步當前音景"
+                hidden
+              >
+                <i data-lucide="radio"></i>
+                <span>廣播音景</span>
               </button>
             </div>
             <div class="ambient-weather-row" id="ambientWeatherRow">
@@ -970,6 +989,13 @@
                 <span>跟隨房主節奏倒數</span>
               </label>
             </div>
+            <div class="field" id="p2pSoundscapeSyncRow">
+              <span>音景同步</span>
+              <label class="checkbox-label" title="在自習室中自動跟隨房主的環境音景與空間調音">
+                <input type="checkbox" id="syncWithHostSoundscape" />
+                <span>跟隨房主音景與調音</span>
+              </label>
+            </div>
             <div class="field">
               <span>心流自動巡航</span>
               <label class="checkbox-label" title="專注與休息倒數結束後自動切換並接續倒數">
@@ -982,6 +1008,13 @@
               <label class="checkbox-label" title="專注剩餘 3 分鐘與 1 分鐘時播放輕柔收尾水晶音">
                 <input type="checkbox" id="windDownAlert" checked />
                 <span>剩餘 3m / 1m 播放提示音</span>
+              </label>
+            </div>
+            <div class="field">
+              <span>暫停舒緩微降</span>
+              <label class="checkbox-label" title="專注計時暫停時，音樂與白噪音自動平滑衰減至靜謐音量">
+                <input type="checkbox" id="audioDuckingOnPause" checked />
+                <span>暫停時音效舒緩微降 (Ducking)</span>
               </label>
             </div>
             <label class="field">
@@ -1226,8 +1259,8 @@
       <div class="poster-dialog-card">
         <div class="poster-header">
           <div class="poster-title-group">
-            <h2>📸 專注成果拍立得卡片</h2>
-            <span class="poster-subtitle">定格今日專注高光時刻，分享心流印記</span>
+            <h2 id="posterModalTitle">📸 專注成果拍立得卡片</h2>
+            <span class="poster-subtitle" id="posterModalSubtitle">定格今日專注高光時刻，分享心流印記</span>
           </div>
           <button class="icon-btn subtle close-btn" id="closePoster" type="button" aria-label="關閉拍立得卡片">
             <i data-lucide="x"></i>

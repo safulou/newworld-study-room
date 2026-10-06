@@ -258,4 +258,14 @@ describe("room-scoped store", () => {
     expect(stored.eq).toEqual({ bass: 2, mid: -1, treble: 3 });
     expect(stored.reverb).toEqual({ preset: "cathedral", wet: 0.25 });
   });
+
+  it("sanitizes audioDuckingOnPause and syncWithHostSoundscape settings", () => {
+    const store = createStore({ roomId: "room-c", includeStarterTips: false });
+    expect(store.get().audioDuckingOnPause).toBe(true);
+    expect(store.get().syncWithHostSoundscape).toBe(false);
+
+    store.update({ audioDuckingOnPause: false, syncWithHostSoundscape: true });
+    expect(store.get().audioDuckingOnPause).toBe(false);
+    expect(store.get().syncWithHostSoundscape).toBe(true);
+  });
 });
