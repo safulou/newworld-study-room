@@ -52,6 +52,7 @@ import {
   Share2,
   Shuffle,
   Smartphone,
+  Sparkle,
   Sparkles,
   SunMoon,
   Trash2,
@@ -135,6 +136,7 @@ const icons = {
   Share2,
   Shuffle,
   Smartphone,
+  Sparkle,
   Sparkles,
   SunMoon,
   Trash2,
@@ -376,6 +378,16 @@ const elements = {
   windowWeather: $("#windowWeather"),
   ambientWeatherRow: $("#ambientWeatherRow"),
   weatherChips: document.querySelectorAll(".weather-chip"),
+  btnFlowPrep: $("#btnFlowPrep"),
+  flowPrepModal: $("#flowPrepModal"),
+  closeFlowPrep: $("#closeFlowPrep"),
+  prepIntentionInput: $("#prepIntentionInput"),
+  prepBreathRing: $("#prepBreathRing"),
+  prepBreathPhaseText: $("#prepBreathPhaseText"),
+  prepBreathSubtext: $("#prepBreathSubtext"),
+  prepBreathCounter: $("#prepBreathCounter"),
+  btnSkipPrepBreath: $("#btnSkipPrepBreath"),
+  btnStartFlowFromPrep: $("#btnStartFlowFromPrep"),
 };
 
 const store = createStore({
@@ -718,7 +730,22 @@ function renderTasks() {
     trashIcon.setAttribute("data-lucide", "trash-2");
     delBtn.append(trashIcon);
 
-    item.append(handle, moveBtns, checkbox, title, pomoProg, delBtn);
+    // Pomodoro budget progress bar
+    const targetCount = Math.max(1, task.targetPomodoros || 1);
+    const completedCount = task.pomodoros || 0;
+    const pct = Math.min(100, Math.round((completedCount / targetCount) * 100));
+    const isTargetMet = completedCount >= targetCount;
+
+    const pomoBarWrapper = document.createElement("div");
+    pomoBarWrapper.className = `task-pomo-bar-wrapper ${isTargetMet ? "target-met" : ""}`.trim();
+    pomoBarWrapper.title = `番茄鐘進度：${completedCount} / ${targetCount} (${pct}%)`;
+
+    const pomoBarFill = document.createElement("div");
+    pomoBarFill.className = "task-pomo-bar-fill";
+    pomoBarFill.style.width = `${pct}%`;
+    pomoBarWrapper.append(pomoBarFill);
+
+    item.append(handle, moveBtns, checkbox, title, pomoProg, delBtn, pomoBarWrapper);
 
     // HTML5 Drag and drop listeners
     item.addEventListener("dragstart", (e) => {
@@ -1608,6 +1635,14 @@ function formatPanLabel(pan) {
   return `右 ${panPercent}%`;
 }
 
+function getBinauralBandInfo(freq) {
+  if (freq < 4) return { band: "Delta (δ)", icon: "💤", desc: "深層修復" };
+  if (freq < 8) return { band: "Theta (θ)", icon: "🌙", desc: "深度冥想" };
+  if (freq < 14) return { band: "Alpha (α)", icon: "✨", desc: "放鬆心流" };
+  if (freq < 30) return { band: "Beta (β)", icon: "⚡", desc: "主動專注" };
+  return { band: "Gamma (γ)", icon: "💥", desc: "巔峰認知" };
+}
+
 function renderAmbientMixer() {
   if (!elements.ambientMixer || !elements.ambientMixerTracks) return;
   const activeTracks = ambientSound.getActiveTracks();
@@ -1624,6 +1659,7 @@ function renderAmbientMixer() {
   const activeElement = document.activeElement;
   const activeTrackAttr = activeElement?.closest?.(".ambient-mixer-track")?.dataset.track;
   const isPanSlider = activeElement?.classList?.contains("mixer-track-pan-slider");
+  const isFreqSlider = activeElement?.classList?.contains("mixer-track-freq-slider");
 
   elements.ambientMixerTracks.innerHTML = activeTracks
     .map((name) => {
@@ -1632,6 +1668,21 @@ function renderAmbientMixer() {
       const pan = ambientSound.getTrackPan(name);
       const panPercent = Math.round(pan * 100);
       const panText = formatPanLabel(pan);
+
+      let binauralHtml = "";
+      if (name.startsWith("binaural_")) {
+        const freqConfig = ambientSound.getBinauralBeatFrequency(name) || { base: 210, diff: 10 };
+        const band = getBinauralBandInfo(freqConfig.diff);
+        binauralHtml = `
+          <div class="mixer-binaural-row">
+            <span class="mixer-binaural-label">節律: <strong>${freqConfig.diff.toFixed(1)} Hz</strong> · ${band.icon} ${band.band} (${band.desc})</span>
+            <div class="mixer-binaural-controls">
+              <input class="mixer-track-freq-slider" type="range" min="1" max="45" step="0.5" value="${freqConfig.diff}" aria-label="${meta.name} 雙耳節律頻率微調" />
+            </div>
+          </div>
+        `;
+      }
+
       return `
         <div class="ambient-mixer-track" data-track="${name}">
           <div class="mixer-track-row">
@@ -1647,13 +1698,16 @@ function renderAmbientMixer() {
               <span class="mixer-pan-indicator">R</span>
             </div>
           </div>
+          ${binauralHtml}
         </div>
       `;
     })
     .join("");
 
   if (activeTrackAttr) {
-    const selector = isPanSlider ? ".mixer-track-pan-slider" : ".mixer-track-slider";
+    let selector = ".mixer-track-slider";
+    if (isPanSlider) selector = ".mixer-track-pan-slider";
+    else if (isFreqSlider) selector = ".mixer-track-freq-slider";
     const restoredSlider = elements.ambientMixerTracks.querySelector(`[data-track="${activeTrackAttr}"] ${selector}`);
     restoredSlider?.focus();
   }
@@ -1726,6 +1780,23 @@ function bindAmbientSound() {
       const panLabel = trackRow.querySelector(".mixer-pan-label");
       if (panLabel) {
         panLabel.textContent = `方位: ${formatPanLabel(panVal / 100)}`;
+      }
+      return;
+    }
+
+    const freqSlider = e.target.closest(".mixer-track-freq-slider");
+    if (freqSlider) {
+      const trackRow = freqSlider.closest(".ambient-mixer-track");
+      const trackName = trackRow?.dataset.track;
+      if (!trackName) return;
+      const diffVal = Number(freqSlider.value);
+      const currentConfig = ambientSound.getBinauralBeatFrequency(trackName);
+      const baseFreq = currentConfig?.base || 210;
+      ambientSound.setBinauralBeatFrequency(trackName, baseFreq, diffVal);
+      const bandInfo = getBinauralBandInfo(diffVal);
+      const binauralLabel = trackRow.querySelector(".mixer-binaural-label");
+      if (binauralLabel) {
+        binauralLabel.innerHTML = `節律: <strong>${diffVal.toFixed(1)} Hz</strong> · ${bandInfo.icon} ${bandInfo.band} (${bandInfo.desc})`;
       }
     }
   });
@@ -2539,8 +2610,13 @@ function bindTasks() {
     if (target.classList.contains("task-checkbox")) {
       const isCompleted = taskTracker.toggleTask(taskId);
       if (isCompleted) {
-        companionSound.playTapChime();
+        companionSound.playSingingBowl();
+        spawnZenSpark("🏆 任務達成！");
+        viewer?.triggerBounce();
+        showCompanionBubble("恭喜完成任務！你今天超有毅力 ✨", 4000);
         showToast("任務已完成！繼續保持 🌟");
+      } else {
+        companionSound.playTapChime();
       }
       renderTasks();
       return;
@@ -3493,6 +3569,115 @@ function bindBreathingGuide() {
   });
 }
 
+let prepBreathTimer = null;
+const PREP_MAX_BREATHS = 3;
+
+function stopPrepBreathing() {
+  if (prepBreathTimer) {
+    clearTimeout(prepBreathTimer);
+    prepBreathTimer = null;
+  }
+  if (elements.prepBreathRing) {
+    elements.prepBreathRing.className = "prep-breath-ring";
+  }
+}
+
+function runPrepBreathingCycle(cycleCount = 1) {
+  if (!elements.flowPrepModal?.open) return;
+  if (cycleCount > PREP_MAX_BREATHS) {
+    if (elements.prepBreathPhaseText) elements.prepBreathPhaseText.textContent = "心神沉靜 ✨";
+    if (elements.prepBreathSubtext) elements.prepBreathSubtext.textContent = "意念已凝聚 · 準備出發";
+    if (elements.prepBreathCounter) elements.prepBreathCounter.textContent = "儀式完成 🌸";
+    if (elements.prepBreathRing) elements.prepBreathRing.className = "prep-breath-ring";
+    companionSound.playSingingBowl();
+    return;
+  }
+
+  if (elements.prepBreathCounter) {
+    elements.prepBreathCounter.textContent = `第 ${cycleCount} / ${PREP_MAX_BREATHS} 次呼吸`;
+  }
+
+  // Phase 1: Inhale (4s)
+  if (elements.prepBreathRing) elements.prepBreathRing.className = "prep-breath-ring inhale";
+  if (elements.prepBreathPhaseText) elements.prepBreathPhaseText.textContent = "緩緩吸氣";
+  if (elements.prepBreathSubtext) elements.prepBreathSubtext.textContent = "感受清新能量進入身心";
+  companionSound.playTapChime();
+
+  prepBreathTimer = window.setTimeout(() => {
+    if (!elements.flowPrepModal?.open) return;
+
+    // Phase 2: Hold (2s)
+    if (elements.prepBreathRing) elements.prepBreathRing.className = "prep-breath-ring hold";
+    if (elements.prepBreathPhaseText) elements.prepBreathPhaseText.textContent = "屏息凝聚";
+    if (elements.prepBreathSubtext) elements.prepBreathSubtext.textContent = "安定意念與思緒";
+
+    prepBreathTimer = window.setTimeout(() => {
+      if (!elements.flowPrepModal?.open) return;
+
+      // Phase 3: Exhale (4s)
+      if (elements.prepBreathRing) elements.prepBreathRing.className = "prep-breath-ring exhale";
+      if (elements.prepBreathPhaseText) elements.prepBreathPhaseText.textContent = "緩緩吐氣";
+      if (elements.prepBreathSubtext) elements.prepBreathSubtext.textContent = "放下肩膀與緊繃";
+
+      prepBreathTimer = window.setTimeout(() => {
+        if (!elements.flowPrepModal?.open) return;
+        runPrepBreathingCycle(cycleCount + 1);
+      }, 4000);
+    }, 2000);
+  }, 4000);
+}
+
+function startFlowFromRitual() {
+  stopPrepBreathing();
+  const intention = elements.prepIntentionInput?.value?.trim()?.slice(0, 60);
+  if (intention) {
+    store.update({ focusIntention: intention });
+    if (elements.focusIntentionInput) elements.focusIntentionInput.value = intention;
+    if (elements.zenIntentionText) elements.zenIntentionText.textContent = `當前意圖：${intention}`;
+  }
+  if (!timer.running) {
+    timer.start();
+  }
+  viewer?.triggerBounce();
+  showCompanionBubble("鎖定意圖，我們一起進入心流狀態！💫", 3500);
+  showToast("心流儀式完成，專注啟動！🚀");
+  elements.flowPrepModal?.close();
+}
+
+function bindFlowPrep() {
+  elements.btnFlowPrep?.addEventListener("click", () => {
+    const currentIntention = store.get().focusIntention || taskTracker.tasks.find((t) => !t.completed)?.title || "";
+    if (elements.prepIntentionInput) {
+      elements.prepIntentionInput.value = currentIntention;
+    }
+    stopPrepBreathing();
+    elements.flowPrepModal?.showModal();
+    runPrepBreathingCycle(1);
+  });
+
+  elements.closeFlowPrep?.addEventListener("click", () => {
+    stopPrepBreathing();
+    elements.flowPrepModal?.close();
+  });
+
+  elements.flowPrepModal?.addEventListener("click", (e) => {
+    const dialogCard = e.target.closest(".flow-prep-dialog-card");
+    if (!dialogCard && elements.flowPrepModal.open) {
+      stopPrepBreathing();
+      elements.flowPrepModal.close();
+    }
+  });
+
+  elements.btnSkipPrepBreath?.addEventListener("click", startFlowFromRitual);
+  elements.btnStartFlowFromPrep?.addEventListener("click", startFlowFromRitual);
+
+  elements.prepIntentionInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      startFlowFromRitual();
+    }
+  });
+}
+
 function renderHerbarium() {
   if (!elements.plantsView || !elements.badgesView) return;
   const plants = studyStats.getHerbarium();
@@ -3681,6 +3866,7 @@ function init() {
   bindZenMode();
   bindZenTools();
   bindBreathingGuide();
+  bindFlowPrep();
   bindHerbarium();
   bindIdleSleep();
   bindP2PCheer();
@@ -3721,6 +3907,7 @@ function init() {
     lofiGenerator.stop();
     weatherEngine?.destroy();
     stopBreathingGuide();
+    stopPrepBreathing();
   });
 }
 

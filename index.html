@@ -299,6 +299,15 @@
             <button class="icon-btn primary" id="toggleTimer" type="button" aria-label="開始專注" title="開始專注">
               <i data-lucide="play"></i>
             </button>
+            <button
+              class="icon-btn"
+              id="btnFlowPrep"
+              type="button"
+              aria-label="專注前靜心儀式"
+              title="專注前靜心儀式（意圖確認與三口深呼吸校準）"
+            >
+              <i data-lucide="sparkle"></i>
+            </button>
             <button class="icon-btn" id="resetTimer" type="button" aria-label="重設計時" title="重設計時">
               <i data-lucide="rotate-ccw"></i>
             </button>
@@ -1123,6 +1132,47 @@
           <button class="poster-action-btn secondary" id="btnCopyPoster" type="button">
             <i data-lucide="copy"></i>
             <span>複製到剪貼簿</span>
+          </button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="flow-prep-modal" id="flowPrepModal">
+      <div class="flow-prep-dialog-card">
+        <div class="flow-prep-header">
+          <div class="flow-prep-title-group">
+            <h2>✨ 專注前靜心儀式</h2>
+            <span class="flow-prep-subtitle">鎖定唯一意圖 · 三口深呼吸校準 · 進入深度心流</span>
+          </div>
+          <button class="icon-btn subtle close-btn" id="closeFlowPrep" type="button" aria-label="關閉靜心儀式">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="flow-prep-body">
+          <div class="prep-step-row">
+            <span class="prep-step-badge">1. 鎖定意圖</span>
+            <input
+              type="text"
+              id="prepIntentionInput"
+              class="prep-intention-input"
+              maxlength="48"
+              placeholder="為接下來的專注設定一個具體目標..."
+              aria-label="專注意圖"
+            />
+          </div>
+          <div class="prep-breathing-stage">
+            <div class="prep-breath-ring" id="prepBreathRing">
+              <span class="prep-breath-phase-text" id="prepBreathPhaseText">準備吸氣</span>
+              <span class="prep-breath-subtext" id="prepBreathSubtext">放鬆肩頸</span>
+            </div>
+            <span class="prep-breath-counter" id="prepBreathCounter">第 1 / 3 次呼吸</span>
+          </div>
+        </div>
+        <div class="flow-prep-footer">
+          <button class="btn-text-subtle" id="btnSkipPrepBreath" type="button">直接出發</button>
+          <button class="btn-primary-action" id="btnStartFlowFromPrep" type="button">
+            <i data-lucide="play"></i>
+            <span>啟動專注旅程</span>
           </button>
         </div>
       </div>
