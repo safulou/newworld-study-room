@@ -179,6 +179,14 @@
             <span class="zen-intention-text" id="zenIntentionText">當前意圖：保持專注</span>
           </div>
 
+          <div class="flow-momentum-pill" id="flowMomentumBadge" title="今日專注心流勢能值">
+            <span class="momentum-icon" id="momentumIcon">☕</span>
+            <span class="momentum-text" id="momentumText">心流勢能：蓄勢待發 (0%)</span>
+            <div class="momentum-mini-track">
+              <div class="momentum-mini-fill" id="momentumMiniFill" style="width: 0%"></div>
+            </div>
+          </div>
+
           <div class="focus-intention-bar" id="focusIntentionBar">
             <span class="intention-icon" aria-hidden="true">🎯</span>
             <input
@@ -386,6 +394,10 @@
                 🌱 漸入佳境
               </button>
             </div>
+            <div class="smart-break-suggestion" id="smartBreakSuggestion" hidden>
+              <span class="smart-break-text" id="smartBreakText">💡 智慧建議：深度心流後建議短休 10 分鐘</span>
+              <button class="btn-apply-smart-break" id="btnApplySmartBreak" type="button">一鍵套用短休 10m</button>
+            </div>
           </div>
 
           <div class="ambient-bar" id="ambientBar" hidden>
@@ -397,6 +409,8 @@
               <button class="preset-btn" type="button" data-preset="deep_flow">🧘 深度心流</button>
               <button class="preset-btn" type="button" data-preset="zen_meditation">🌙 禪修冥想</button>
               <button class="preset-btn" type="button" data-preset="study_library">📚 圖書館自習</button>
+              <button class="preset-btn" type="button" data-preset="cathedral_study">⛪ 大教堂研讀</button>
+              <button class="preset-btn" type="button" data-preset="blizzard_cabin">❄️ 暴風雪暖爐</button>
             </div>
             <div class="custom-presets-row" id="customPresetsRow">
               <span class="custom-preset-label">自訂混音：</span>
@@ -1310,6 +1324,13 @@
         </div>
         <div class="affinity-rules-row">
           <span>獲取默契方式：🍅 專注完成 (+25) · 🧘 靜心儀式 (+15) · 🏆 完成任務 (+10) · 🐾 撫摸安撫 (+3)</span>
+        </div>
+        <div class="affinity-aura-section">
+          <div class="affinity-aura-header">
+            <span class="affinity-aura-title">✨ 伴讀心流共振光環</span>
+            <span class="affinity-aura-hint">達標自動解鎖 3D 心流光環，亦可自由切換佩戴</span>
+          </div>
+          <div class="affinity-aura-chips" id="affinityAuraChips"></div>
         </div>
         <div class="affinity-tiers-list" id="affinityTiersList"></div>
       </div>

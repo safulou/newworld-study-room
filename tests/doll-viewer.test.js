@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { DollViewer, drawDollFace } from "../src/services/doll-viewer.js";
+import { DollViewer, drawDollFace, AFFINITY_AURAS, getUnlockedAura } from "../src/services/doll-viewer.js";
 
 describe("drawDollFace", () => {
   let context;
@@ -108,5 +108,56 @@ describe("drawDollFace", () => {
     fakeViewer.setTimerState("idle");
     expect(fakeViewer.timerState).toBe("idle");
     expect(fakeViewer.arms[0].rotation.set).toHaveBeenCalledWith(0, 0, -0.48);
+  });
+
+  it("calculates unlocked aura tiers based on affinity level", () => {
+    expect(AFFINITY_AURAS.none.minLevel).toBe(1);
+    expect(AFFINITY_AURAS.warm_glow.minLevel).toBe(3);
+    expect(AFFINITY_AURAS.starlight.minLevel).toBe(5);
+    expect(AFFINITY_AURAS.aurora.minLevel).toBe(7);
+    expect(AFFINITY_AURAS.crown.minLevel).toBe(10);
+
+    expect(getUnlockedAura(1)).toBe("none");
+    expect(getUnlockedAura(2)).toBe("none");
+    expect(getUnlockedAura(3)).toBe("warm_glow");
+    expect(getUnlockedAura(4)).toBe("warm_glow");
+    expect(getUnlockedAura(5)).toBe("starlight");
+    expect(getUnlockedAura(6)).toBe("starlight");
+    expect(getUnlockedAura(7)).toBe("aurora");
+    expect(getUnlockedAura(9)).toBe("aurora");
+    expect(getUnlockedAura(10)).toBe("crown");
+  });
+
+  it("sets affinity aura on viewer and updates aura group visibility", () => {
+    const fakeChildren = [];
+    const fakeAuraGroup = {
+      visible: false,
+      children: fakeChildren,
+      add: vi.fn((mesh) => fakeChildren.push(mesh)),
+      remove: vi.fn((mesh) => {
+        const idx = fakeChildren.indexOf(mesh);
+        if (idx !== -1) fakeChildren.splice(idx, 1);
+      }),
+    };
+    const fakeViewer = {
+      auraGroup: fakeAuraGroup,
+      currentAura: "none",
+    };
+    fakeViewer.setAffinityAura = DollViewer.prototype.setAffinityAura.bind(fakeViewer);
+
+    // Test none
+    fakeViewer.setAffinityAura("none");
+    expect(fakeViewer.currentAura).toBe("none");
+    expect(fakeAuraGroup.visible).toBe(false);
+
+    // Test warm_glow
+    fakeViewer.setAffinityAura("warm_glow");
+    expect(fakeViewer.currentAura).toBe("warm_glow");
+    expect(fakeAuraGroup.visible).toBe(true);
+    expect(fakeAuraGroup.add).toHaveBeenCalled();
+
+    // Reset back to none
+    fakeViewer.setAffinityAura("none");
+    expect(fakeAuraGroup.visible).toBe(false);
   });
 });

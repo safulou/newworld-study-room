@@ -64,6 +64,7 @@ const profileDefaults = {
   windDownAlert: true,
   customPresets: [],
   companionAffinityExp: 0,
+  companionAura: "auto",
 };
 
 export const AFFINITY_RANKS = [
@@ -111,6 +112,22 @@ export function getAffinityRank(exp = 0) {
     }
   }
   return { ...AFFINITY_RANKS[0], currentExp: validExp, progressPercent: 0 };
+}
+
+export const AFFINITY_AURAS = {
+  none: { id: "none", label: "無光環", minLevel: 1, icon: "⭕" },
+  warm_glow: { id: "warm_glow", label: "溫潤微光", minLevel: 3, icon: "🍵", color: 0xfbbf24 },
+  starlight: { id: "starlight", label: "星光共振", minLevel: 5, icon: "✨", color: 0x38bdf8 },
+  aurora: { id: "aurora", label: "極光流彩", minLevel: 7, icon: "🌟", color: 0x34d399, secondaryColor: 0x818cf8 },
+  crown: { id: "crown", label: "神聖日冕", minLevel: 10, icon: "👑", color: 0xfcd34d },
+};
+
+export function getUnlockedAura(level = 1) {
+  if (level >= 10) return "crown";
+  if (level >= 7) return "aurora";
+  if (level >= 5) return "starlight";
+  if (level >= 3) return "warm_glow";
+  return "none";
 }
 
 const roomDefaults = {
@@ -252,9 +269,27 @@ function sanitizeProfile(value = {}) {
                       .map(([k, v]) => [k, Math.max(-1, Math.min(1, Number(v)))]),
                   )
                 : {},
+            eq:
+              p.eq && typeof p.eq === "object"
+                ? {
+                    bass: Math.max(-12, Math.min(12, Number(p.eq.bass) || 0)),
+                    mid: Math.max(-12, Math.min(12, Number(p.eq.mid) || 0)),
+                    treble: Math.max(-12, Math.min(12, Number(p.eq.treble) || 0)),
+                  }
+                : null,
+            reverb:
+              p.reverb && typeof p.reverb === "object"
+                ? {
+                    preset: String(p.reverb.preset || "bypass").slice(0, 20),
+                    wet: Math.max(0, Math.min(1, Number(p.reverb.wet) || 0)),
+                  }
+                : null,
           }))
       : [],
     companionAffinityExp: Math.max(0, Math.min(100000, Number(value.companionAffinityExp) || 0)),
+    companionAura: ["auto", "none", "warm_glow", "starlight", "aurora", "crown"].includes(value.companionAura)
+      ? value.companionAura
+      : profileDefaults.companionAura,
   };
 }
 

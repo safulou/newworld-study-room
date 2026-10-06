@@ -83,7 +83,7 @@ import { TaskTracker } from "./services/task-tracker.js";
 import { FocusPosterGenerator } from "./services/poster-generator.js";
 import { renderQrToCanvas, downloadQrCanvas, copyQrCanvasToClipboard } from "./services/qr-generator.js";
 import { WeatherEngine } from "./services/weather-engine.js";
-import { createStore, AFFINITY_RANKS, getAffinityRank } from "./state/store.js";
+import { createStore, AFFINITY_RANKS, getAffinityRank, AFFINITY_AURAS, getUnlockedAura } from "./state/store.js";
 
 const icons = {
   Activity,
@@ -425,6 +425,16 @@ const elements = {
   affinityProgressFill: $("#affinityProgressFill"),
   affinityCurrentQuote: $("#affinityCurrentQuote"),
   affinityTiersList: $("#affinityTiersList"),
+  affinityAuraChips: $("#affinityAuraChips"),
+
+  // Flow Momentum & Smart Break
+  flowMomentumBadge: $("#flowMomentumBadge"),
+  momentumIcon: $("#momentumIcon"),
+  momentumText: $("#momentumText"),
+  momentumMiniFill: $("#momentumMiniFill"),
+  smartBreakSuggestion: $("#smartBreakSuggestion"),
+  smartBreakText: $("#smartBreakText"),
+  btnApplySmartBreak: $("#btnApplySmartBreak"),
 };
 
 const store = createStore({
@@ -1305,6 +1315,8 @@ function renderState(state) {
   updateNotificationUI(state);
   renderCustomPresets();
   updateAffinityUI();
+  applyCurrentAura();
+  updateFlowMomentumUI();
 }
 
 function makeTip(text, by = store.get().nickname) {
@@ -1438,10 +1450,94 @@ function updateAffinityUI() {
   if (elements.affinityCurrentQuote) elements.affinityCurrentQuote.textContent = `「${rank.quote}」`;
 }
 
+function applyCurrentAura() {
+  const exp = store.get().companionAffinityExp || 0;
+  const rank = getAffinityRank(exp);
+  const userPref = store.get().companionAura || "auto";
+
+  let auraToApply;
+  if (userPref === "auto") {
+    auraToApply = getUnlockedAura(rank.level);
+  } else if (userPref === "none") {
+    auraToApply = "none";
+  } else {
+    const config = AFFINITY_AURAS[userPref];
+    if (config && rank.level >= config.minLevel) {
+      auraToApply = userPref;
+    } else {
+      auraToApply = getUnlockedAura(rank.level);
+    }
+  }
+
+  viewer?.setAffinityAura?.(auraToApply);
+}
+
+function renderAffinityAuraChips() {
+  if (!elements.affinityAuraChips) return;
+  const currentExp = store.get().companionAffinityExp || 0;
+  const currentRank = getAffinityRank(currentExp);
+  const selectedPref = store.get().companionAura || "auto";
+
+  elements.affinityAuraChips.replaceChildren();
+
+  // 1. Auto option
+  const autoBtn = document.createElement("button");
+  autoBtn.type = "button";
+  autoBtn.className = `affinity-aura-chip${selectedPref === "auto" ? " active" : ""}`;
+  const autoAura = getUnlockedAura(currentRank.level);
+  const autoLabel = autoAura === "none" ? "自動 (尚未解鎖)" : `自動 (${AFFINITY_AURAS[autoAura]?.label || autoAura})`;
+  autoBtn.textContent = `✨ ${autoLabel}`;
+  autoBtn.title = "自動佩戴目前最高解鎖的光環";
+  autoBtn.addEventListener("click", () => {
+    store.update({ companionAura: "auto" });
+    applyCurrentAura();
+    renderAffinityAuraChips();
+  });
+  elements.affinityAuraChips.append(autoBtn);
+
+  // 2. None option
+  const noneBtn = document.createElement("button");
+  noneBtn.type = "button";
+  noneBtn.className = `affinity-aura-chip${selectedPref === "none" ? " active" : ""}`;
+  noneBtn.textContent = "⭕ 隱藏光環";
+  noneBtn.title = "不顯示任何光環裝飾";
+  noneBtn.addEventListener("click", () => {
+    store.update({ companionAura: "none" });
+    applyCurrentAura();
+    renderAffinityAuraChips();
+  });
+  elements.affinityAuraChips.append(noneBtn);
+
+  // 3. Specific Auras
+  Object.values(AFFINITY_AURAS).forEach((aura) => {
+    if (aura.id === "none") return;
+    const isUnlocked = currentRank.level >= aura.minLevel;
+    const isSelected = selectedPref === aura.id;
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `affinity-aura-chip${isSelected ? " active" : ""}`;
+    btn.disabled = !isUnlocked;
+    btn.textContent = `${aura.icon} ${aura.label} (Lv.${aura.minLevel})`;
+    btn.title = isUnlocked ? `佩戴【${aura.label}】光環` : `需達到 Lv.${aura.minLevel} 解鎖`;
+
+    if (isUnlocked) {
+      btn.addEventListener("click", () => {
+        store.update({ companionAura: aura.id });
+        applyCurrentAura();
+        renderAffinityAuraChips();
+      });
+    }
+    elements.affinityAuraChips.append(btn);
+  });
+}
+
 function renderAffinityModal() {
   if (!elements.affinityTiersList) return;
   const currentExp = store.get().companionAffinityExp || 0;
   const currentRank = getAffinityRank(currentExp);
+
+  renderAffinityAuraChips();
 
   elements.affinityTiersList.replaceChildren();
   AFFINITY_RANKS.forEach((tier) => {
@@ -1487,6 +1583,7 @@ function addAffinityExp(amount = 0, reason = "") {
   updateAffinityUI();
 
   if (newRank.level > oldRank.level) {
+    applyCurrentAura();
     showToast(`🎉 伴讀夥伴默契升級！邁入【Lv.${newRank.level} ${newRank.title}】！`);
     companionSound.playCelebrationFanfare();
     showCompanionBubble(`哇！我們的默契等級提升到【Lv.${newRank.level} ${newRank.title}】了！✨`, 5000);
@@ -1659,6 +1756,8 @@ function bindTimer() {
       });
       lastRecordedSessionId = recorded?.id || null;
       showFlowReflectionPrompt();
+      showSmartBreakSuggestion(recorded);
+      updateFlowMomentumUI();
       renderStats();
       addAffinityExp(25, "專注完成");
 
@@ -1735,7 +1834,62 @@ function showFlowReflectionPrompt() {
 function hideFlowReflectionPrompt() {
   if (!elements.flowReflectionPrompt) return;
   elements.flowReflectionPrompt.hidden = true;
+  if (elements.smartBreakSuggestion) {
+    elements.smartBreakSuggestion.hidden = true;
+  }
   clearTimeout(flowReflectionTimer);
+}
+
+let currentSmartBreakMinutes = 5;
+
+function showSmartBreakSuggestion(lastSession = null) {
+  if (!elements.smartBreakSuggestion) return;
+  const rec = studyStats.getSmartBreakRecommendation(lastSession);
+  currentSmartBreakMinutes = rec.recommendedMinutes;
+  if (elements.smartBreakText) {
+    elements.smartBreakText.textContent = `💡 智慧建議：${rec.reason}（建議 ${rec.recommendedMinutes} 分鐘）`;
+  }
+  if (elements.btnApplySmartBreak) {
+    elements.btnApplySmartBreak.textContent = `一鍵套用短休 ${rec.recommendedMinutes}m`;
+  }
+  elements.smartBreakSuggestion.hidden = false;
+}
+
+function bindSmartBreak() {
+  elements.btnApplySmartBreak?.addEventListener("click", () => {
+    store.update({ shortBreakMinutes: currentSmartBreakMinutes });
+    timer.shortBreakMinutes = currentSmartBreakMinutes;
+    if (timer.mode === "shortBreak") {
+      timer.remaining = currentSmartBreakMinutes * 60;
+      timer.minutes = currentSmartBreakMinutes;
+      timer.emitTick();
+    }
+    if (elements.smartBreakSuggestion) {
+      elements.smartBreakSuggestion.hidden = true;
+    }
+    showToast(`已套用智慧休憩：短休設定為 ${currentSmartBreakMinutes} 分鐘 ☕`);
+    broadcastTimerSyncIfHost();
+  });
+
+  elements.flowMomentumBadge?.addEventListener("click", () => {
+    const momentum = studyStats.getFlowMomentum();
+    showToast(`${momentum.icon} 心流勢能 ${momentum.score}%【${momentum.levelName}】：${momentum.quote}`);
+  });
+}
+
+function updateFlowMomentumUI() {
+  if (!elements.flowMomentumBadge) return;
+  const momentum = studyStats.getFlowMomentum();
+  if (elements.momentumIcon) {
+    elements.momentumIcon.textContent = momentum.icon;
+  }
+  if (elements.momentumText) {
+    elements.momentumText.textContent = `心流勢能：${momentum.levelName} (${momentum.score}%)`;
+  }
+  if (elements.momentumMiniFill) {
+    elements.momentumMiniFill.style.width = `${momentum.score}%`;
+  }
+  elements.flowMomentumBadge.title = `心流勢能 ${momentum.score}% (${momentum.levelName})\n今日累積 ${momentum.totalMinutes} 分鐘 / ${momentum.sessionCount} 輪專注\n「${momentum.quote}」`;
 }
 
 function bindFlowReflection() {
@@ -1745,6 +1899,7 @@ function bindFlowReflection() {
       if (lastRecordedSessionId) {
         studyStats.updateSession(lastRecordedSessionId, { rating });
         renderStats();
+        updateFlowMomentumUI();
         const ratingNames = { flow: "🔥 深度心流", steady: "✨ 穩定推進", warmup: "🌱 漸入佳境" };
         showToast(`心流狀態已標記為「${ratingNames[rating] || rating}」！`);
       }
@@ -1889,6 +2044,23 @@ function renderAmbientMixer() {
   }
 }
 
+function syncAcousticUI() {
+  const eq = ambientSound.getMasterEQ();
+  const reverb = ambientSound.getMasterReverb();
+  if (elements.sliderReverbWet) elements.sliderReverbWet.value = String(Math.round(reverb.wet * 100));
+  if (elements.reverbWetValue) elements.reverbWetValue.textContent = `${Math.round(reverb.wet * 100)}%`;
+  if (elements.sliderEqBass) elements.sliderEqBass.value = String(eq.bass);
+  if (elements.eqBassValue) elements.eqBassValue.textContent = `${eq.bass > 0 ? "+" : ""}${eq.bass} dB`;
+  if (elements.sliderEqMid) elements.sliderEqMid.value = String(eq.mid);
+  if (elements.eqMidValue) elements.eqMidValue.textContent = `${eq.mid > 0 ? "+" : ""}${eq.mid} dB`;
+  if (elements.sliderEqTreble) elements.sliderEqTreble.value = String(eq.treble);
+  if (elements.eqTrebleValue) elements.eqTrebleValue.textContent = `${eq.treble > 0 ? "+" : ""}${eq.treble} dB`;
+
+  elements.acousticPresetBtns?.forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.acoustic === reverb.preset);
+  });
+}
+
 function bindAmbientSound() {
   elements.toggleAmbient.addEventListener("click", () => {
     const isHidden = elements.ambientBar.hidden;
@@ -1915,23 +2087,6 @@ function bindAmbientSound() {
     elements.acousticFxPanel.hidden = !isHidden;
     elements.btnToggleAcousticFX.classList.toggle("active", isHidden);
   });
-
-  const syncAcousticUI = () => {
-    const eq = ambientSound.getMasterEQ();
-    const reverb = ambientSound.getMasterReverb();
-    if (elements.sliderReverbWet) elements.sliderReverbWet.value = String(Math.round(reverb.wet * 100));
-    if (elements.reverbWetValue) elements.reverbWetValue.textContent = `${Math.round(reverb.wet * 100)}%`;
-    if (elements.sliderEqBass) elements.sliderEqBass.value = String(eq.bass);
-    if (elements.eqBassValue) elements.eqBassValue.textContent = `${eq.bass > 0 ? "+" : ""}${eq.bass} dB`;
-    if (elements.sliderEqMid) elements.sliderEqMid.value = String(eq.mid);
-    if (elements.eqMidValue) elements.eqMidValue.textContent = `${eq.mid > 0 ? "+" : ""}${eq.mid} dB`;
-    if (elements.sliderEqTreble) elements.sliderEqTreble.value = String(eq.treble);
-    if (elements.eqTrebleValue) elements.eqTrebleValue.textContent = `${eq.treble > 0 ? "+" : ""}${eq.treble} dB`;
-
-    elements.acousticPresetBtns?.forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.acoustic === reverb.preset);
-    });
-  };
 
   elements.acousticPresetBtns?.forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -2074,6 +2229,7 @@ function bindPresets() {
       });
       syncWeatherAtmosphere();
       renderAmbientMixer();
+      syncAcousticUI();
       showToast(`已套用「${preset.name}」音景預設。`);
     });
   });
@@ -2111,6 +2267,8 @@ function handleImportSoundscape(rawInput) {
     name: finalName,
     tracks: normalizedTracks,
     pans: decoded.pans || {},
+    eq: decoded.eq || null,
+    reverb: decoded.reverb || null,
   };
 
   const currentPresets = store.get().customPresets || [];
@@ -2118,6 +2276,9 @@ function handleImportSoundscape(rawInput) {
   renderCustomPresets();
 
   ambientSound.applyTrackMix(newPreset.tracks, newPreset.pans);
+  if (newPreset.eq) ambientSound.setMasterEQ(newPreset.eq);
+  if (newPreset.reverb) ambientSound.setMasterReverb(newPreset.reverb);
+  syncAcousticUI();
   elements.ambientChips.forEach((chipEl) => {
     const sound = chipEl.dataset.sound;
     if (sound === "lofi") return;
@@ -2164,6 +2325,13 @@ function renderCustomPresets() {
 
     nameBtn.addEventListener("click", () => {
       ambientSound.applyTrackMix(preset.tracks, preset.pans || {});
+      if (preset.eq) {
+        ambientSound.setMasterEQ(preset.eq);
+      }
+      if (preset.reverb) {
+        ambientSound.setMasterReverb(preset.reverb);
+      }
+      syncAcousticUI();
       elements.ambientChips.forEach((chipEl) => {
         const sound = chipEl.dataset.sound;
         if (sound === "lofi") return;
@@ -2225,6 +2393,8 @@ function bindCustomPresets() {
       name: trimmed,
       tracks: currentMix,
       pans: currentPans,
+      eq: ambientSound.getMasterEQ(),
+      reverb: ambientSound.getMasterReverb(),
     };
     const currentPresets = store.get().customPresets || [];
     store.update({ customPresets: [...currentPresets, newPreset] });
@@ -4056,6 +4226,7 @@ async function startViewer() {
       showCompanionBubble(quote, 2800);
     };
     renderState(store.get());
+    applyCurrentAura();
   } catch {
     elements.dollCanvas.hidden = true;
     showToast("目前瀏覽器無法顯示 3D，已切換為簡易娃娃。 ");
@@ -4092,6 +4263,8 @@ function checkSoundscapeUrlHash() {
     name,
     tracks: normalizedTracks,
     pans: decoded.pans || {},
+    eq: decoded.eq || null,
+    reverb: decoded.reverb || null,
   };
 
   const currentPresets = store.get().customPresets || [];
@@ -4099,6 +4272,9 @@ function checkSoundscapeUrlHash() {
   renderCustomPresets();
 
   ambientSound.applyTrackMix(newPreset.tracks, newPreset.pans);
+  if (newPreset.eq) ambientSound.setMasterEQ(newPreset.eq);
+  if (newPreset.reverb) ambientSound.setMasterReverb(newPreset.reverb);
+  syncAcousticUI();
   elements.ambientChips.forEach((chipEl) => {
     const sound = chipEl.dataset.sound;
     if (sound === "lofi") return;
@@ -4120,6 +4296,7 @@ function init() {
   bindAtmosphere();
   bindTimer();
   bindFlowReflection();
+  bindSmartBreak();
   bindMusic();
   bindCategoryPicker();
   bindShortcuts();
@@ -4156,6 +4333,8 @@ function init() {
   syncWeatherAtmosphere();
   bindCompanionAffinity();
   updateAffinityUI();
+  applyCurrentAura();
+  updateFlowMomentumUI();
   elements.avatarFallback?.addEventListener("click", () => {
     viewer?.triggerBounce();
     viewer?.onTap?.();

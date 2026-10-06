@@ -206,4 +206,51 @@ describe("AmbientSoundscapeManager", () => {
 
     expect(manager.applyAcousticPreset("invalid_preset")).toBe(false);
   });
+
+  it("applies master soundscape presets including acoustic EQ and reverb", () => {
+    expect(SOUNDSCAPE_PRESETS.cathedral_study).toBeDefined();
+    expect(SOUNDSCAPE_PRESETS.cathedral_study.acoustic).toBe("cathedral");
+    expect(SOUNDSCAPE_PRESETS.blizzard_cabin).toBeDefined();
+    expect(SOUNDSCAPE_PRESETS.blizzard_cabin.acoustic).toBe("cabin");
+
+    const manager = new AmbientSoundscapeManager();
+    manager.applyPreset("cathedral_study");
+    expect(manager.getMasterEQ()).toEqual({ bass: 1, mid: 2, treble: 3 });
+    expect(manager.getMasterReverb().preset).toBe("cathedral");
+  });
+
+  it("encodes and decodes soundscape codes with EQ and reverb preserving backward compatibility", () => {
+    // 1. With EQ and Reverb
+    const preset = {
+      name: "大教堂古典",
+      tracks: { pencil: 0.3, rain: 0.2 },
+      pans: { pencil: 0.35, rain: -0.5 },
+      eq: { bass: 2, mid: 1, treble: 3 },
+      reverb: { preset: "cathedral", wet: 0.28 },
+    };
+    const code = encodeSoundscapeCode(preset);
+    expect(code.startsWith("sc_")).toBe(true);
+
+    const decoded = decodeSoundscapeCode(code);
+    expect(decoded.name).toBe("大教堂古典");
+    expect(decoded.tracks.pencil).toBe(30);
+    expect(decoded.tracks.rain).toBe(20);
+    expect(decoded.pans.pencil).toBe(0.35);
+    expect(decoded.pans.rain).toBe(-0.5);
+    expect(decoded.eq).toEqual({ bass: 2, mid: 1, treble: 3 });
+    expect(decoded.reverb).toEqual({ preset: "cathedral", wet: 0.28 });
+
+    // 2. Legacy code without EQ/Reverb
+    const legacyPreset = {
+      name: "傳統音景",
+      tracks: { wind: 0.4 },
+      pans: { wind: -0.2 },
+    };
+    const legacyCode = encodeSoundscapeCode(legacyPreset);
+    const legacyDecoded = decodeSoundscapeCode(legacyCode);
+    expect(legacyDecoded.name).toBe("傳統音景");
+    expect(legacyDecoded.tracks.wind).toBe(40);
+    expect(legacyDecoded.eq).toBeNull();
+    expect(legacyDecoded.reverb).toBeNull();
+  });
 });

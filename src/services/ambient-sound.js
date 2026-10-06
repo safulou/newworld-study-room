@@ -62,6 +62,26 @@ export const SOUNDSCAPE_PRESETS = {
     tracks: { keyboard: 0.28, pencil: 0.25, rain: 0.15 },
     pans: { keyboard: -0.45, pencil: 0.45, rain: -0.65 },
   },
+  cathedral_study: {
+    id: "cathedral_study",
+    name: "大教堂古典研讀",
+    icon: "sparkles",
+    tracks: { pencil: 0.28, rain: 0.18, binaural_alpha: 0.2 },
+    pans: { pencil: 0.35, rain: -0.5, binaural_alpha: 0 },
+    acoustic: "cathedral",
+    eq: { bass: 1, mid: 2, treble: 3 },
+    reverb: { preset: "cathedral", wet: 0.3 },
+  },
+  blizzard_cabin: {
+    id: "blizzard_cabin",
+    name: "暴風雪暖爐小木屋",
+    icon: "flame",
+    tracks: { wind: 0.38, campfire: 0.32, pink_noise: 0.2 },
+    pans: { wind: -0.65, campfire: 0.6, pink_noise: 0 },
+    acoustic: "cabin",
+    eq: { bass: 3, mid: 0, treble: -1 },
+    reverb: { preset: "cabin", wet: 0.35 },
+  },
 };
 
 export const SPATIAL_SCENARIOS = {
@@ -852,6 +872,15 @@ export class AmbientSoundscapeManager {
     const preset = SOUNDSCAPE_PRESETS[presetId];
     if (!preset) return [];
 
+    if (preset.eq) {
+      this.setMasterEQ(preset.eq);
+    }
+    if (preset.reverb) {
+      this.setMasterReverb(preset.reverb);
+    } else if (preset.acoustic) {
+      this.applyAcousticPreset(preset.acoustic);
+    }
+
     return this.applyTrackMix(preset.tracks, preset.pans);
   }
 
@@ -894,6 +923,20 @@ export function encodeSoundscapeCode(preset) {
   if (Object.keys(cleanTracks).length === 0) return "";
 
   const payload = { n: name, t: cleanTracks, p: cleanPans };
+  if (preset.eq && typeof preset.eq === "object") {
+    payload.eq = {
+      b: Math.max(-12, Math.min(12, Math.round(Number(preset.eq.bass) || 0))),
+      m: Math.max(-12, Math.min(12, Math.round(Number(preset.eq.mid) || 0))),
+      t: Math.max(-12, Math.min(12, Math.round(Number(preset.eq.treble) || 0))),
+    };
+  }
+  if (preset.reverb && typeof preset.reverb === "object") {
+    payload.rv = {
+      p: String(preset.reverb.preset || "bypass").slice(0, 16),
+      w: Math.max(0, Math.min(100, Math.round((Number(preset.reverb.wet) || 0) * 100))),
+    };
+  }
+
   try {
     const jsonStr = JSON.stringify(payload);
     const bytes = new TextEncoder().encode(jsonStr);
@@ -908,7 +951,7 @@ export function encodeSoundscapeCode(preset) {
 /**
  * Decode and validate a soundscape code into a clean preset object
  * @param {string} code
- * @returns {{ name: string, tracks: Object, pans: Object } | null}
+ * @returns {{ name: string, tracks: Object, pans: Object, eq?: Object, reverb?: Object } | null}
  */
 export function decodeSoundscapeCode(code) {
   if (!code || typeof code !== "string") return null;
@@ -949,8 +992,29 @@ export function decodeSoundscapeCode(code) {
       }
     });
 
+    let eq = null;
+    const rawEq = parsed.eq || parsed.e;
+    if (rawEq && typeof rawEq === "object") {
+      eq = {
+        bass: Math.max(-12, Math.min(12, Math.round(Number(rawEq.b ?? rawEq.bass ?? 0)))),
+        mid: Math.max(-12, Math.min(12, Math.round(Number(rawEq.m ?? rawEq.mid ?? 0)))),
+        treble: Math.max(-12, Math.min(12, Math.round(Number(rawEq.t ?? rawEq.treble ?? 0)))),
+      };
+    }
+
+    let reverb = null;
+    const rawRv = parsed.rv || parsed.reverb;
+    if (rawRv && typeof rawRv === "object") {
+      const p = String(rawRv.p ?? rawRv.preset ?? "bypass");
+      const w = Number(rawRv.w !== undefined ? rawRv.w / 100 : (rawRv.wet ?? 0));
+      reverb = {
+        preset: ["bypass", "cabin", "library", "cathedral"].includes(p) ? p : "custom",
+        wet: Math.max(0, Math.min(1, Math.round(w * 100) / 100)),
+      };
+    }
+
     if (Object.keys(tracks).length === 0) return null;
-    return { name, tracks, pans };
+    return { name, tracks, pans, eq, reverb };
   } catch {
     return null;
   }

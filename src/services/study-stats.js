@@ -589,6 +589,97 @@ export class StudyStatsManager {
       },
     ];
   }
+
+  getFlowMomentum(todaySessions = null) {
+    const sessions = todaySessions || this.getTodaySessions();
+    const totalMinutes = sessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+    const sessionCount = sessions.length;
+    const flowCount = sessions.filter((s) => s.rating === "flow").length;
+    const flowRate = sessionCount > 0 ? Math.round((flowCount / sessionCount) * 100) : 0;
+
+    // Base minutes points (0 ~ 50 points: 100 mins reach max base)
+    const basePoints = Math.min(50, totalMinutes * 0.5);
+    // Consistency count points (0 ~ 25 points: 4 sessions reach max)
+    const countPoints = Math.min(25, sessionCount * 6.5);
+    // Flow depth points (0 ~ 25 points based on % of flow sessions)
+    const depthPoints = Math.round(flowRate * 0.25);
+
+    const score = Math.min(100, Math.round(basePoints + countPoints + depthPoints));
+
+    let tier = "dormant";
+    let levelName = "蓄勢待發";
+    let icon = "☕";
+    let quote = "準備就緒，隨時開啟今日心流之旅。";
+    let recommendedBreak = 5;
+
+    if (score >= 80) {
+      tier = "hyper_focus";
+      levelName = "深度超頻";
+      icon = "🌊";
+      quote = "心流狀態極致充沛，靈感泉湧不止！";
+      recommendedBreak = 15;
+    } else if (score >= 55) {
+      tier = "peak_flow";
+      levelName = "巔峰心流";
+      icon = "🔥";
+      quote = "專注勢能旺盛，眼前挑戰迎刃而解！";
+      recommendedBreak = 10;
+    } else if (score >= 30) {
+      tier = "steady_flow";
+      levelName = "穩步爬升";
+      icon = "⚡";
+      quote = "專注節奏正佳，保持當前勢頭推進。";
+      recommendedBreak = 5;
+    } else if (score >= 10) {
+      tier = "warming_up";
+      levelName = "初入狀態";
+      icon = "🌱";
+      quote = "熱身完畢，大腦引擎漸入佳境。";
+      recommendedBreak = 5;
+    }
+
+    return {
+      score,
+      tier,
+      levelName,
+      icon,
+      quote,
+      recommendedBreak,
+      totalMinutes,
+      sessionCount,
+      flowRate,
+    };
+  }
+
+  getSmartBreakRecommendation(lastSession = null, todaySessions = null) {
+    const momentum = this.getFlowMomentum(todaySessions);
+    const duration = lastSession?.durationMinutes || 25;
+    const rating = lastSession?.rating || "flow";
+
+    let recommendedMinutes;
+    let reason;
+
+    if (momentum.totalMinutes >= 180) {
+      recommendedMinutes = 15;
+      reason = "今日專注已超過 3 小時，強烈建議站立活動伸展放鬆 🚶";
+    } else if (duration >= 45 || rating === "flow") {
+      recommendedMinutes = 10;
+      reason = "深度心流後大腦耗能較高，建議 10 分鐘護眼放鬆 💧";
+    } else if (duration <= 15 || rating === "warmup") {
+      recommendedMinutes = 3;
+      reason = "短衝刺熱身，建議 3 分鐘敏捷換氣維持專注動力 ⚡";
+    } else {
+      recommendedMinutes = 5;
+      reason = "標準番茄節奏，補充水分準備迎接下一輪 🍵";
+    }
+
+    return {
+      recommendedMinutes,
+      reason,
+      momentumScore: momentum.score,
+      momentumTier: momentum.tier,
+    };
+  }
 }
 
 export const PLANT_BOTANICAL_SPECIES = {

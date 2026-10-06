@@ -158,6 +158,9 @@ function defaultStandeeTexture() {
   return texture;
 }
 
+import { AFFINITY_AURAS, getUnlockedAura } from "../state/store.js";
+export { AFFINITY_AURAS, getUnlockedAura };
+
 export class DollViewer {
   constructor(canvas, container) {
     this.canvas = canvas;
@@ -212,6 +215,8 @@ export class DollViewer {
     this.currentLookPitch = 0;
     this.onWindowPointerMove = null;
     this.onWindowPointerLeave = null;
+    this.auraGroup = null;
+    this.currentAura = "none";
     this.init();
   }
 
@@ -477,6 +482,10 @@ export class DollViewer {
     this.scanRing.rotation.x = Math.PI / 2;
     this.scanRing.visible = false;
     this.doll.add(this.scanRing);
+
+    this.auraGroup = new THREE.Group();
+    this.auraGroup.visible = false;
+    this.doll.add(this.auraGroup);
 
     this.pedestal = new THREE.Mesh(
       new THREE.CylinderGeometry(0.82, 0.94, 0.16, 48),
@@ -883,6 +892,88 @@ export class DollViewer {
     if (this.catGroup) this.catGroup.visible = Boolean(cat);
   }
 
+  setAffinityAura(auraType = "none") {
+    this.currentAura = auraType;
+    if (!this.auraGroup) return;
+
+    while (this.auraGroup.children.length > 0) {
+      const child = this.auraGroup.children[0];
+      this.auraGroup.remove(child);
+      if (child.geometry) child.geometry.dispose();
+      if (child.material) child.material.dispose();
+    }
+
+    if (!auraType || auraType === "none" || !AFFINITY_AURAS[auraType]) {
+      this.auraGroup.visible = false;
+      return;
+    }
+
+    this.auraGroup.visible = true;
+    const config = AFFINITY_AURAS[auraType];
+
+    if (auraType === "warm_glow") {
+      const geo = new THREE.TorusGeometry(0.72, 0.032, 12, 48);
+      const mat = new THREE.MeshBasicMaterial({ color: config.color, transparent: true, opacity: 0.75 });
+      const ring = new THREE.Mesh(geo, mat);
+      ring.rotation.x = Math.PI / 2.2;
+      ring.position.set(0, 0.85, 0);
+      this.auraGroup.add(ring);
+    } else if (auraType === "starlight") {
+      const geo = new THREE.TorusGeometry(0.55, 0.024, 12, 48);
+      const mat = new THREE.MeshBasicMaterial({ color: config.color, transparent: true, opacity: 0.85 });
+      const ring = new THREE.Mesh(geo, mat);
+      ring.rotation.x = Math.PI / 2.3;
+      ring.rotation.z = 0.2;
+      ring.position.set(0, 2.15, 0);
+      this.auraGroup.add(ring);
+
+      const starGeo = new THREE.OctahedronGeometry(0.06, 0);
+      const starMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95 });
+      for (let i = 0; i < 4; i++) {
+        const star = new THREE.Mesh(starGeo, starMat);
+        const angle = (i * Math.PI) / 2;
+        star.position.set(Math.cos(angle) * 0.55, 2.15, Math.sin(angle) * 0.55);
+        this.auraGroup.add(star);
+      }
+    } else if (auraType === "aurora") {
+      const geo1 = new THREE.TorusGeometry(0.6, 0.026, 12, 48);
+      const mat1 = new THREE.MeshBasicMaterial({ color: config.color, transparent: true, opacity: 0.8 });
+      const ring1 = new THREE.Mesh(geo1, mat1);
+      ring1.rotation.x = Math.PI / 2.4;
+      ring1.rotation.y = 0.3;
+      ring1.position.set(0, 2.1, 0);
+
+      const geo2 = new THREE.TorusGeometry(0.52, 0.022, 12, 48);
+      const mat2 = new THREE.MeshBasicMaterial({
+        color: config.secondaryColor,
+        transparent: true,
+        opacity: 0.75,
+      });
+      const ring2 = new THREE.Mesh(geo2, mat2);
+      ring2.rotation.x = Math.PI / 1.9;
+      ring2.rotation.z = -0.35;
+      ring2.position.set(0, 2.18, 0);
+
+      this.auraGroup.add(ring1, ring2);
+    } else if (auraType === "crown") {
+      const ringGeo = new THREE.TorusGeometry(0.58, 0.038, 12, 48);
+      const ringMat = new THREE.MeshBasicMaterial({ color: config.color, transparent: true, opacity: 0.9 });
+      const mainRing = new THREE.Mesh(ringGeo, ringMat);
+      mainRing.rotation.x = Math.PI / 2;
+      mainRing.position.set(0, 2.2, 0);
+      this.auraGroup.add(mainRing);
+
+      const rayGeo = new THREE.ConeGeometry(0.045, 0.16, 8);
+      const rayMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95 });
+      for (let i = 0; i < 6; i++) {
+        const ray = new THREE.Mesh(rayGeo, rayMat);
+        const angle = (i * Math.PI) / 3;
+        ray.position.set(Math.cos(angle) * 0.58, 2.28, Math.sin(angle) * 0.58);
+        this.auraGroup.add(ray);
+      }
+    }
+  }
+
   resize() {
     const width = Math.max(1, this.container.clientWidth);
     const height = Math.max(1, this.container.clientHeight);
@@ -1077,6 +1168,11 @@ export class DollViewer {
     if (this.scanRing.visible) {
       this.scanRing.position.y = Math.sin(elapsed * 2.7) * 1.15 + 0.18;
       this.scanMaterial.opacity = 0.45 + Math.sin(elapsed * 5) * 0.2;
+    }
+    if (this.auraGroup && this.auraGroup.visible && !this.reducedMotion) {
+      this.auraGroup.rotation.y += 0.012;
+      const breathe = Math.sin(elapsed * 2.4) * 0.035;
+      this.auraGroup.scale.set(1 + breathe, 1 + breathe, 1 + breathe);
     }
     this.renderer.render(this.scene, this.camera);
   }

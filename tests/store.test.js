@@ -233,4 +233,29 @@ describe("room-scoped store", () => {
     expect(rankMax.title).toBe("靈魂旅伴");
     expect(rankMax.progressPercent).toBe(100);
   });
+
+  it("sanitizes companionAura and stores custom presets with eq/reverb", () => {
+    const store = createStore({ roomId: "room-b", includeStarterTips: false });
+    expect(store.get().companionAura).toBe("auto");
+
+    store.update({ companionAura: "starlight" });
+    expect(store.get().companionAura).toBe("starlight");
+
+    store.update({ companionAura: "invalid_aura" });
+    expect(store.get().companionAura).toBe("auto");
+
+    const customPreset = {
+      id: "p1",
+      name: "雨夜古典",
+      tracks: { rain: 0.4 },
+      pans: { rain: -0.2 },
+      eq: { bass: 2, mid: -1, treble: 3 },
+      reverb: { preset: "cathedral", wet: 0.25 },
+    };
+    store.update({ customPresets: [customPreset] });
+    const stored = store.get().customPresets[0];
+    expect(stored.name).toBe("雨夜古典");
+    expect(stored.eq).toEqual({ bass: 2, mid: -1, treble: 3 });
+    expect(stored.reverb).toEqual({ preset: "cathedral", wet: 0.25 });
+  });
 });

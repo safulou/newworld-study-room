@@ -306,4 +306,46 @@ describe("StudyStatsManager Service", () => {
     const weekReport = stats.exportExecutiveMarkdownReport("Lina", [], { range: "week", now });
     expect(weekReport).toContain("心流復盤報告（近 7 天）");
   });
+
+  it("calculates flow momentum gauge and adaptive smart break recommendations", () => {
+    // 1. Dormant momentum (no sessions)
+    const emptyMomentum = stats.getFlowMomentum([]);
+    expect(emptyMomentum.score).toBe(0);
+    expect(emptyMomentum.tier).toBe("dormant");
+    expect(emptyMomentum.levelName).toBe("蓄勢待發");
+
+    // 2. High momentum
+    const activeSessions = [
+      { durationMinutes: 50, rating: "flow" },
+      { durationMinutes: 50, rating: "flow" },
+      { durationMinutes: 25, rating: "flow" },
+    ];
+    const highMomentum = stats.getFlowMomentum(activeSessions);
+    expect(highMomentum.totalMinutes).toBe(125);
+    expect(highMomentum.sessionCount).toBe(3);
+    expect(highMomentum.flowRate).toBe(100);
+    expect(highMomentum.score).toBeGreaterThanOrEqual(80);
+    expect(highMomentum.tier).toBe("hyper_focus");
+    expect(highMomentum.levelName).toBe("深度超頻");
+
+    // 3. Smart break recommendation for deep session
+    const recDeep = stats.getSmartBreakRecommendation({ durationMinutes: 50, rating: "flow" }, activeSessions);
+    expect(recDeep.recommendedMinutes).toBe(10);
+    expect(recDeep.reason).toContain("深度心流後");
+
+    // 4. Smart break recommendation for short sprint
+    const recSprint = stats.getSmartBreakRecommendation({ durationMinutes: 15, rating: "warmup" }, activeSessions);
+    expect(recSprint.recommendedMinutes).toBe(3);
+    expect(recSprint.reason).toContain("短衝刺熱身");
+
+    // 5. Smart break recommendation for marathon session (> 180 min total)
+    const longDaySessions = [
+      { durationMinutes: 60, rating: "flow" },
+      { durationMinutes: 60, rating: "flow" },
+      { durationMinutes: 65, rating: "steady" },
+    ];
+    const recMarathon = stats.getSmartBreakRecommendation({ durationMinutes: 65, rating: "steady" }, longDaySessions);
+    expect(recMarathon.recommendedMinutes).toBe(15);
+    expect(recMarathon.reason).toContain("超過 3 小時");
+  });
 });
