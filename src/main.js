@@ -452,6 +452,23 @@ const elements = {
   clockworkTickSound: $("#clockworkTickSound"),
   clockworkTickVolume: $("#clockworkTickVolume"),
   clockworkTickVolumeValue: $("#clockworkTickVolumeValue"),
+
+  // Cabin Atmosphere Mood
+  cabinAtmosphereMood: $("#cabinAtmosphereMood"),
+
+  // Historical Session Retrospective Editor Modal
+  sessionEditModal: $("#sessionEditModal"),
+  closeSessionEdit: $("#closeSessionEdit"),
+  sessionEditForm: $("#sessionEditForm"),
+  sessionEditId: $("#sessionEditId"),
+  sessionEditTaskTitle: $("#sessionEditTaskTitle"),
+  sessionEditNote: $("#sessionEditNote"),
+  sessionEditCategory: $("#sessionEditCategory"),
+  sessionEditRatingGroup: $("#sessionEditRatingGroup"),
+  sessionRatingPills: [...document.querySelectorAll(".session-rating-pill")],
+  btnCancelSessionEdit: $("#btnCancelSessionEdit"),
+  btnSaveSessionEdit: $("#btnSaveSessionEdit"),
+  sessionEditSubtitle: $("#sessionEditSubtitle"),
 };
 
 const store = createStore({
@@ -1063,6 +1080,24 @@ function renderSessionTimeline() {
       showToast(`已將此記錄調整為「${ratingBadges[nextRating].label}」！`);
     });
 
+    const noteEl = item.querySelector(".timeline-note");
+    if (noteEl) {
+      noteEl.style.cursor = "pointer";
+      noteEl.addEventListener("click", () => {
+        openSessionEditModal(session);
+      });
+    }
+
+    const editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.className = "timeline-edit-btn";
+    editBtn.title = "編輯此筆專注任務與心得筆記";
+    editBtn.setAttribute("aria-label", "編輯此筆專注記錄");
+    editBtn.innerHTML = "✏️";
+    editBtn.addEventListener("click", () => {
+      openSessionEditModal(session);
+    });
+
     const delBtn = document.createElement("button");
     delBtn.type = "button";
     delBtn.className = "timeline-del-btn";
@@ -1080,12 +1115,88 @@ function renderSessionTimeline() {
       }
     });
 
-    item.append(delBtn);
+    item.append(editBtn, delBtn);
     elements.sessionTimelineList.append(item);
   });
 }
 
+let currentEditingSessionId = null;
+let currentEditingRating = "flow";
+
+function openSessionEditModal(session) {
+  if (!elements.sessionEditModal) return;
+  currentEditingSessionId = session.id;
+  currentEditingRating = session.rating || "flow";
+
+  if (elements.sessionEditId) elements.sessionEditId.value = session.id;
+  if (elements.sessionEditTaskTitle) elements.sessionEditTaskTitle.value = session.taskTitle || "";
+  if (elements.sessionEditNote) elements.sessionEditNote.value = session.note || "";
+  if (elements.sessionEditCategory) elements.sessionEditCategory.value = session.category || "dev";
+
+  if (elements.sessionEditSubtitle) {
+    const timeStr = session.timestamp
+      ? new Date(session.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : "";
+    const dateStr = session.date || "";
+    elements.sessionEditSubtitle.textContent = `${dateStr} ${timeStr} · ${session.durationMinutes} 分鐘專注`;
+  }
+
+  elements.sessionRatingPills?.forEach((pill) => {
+    pill.classList.toggle("active", pill.dataset.rating === currentEditingRating);
+  });
+
+  elements.sessionEditModal.showModal();
+}
+
+let sessionEditBound = false;
+function bindSessionEditModal() {
+  if (sessionEditBound) return;
+  sessionEditBound = true;
+
+  elements.closeSessionEdit?.addEventListener("click", () => {
+    elements.sessionEditModal?.close();
+  });
+
+  elements.btnCancelSessionEdit?.addEventListener("click", () => {
+    elements.sessionEditModal?.close();
+  });
+
+  elements.sessionRatingPills?.forEach((pill) => {
+    pill.addEventListener("click", () => {
+      currentEditingRating = pill.dataset.rating || "flow";
+      elements.sessionRatingPills.forEach((p) => p.classList.toggle("active", p === pill));
+    });
+  });
+
+  elements.sessionEditForm?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!currentEditingSessionId) return;
+
+    const taskTitle = elements.sessionEditTaskTitle?.value?.trim() || "";
+    const note = elements.sessionEditNote?.value?.trim() || "";
+    const category = elements.sessionEditCategory?.value || "dev";
+    const rating = currentEditingRating || "flow";
+
+    const updated = studyStats.updateSession(currentEditingSessionId, {
+      taskTitle,
+      note,
+      category,
+      rating,
+    });
+
+    if (updated) {
+      renderStats();
+      if (elements.herbariumModal?.open) {
+        renderHerbarium();
+      }
+      elements.sessionEditModal?.close();
+      showToast("專注記錄與複盤筆記已更新！✏️");
+    }
+  });
+}
+
 function bindStatsTimeline() {
+  bindSessionEditModal();
   elements.timelineRangeChips?.forEach((chip) => {
     chip.addEventListener("click", () => {
       timelineFilter.range = chip.dataset.range || "today";
@@ -1245,6 +1356,28 @@ function updateAtmosphere(mode = "auto") {
   };
   if (elements.toggleAtmosphere) elements.toggleAtmosphere.title = labels[mode] || labels.auto;
   syncWeatherAtmosphere();
+  applyCabinMood();
+}
+
+function applyCabinMood() {
+  const setting = store.get().cabinAtmosphereMood || "auto";
+  let resolvedMood = setting;
+  if (setting === "auto") {
+    const isRunning = Boolean(timer?.interval);
+    if (isRunning && timer?.mode === "focus") {
+      resolvedMood = "amber";
+    } else if (isRunning && (timer?.mode === "shortBreak" || timer?.mode === "longBreak")) {
+      resolvedMood = "emerald";
+    } else {
+      const hour = new Date().getHours();
+      if (hour >= 20 || hour < 6) {
+        resolvedMood = "violet";
+      } else {
+        resolvedMood = "noir";
+      }
+    }
+  }
+  document.body.dataset.cabinMood = resolvedMood;
 }
 
 function clampProgress(value) {
@@ -1314,6 +1447,10 @@ function renderState(state) {
       elements.clockworkTickVolumeValue.textContent = `${volPct}%`;
     }
   }
+  if (elements.cabinAtmosphereMood && document.activeElement !== elements.cabinAtmosphereMood) {
+    elements.cabinAtmosphereMood.value = state.cabinAtmosphereMood || "auto";
+  }
+  applyCabinMood();
   if (elements.pillShortBreakText) {
     elements.pillShortBreakText.textContent = `☕ 短休 ${state.shortBreakMinutes}m`;
   }
@@ -1805,6 +1942,7 @@ function bindTimer() {
     }
     updateTimerModeUI(event.detail.mode, event.detail.cycleRound);
     broadcastTimerSyncIfHost();
+    applyCabinMood();
   });
 
   timer.addEventListener("running", (event) => {
@@ -1813,6 +1951,7 @@ function bindTimer() {
     const pauseTitle = isFocus ? "暫停專注" : "暫停休息";
     replaceButtonIcon(elements.toggleTimer, event.detail ? "pause" : "play", event.detail ? pauseTitle : playTitle);
     broadcastTimerSyncIfHost();
+    applyCabinMood();
 
     elements.timer.classList.toggle("paused", !event.detail && timer.remaining > 0);
     if (!event.detail) {
@@ -1888,6 +2027,7 @@ function bindTimer() {
 
     if (timer.mode === "focus") {
       viewer?.setTimerState("completed");
+      viewer?.triggerCheer?.();
       companionSound.playCompletionChime(store.get().completionChime || "fanfare");
 
       const activeTasks = taskTracker.getActiveTasks();
@@ -1947,6 +2087,7 @@ function bindTimer() {
         showToast("🚀 心流自動巡航：已自動開啟下一輪計時");
       }, 1200);
     }
+    applyCabinMood();
   });
 
   elements.timerModePills?.forEach((pill) => {
@@ -1977,6 +2118,7 @@ function bindTimer() {
     viewer?.setTimerState("idle");
     notificationManager.updateTitle({ remaining: null, isRunning: false });
     broadcastTimerSyncIfHost();
+    applyCabinMood();
   });
 }
 
@@ -3783,6 +3925,20 @@ function bindSettings() {
       });
     }
   });
+  elements.cabinAtmosphereMood?.addEventListener("change", () => {
+    const val = elements.cabinAtmosphereMood.value;
+    store.update({ cabinAtmosphereMood: val });
+    applyCabinMood();
+    const moodLabels = {
+      auto: "已切換為「自動感應光暈」（依專注/休息/晝夜動態漸變）✨",
+      amber: "已切換為「暖木琥珀」溫暖壁爐微光 🪵",
+      emerald: "已切換為「山嵐翡翠」靜謐林間甘泉 🍵",
+      violet: "已切換為「星暮紫韻」深空沉靜暮光 🌌",
+      rose: "已切換為「夕照粉櫻」柔和晚霞櫻染 🌸",
+      noir: "已切換為「經典暗夜」深邃沉穩原木 🌙",
+    };
+    showToast(moodLabels[val] || "已更新木屋氛圍光暈");
+  });
   elements.plantType.addEventListener("change", () => {
     lastGardenStage = "";
     store.update({ plantType: elements.plantType.value });
@@ -4636,6 +4792,33 @@ async function startViewer() {
       companionSound.playCelebrationFanfare();
       showCompanionBubble("哇～旋轉大跳躍！今天的精神滿分！💫🌟", 3600);
       showToast("解鎖伴讀玩偶 360° 開心旋轉！🎉");
+    };
+    viewer.onMicroEmote = (emoteType) => {
+      wakeUpDoll();
+      const now = Date.now();
+      if (now - lastAffinityInteractionTime.pet > 3000) {
+        lastAffinityInteractionTime.pet = now;
+        addAffinityExp(2, "夥伴微動作互動");
+      }
+      if (emoteType === "wave") {
+        companionSound.playGreetingWave();
+        const waveQuotes = [
+          "揮揮小手～嗨！今天也要精神滿滿地前進喔！👋✨",
+          "向你招手！專注的每一步，我都看在眼裡呢～🌸",
+          "揮手致意！小木屋今天也很溫暖，我們一起加油！🎒",
+        ];
+        const quote = waveQuotes[Math.floor(Math.random() * waveQuotes.length)];
+        showCompanionBubble(quote, 3200);
+      } else {
+        companionSound.playAffirmativeNod();
+        const nodQuotes = [
+          "點點頭～你做得很棒，節奏掌握得剛剛好！🌱✨",
+          "肯定地點頭！只要按部就班，一切都會順利的～🍵",
+          "嗯嗯！專注在當下就好，深呼吸繼續推進！💪",
+        ];
+        const quote = nodQuotes[Math.floor(Math.random() * nodQuotes.length)];
+        showCompanionBubble(quote, 3200);
+      }
     };
     viewer.onPet = (x, y) => {
       companionSound.playPettingPurr();

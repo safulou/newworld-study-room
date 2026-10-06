@@ -202,6 +202,8 @@ export class DollViewer {
     this.spinStartTime = 0;
     this.lastSpinAngle = 0;
     this.onJoySpin = null;
+    this.currentEmote = null;
+    this.onMicroEmote = null;
     this.isPetting = false;
     this.petEndTime = 0;
     this.petStrokeCount = 0;
@@ -622,6 +624,14 @@ export class DollViewer {
             this.consecutiveTaps = 0;
             this.triggerJoySpin();
             this.onJoySpin?.();
+          } else if (this.consecutiveTaps === 2) {
+            const emoteType = Math.random() < 0.6 ? "wave" : "nod";
+            if (emoteType === "wave") {
+              this.triggerWave();
+            } else {
+              this.triggerNod();
+            }
+            this.onMicroEmote?.(emoteType);
           } else {
             this.triggerBounce();
             this.onTap?.();
@@ -678,6 +688,35 @@ export class DollViewer {
   triggerJoySpin() {
     this.spinStartTime = performance.now();
     this.lastSpinAngle = 0;
+    this.triggerBounce();
+  }
+
+  triggerWave({ side = "right", duration = 1300 } = {}) {
+    this.currentEmote = {
+      type: "wave",
+      startTime: performance.now(),
+      duration,
+      side,
+    };
+    this.lastFaceMode = null;
+  }
+
+  triggerNod({ duration = 1100 } = {}) {
+    this.currentEmote = {
+      type: "nod",
+      startTime: performance.now(),
+      duration,
+    };
+    this.lastFaceMode = null;
+  }
+
+  triggerCheer({ duration = 1500 } = {}) {
+    this.currentEmote = {
+      type: "cheer",
+      startTime: performance.now(),
+      duration,
+    };
+    this.lastFaceMode = null;
     this.triggerBounce();
   }
 
@@ -999,9 +1038,15 @@ export class DollViewer {
     this.currentLookYaw += (lookTargetYaw - this.currentLookYaw) * lerpFactor;
     this.currentLookPitch += (lookTargetPitch - this.currentLookPitch) * lerpFactor;
 
-    // Procedural facial expressions: petting / joy, sleeping, blinking, or open with gaze tracking
+    // Procedural facial expressions: micro-emote / petting / joy, sleeping, blinking, or open with gaze tracking
     if (!this.currentPhoto && this.faceContext && !this.reducedMotion) {
-      if (this.isPetting && now < this.petEndTime) {
+      if (this.currentEmote && now < this.currentEmote.startTime + this.currentEmote.duration) {
+        if (this.lastFaceMode !== "joy") {
+          drawDollFace(this.faceContext, "joy");
+          this.defaultTexture.needsUpdate = true;
+          this.lastFaceMode = "joy";
+        }
+      } else if (this.isPetting && now < this.petEndTime) {
         if (this.lastFaceMode !== "joy") {
           drawDollFace(this.faceContext, "joy");
           this.defaultTexture.needsUpdate = true;
@@ -1046,11 +1091,15 @@ export class DollViewer {
         }
       } else if (
         this.lastFaceMode !== "open" &&
+        (!this.currentEmote || now >= this.currentEmote.startTime + this.currentEmote.duration) &&
         (!this.isPetting || now >= this.petEndTime) &&
         !this.isSleeping &&
         !this.isBlinking
       ) {
         this.isPetting = false;
+        if (this.currentEmote && now >= this.currentEmote.startTime + this.currentEmote.duration) {
+          this.currentEmote = null;
+        }
         drawDollFace(this.faceContext, "open", this.currentLookYaw, this.currentLookPitch);
         this.defaultTexture.needsUpdate = true;
         this.lastFaceMode = "open";
@@ -1115,7 +1164,51 @@ export class DollViewer {
     }
     this.doll.position.y = basePosY;
 
-    if (this.celebrationStartTime && performance.now() - this.celebrationStartTime < 6000) {
+    if (this.currentEmote && now < this.currentEmote.startTime + this.currentEmote.duration && !this.reducedMotion) {
+      const emote = this.currentEmote;
+      const elapsedEmote = (now - emote.startTime) / 1000;
+      if (emote.type === "wave") {
+        const waveSwing = Math.sin(elapsedEmote * 16) * 0.42;
+        const isRight = emote.side !== "left";
+        const wavingArm = isRight ? this.arms?.[1] : this.arms?.[0];
+        const idleArm = isRight ? this.arms?.[0] : this.arms?.[1];
+
+        if (wavingArm) {
+          wavingArm.rotation.z = (isRight ? 1.35 : -1.35) + waveSwing;
+          wavingArm.rotation.x = 0.25;
+        }
+        if (idleArm) {
+          idleArm.rotation.z = isRight ? -0.48 : 0.48;
+          idleArm.rotation.x = 0;
+        }
+        if (this.head) {
+          this.head.rotation.z = Math.sin(elapsedEmote * 8) * 0.08;
+          this.head.rotation.x = -0.05;
+        }
+      } else if (emote.type === "nod") {
+        const nodSwing = Math.sin(elapsedEmote * 12) * 0.22;
+        if (this.head) {
+          this.head.rotation.x = 0.14 + nodSwing;
+          this.head.rotation.z = 0;
+        }
+        if (this.arms && this.arms.length === 2) {
+          this.arms[0].rotation.set(0, 0, -0.48);
+          this.arms[1].rotation.set(0, 0, 0.48);
+        }
+      } else if (emote.type === "cheer") {
+        const cheerSwing = Math.sin(elapsedEmote * 14) * 0.25;
+        if (this.arms && this.arms.length === 2) {
+          this.arms[0].rotation.z = -1.25 + cheerSwing;
+          this.arms[0].rotation.x = 0.3;
+          this.arms[1].rotation.z = 1.25 - cheerSwing;
+          this.arms[1].rotation.x = 0.3;
+        }
+        if (this.head) {
+          this.head.rotation.x = -0.15;
+          this.head.rotation.z = 0;
+        }
+      }
+    } else if (this.celebrationStartTime && performance.now() - this.celebrationStartTime < 6000) {
       const wave = Math.sin(elapsed * 9) * 0.38;
       if (this.arms && this.arms.length === 2) {
         this.arms[0].rotation.z = -0.85 + wave;
@@ -1145,6 +1238,9 @@ export class DollViewer {
         this.head.rotation.x = -0.08 + stretch * 0.3;
       }
     } else {
+      if (this.currentEmote && now >= this.currentEmote.startTime + this.currentEmote.duration) {
+        this.currentEmote = null;
+      }
       if (this.arms && this.arms.length === 2) {
         this.arms[0].rotation.z = -0.48;
         this.arms[0].rotation.x = 0;
@@ -1153,6 +1249,7 @@ export class DollViewer {
       }
       if (this.head) {
         this.head.rotation.x = 0;
+        this.head.rotation.z = 0;
       }
     }
 

@@ -63,6 +63,12 @@ export class StudyStatsManager {
     if (updates.note !== undefined) {
       entry.note = String(updates.note || "").slice(0, 100);
     }
+    if (updates.taskTitle !== undefined) {
+      entry.taskTitle = String(updates.taskTitle || "").slice(0, 60);
+    }
+    if (updates.category !== undefined && FOCUS_CATEGORIES[updates.category]) {
+      entry.category = updates.category;
+    }
     this.saveHistory();
     return entry;
   }

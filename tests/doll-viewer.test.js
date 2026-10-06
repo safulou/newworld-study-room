@@ -160,4 +160,32 @@ describe("drawDollFace", () => {
     fakeViewer.setAffinityAura("none");
     expect(fakeAuraGroup.visible).toBe(false);
   });
+
+  it("triggers wave, nod, and cheer micro-emotes", () => {
+    const fakeViewer = {
+      currentEmote: null,
+      lastFaceMode: "open",
+      triggerBounce: vi.fn(),
+    };
+    fakeViewer.triggerWave = DollViewer.prototype.triggerWave.bind(fakeViewer);
+    fakeViewer.triggerNod = DollViewer.prototype.triggerNod.bind(fakeViewer);
+    fakeViewer.triggerCheer = DollViewer.prototype.triggerCheer.bind(fakeViewer);
+
+    fakeViewer.triggerWave({ side: "left", duration: 1500 });
+    expect(fakeViewer.currentEmote).not.toBeNull();
+    expect(fakeViewer.currentEmote.type).toBe("wave");
+    expect(fakeViewer.currentEmote.side).toBe("left");
+    expect(fakeViewer.currentEmote.duration).toBe(1500);
+    expect(fakeViewer.lastFaceMode).toBeNull();
+
+    fakeViewer.triggerNod({ duration: 900 });
+    expect(fakeViewer.currentEmote.type).toBe("nod");
+    expect(fakeViewer.currentEmote.duration).toBe(900);
+    expect(fakeViewer.lastFaceMode).toBeNull();
+
+    fakeViewer.triggerCheer({ duration: 1200 });
+    expect(fakeViewer.currentEmote.type).toBe("cheer");
+    expect(fakeViewer.currentEmote.duration).toBe(1200);
+    expect(fakeViewer.triggerBounce).toHaveBeenCalled();
+  });
 });

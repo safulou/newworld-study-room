@@ -324,4 +324,27 @@ describe("room-scoped store", () => {
     expect(presets[1].name).toBe("Preset 1 副本");
     expect(presets[1].id).not.toBe("p1");
   });
+
+  it("sanitizes cabinAtmosphereMood setting", () => {
+    const store = createStore({ roomId: "room-c", includeStarterTips: false });
+    expect(store.get().cabinAtmosphereMood).toBe("auto");
+
+    store.update({ cabinAtmosphereMood: "amber" });
+    expect(store.get().cabinAtmosphereMood).toBe("amber");
+
+    store.update({ cabinAtmosphereMood: "emerald" });
+    expect(store.get().cabinAtmosphereMood).toBe("emerald");
+
+    store.update({ cabinAtmosphereMood: "violet" });
+    expect(store.get().cabinAtmosphereMood).toBe("violet");
+
+    store.update({ cabinAtmosphereMood: "rose" });
+    expect(store.get().cabinAtmosphereMood).toBe("rose");
+
+    store.update({ cabinAtmosphereMood: "noir" });
+    expect(store.get().cabinAtmosphereMood).toBe("noir");
+
+    store.update({ cabinAtmosphereMood: "invalid_mood" });
+    expect(store.get().cabinAtmosphereMood).toBe("auto");
+  });
 });

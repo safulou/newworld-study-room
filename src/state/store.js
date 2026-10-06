@@ -69,6 +69,7 @@ const profileDefaults = {
   syncWithHostSoundscape: false,
   clockworkTickSound: "off",
   clockworkTickVolume: 0.25,
+  cabinAtmosphereMood: "auto",
 };
 
 export const AFFINITY_RANKS = [
@@ -306,6 +307,9 @@ function sanitizeProfile(value = {}) {
       value.clockworkTickVolume !== undefined
         ? Math.max(0, Math.min(1, Number(value.clockworkTickVolume) || 0))
         : profileDefaults.clockworkTickVolume,
+    cabinAtmosphereMood: ["auto", "amber", "emerald", "violet", "rose", "noir"].includes(value.cabinAtmosphereMood)
+      ? value.cabinAtmosphereMood
+      : profileDefaults.cabinAtmosphereMood,
   };
 }
 

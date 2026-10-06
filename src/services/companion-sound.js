@@ -500,4 +500,66 @@ export class CompanionSoundManager {
       osc.stop(now + 0.04);
     }
   }
+
+  /**
+   * Play a bright, cheerful upward greeting chime for doll waving micro-emote
+   */
+  playGreetingWave() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const notes = [
+      { freq: 880.0, delay: 0.0, dur: 0.22 }, // A5
+      { freq: 1174.66, delay: 0.07, dur: 0.35 }, // D6
+      { freq: 1567.98, delay: 0.14, dur: 0.48 }, // G6
+    ];
+
+    notes.forEach(({ freq, delay, dur }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + delay);
+
+      const peak = 0.15 * this.volume;
+      gain.gain.setValueAtTime(0.0001, now + delay);
+      gain.gain.exponentialRampToValueAtTime(peak, now + delay + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + delay);
+      osc.stop(now + delay + dur + 0.05);
+    });
+  }
+
+  /**
+   * Play a warm marimba/wood double-tap tone for doll affirmative nod micro-emote
+   */
+  playAffirmativeNod() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const notes = [
+      { freq: 587.33, delay: 0.0, dur: 0.12 }, // D5
+      { freq: 783.99, delay: 0.09, dur: 0.18 }, // G5
+    ];
+
+    notes.forEach(({ freq, delay, dur }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, now + delay);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.7, now + delay + dur);
+
+      const peak = 0.14 * this.volume;
+      gain.gain.setValueAtTime(0.0001, now + delay);
+      gain.gain.linearRampToValueAtTime(peak, now + delay + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + delay);
+      osc.stop(now + delay + dur + 0.03);
+    });
+  }
 }

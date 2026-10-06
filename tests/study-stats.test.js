@@ -170,10 +170,17 @@ describe("StudyStatsManager Service", () => {
     expect(s.rating).toBe("steady");
     expect(s.note).toBe("完成演算法重構");
 
-    const updated = stats.updateSession(s.id, { rating: "flow", note: "突破核心難題！" });
+    const updated = stats.updateSession(s.id, {
+      rating: "flow",
+      note: "突破核心難題！",
+      taskTitle: "設計系統重構模組",
+      category: "review",
+    });
     expect(updated).not.toBeNull();
     expect(updated.rating).toBe("flow");
     expect(updated.note).toBe("突破核心難題！");
+    expect(updated.taskTitle).toBe("設計系統重構模組");
+    expect(updated.category).toBe("review");
 
     // Invalid rating falls back to flow
     stats.updateSession(s.id, { rating: "invalid_rating" });

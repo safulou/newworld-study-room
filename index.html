@@ -1055,6 +1055,17 @@
                 <option value="clear">🌌 晴空星塵</option>
               </select>
             </label>
+            <label class="field">
+              <span>木屋氛圍光暈</span>
+              <select id="cabinAtmosphereMood">
+                <option value="auto">✨ 自動感應（專注暖木、休息山嵐、子夜星暮）</option>
+                <option value="amber">🪵 暖木琥珀（溫暖壁爐與木屋微光）</option>
+                <option value="emerald">🍵 山嵐翡翠（山林甘泉與抹茶靜謐）</option>
+                <option value="violet">🌌 星暮紫韻（深空夜色與沉靜暮光）</option>
+                <option value="rose">🌸 夕照粉櫻（柔和晚霞與花瓣漫撫）</option>
+                <option value="noir">🌙 經典暗夜（深邃沈穩經典原木）</option>
+              </select>
+            </label>
             <label class="field volume-field">
               <span>音樂音量</span>
               <span class="range-control">
@@ -1418,6 +1429,68 @@
         <div class="distraction-list" id="distractionList" aria-live="polite">
           <div class="distraction-empty">思緒清明，暫無雜念塵埃 ✨</div>
         </div>
+      </div>
+    </dialog>
+
+    <dialog class="session-edit-modal" id="sessionEditModal">
+      <div class="session-edit-dialog-card">
+        <div class="session-edit-header">
+          <div class="session-edit-title-group">
+            <h2>✏️ 專注歷程回顧與備註</h2>
+            <span class="session-edit-subtitle" id="sessionEditSubtitle">編輯專注任務、心得筆記與心流感受</span>
+          </div>
+          <button class="icon-btn subtle close-btn" id="closeSessionEdit" type="button" aria-label="關閉編輯視窗">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <form class="session-edit-form" id="sessionEditForm">
+          <input type="hidden" id="sessionEditId" />
+          <div class="session-edit-field">
+            <label for="sessionEditTaskTitle">專注任務或主題</label>
+            <input
+              id="sessionEditTaskTitle"
+              class="session-edit-input"
+              maxlength="60"
+              placeholder="例：重構渲染模組、閱讀第一章..."
+              autocomplete="off"
+            />
+          </div>
+          <div class="session-edit-field">
+            <label for="sessionEditNote">複盤筆記 / 心得備註</label>
+            <textarea
+              id="sessionEditNote"
+              class="session-edit-textarea"
+              maxlength="100"
+              rows="3"
+              placeholder="記下剛才的收穫、卡點或下次的起手勢..."
+            ></textarea>
+            <span class="session-edit-hint">字數上限 100 字</span>
+          </div>
+          <div class="session-edit-row">
+            <div class="session-edit-field">
+              <label for="sessionEditCategory">領域類別</label>
+              <select id="sessionEditCategory" class="session-edit-select">
+                <option value="dev">💻 開發</option>
+                <option value="read">📚 閱讀</option>
+                <option value="write">✍️ 寫作</option>
+                <option value="design">🎨 設計</option>
+                <option value="review">🧠 複習</option>
+              </select>
+            </div>
+            <div class="session-edit-field">
+              <label>心流狀態</label>
+              <div class="session-edit-rating-group" id="sessionEditRatingGroup">
+                <button type="button" class="session-rating-pill active" data-rating="flow">🔥 深度心流</button>
+                <button type="button" class="session-rating-pill" data-rating="steady">✨ 穩定推進</button>
+                <button type="button" class="session-rating-pill" data-rating="warmup">🌱 漸入佳境</button>
+              </div>
+            </div>
+          </div>
+          <div class="session-edit-actions">
+            <button class="btn subtle" id="btnCancelSessionEdit" type="button">取消</button>
+            <button class="btn primary" id="btnSaveSessionEdit" type="submit">儲存更新</button>
+          </div>
+        </form>
       </div>
     </dialog>
 

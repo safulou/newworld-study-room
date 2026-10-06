@@ -2741,6 +2741,23 @@ h1 {
   white-space: nowrap;
 }
 
+.timeline-edit-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+
+.timeline-edit-btn:hover {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+}
+
 .timeline-del-btn {
   border: none;
   background: transparent;
@@ -6177,6 +6194,203 @@ button.timeline-rating:hover {
 .affinity-aura-chip:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* Session Historical Note & Retro Editor Modal */
+.session-edit-modal {
+  border: none;
+  border-radius: 16px;
+  padding: 0;
+  background: transparent;
+  max-width: 520px;
+  width: 92vw;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  color: var(--text);
+}
+
+.session-edit-modal::backdrop {
+  background: rgba(5, 10, 18, 0.76);
+  backdrop-filter: blur(6px);
+}
+
+.session-edit-dialog-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.session-edit-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.session-edit-title-group h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.session-edit-subtitle {
+  font-size: 12px;
+  color: var(--muted);
+  display: block;
+  margin-top: 4px;
+}
+
+.session-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.session-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.session-edit-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.session-edit-input,
+.session-edit-textarea,
+.session-edit-select {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  transition: border-color 0.18s ease;
+}
+
+.session-edit-input:focus,
+.session-edit-textarea:focus,
+.session-edit-select:focus {
+  outline: none;
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
+.session-edit-textarea {
+  resize: vertical;
+  min-height: 68px;
+  line-height: 1.5;
+}
+
+.session-edit-hint {
+  font-size: 11px;
+  color: var(--faint);
+  text-align: right;
+}
+
+.session-edit-row {
+  display: flex;
+  gap: 12px;
+}
+
+.session-edit-rating-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.session-rating-pill {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.session-rating-pill:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.session-rating-pill.active {
+  background: rgba(241, 182, 95, 0.18);
+  border-color: var(--gold);
+  color: var(--gold-soft);
+  font-weight: 600;
+}
+
+.session-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* Cabin Atmospheric Mood Tints */
+body {
+  transition:
+    background 0.8s ease,
+    color 0.3s ease;
+}
+
+body[data-cabin-mood="amber"] {
+  background: linear-gradient(155deg, #18110b 0%, #201710 58%, #281b12 100%);
+  --shadow: rgba(25, 14, 5, 0.42);
+}
+
+body[data-cabin-mood="amber"] .room-box {
+  box-shadow:
+    0 0 35px rgba(245, 158, 11, 0.08),
+    inset 0 0 20px rgba(245, 158, 11, 0.04);
+}
+
+body[data-cabin-mood="emerald"] {
+  background: linear-gradient(155deg, #0b1713 0%, #11231d 58%, #162d25 100%);
+  --shadow: rgba(5, 20, 14, 0.42);
+}
+
+body[data-cabin-mood="emerald"] .room-box {
+  box-shadow:
+    0 0 35px rgba(52, 211, 153, 0.08),
+    inset 0 0 20px rgba(52, 211, 153, 0.04);
+}
+
+body[data-cabin-mood="violet"] {
+  background: linear-gradient(155deg, #120e20 0%, #19142b 58%, #211a3b 100%);
+  --shadow: rgba(14, 8, 25, 0.42);
+}
+
+body[data-cabin-mood="violet"] .room-box {
+  box-shadow:
+    0 0 35px rgba(167, 139, 250, 0.08),
+    inset 0 0 20px rgba(167, 139, 250, 0.04);
+}
+
+body[data-cabin-mood="rose"] {
+  background: linear-gradient(155deg, #1a0f14 0%, #25141c 58%, #301925 100%);
+  --shadow: rgba(25, 8, 16, 0.42);
+}
+
+body[data-cabin-mood="rose"] .room-box {
+  box-shadow:
+    0 0 35px rgba(244, 114, 182, 0.08),
+    inset 0 0 20px rgba(244, 114, 182, 0.04);
+}
+
+body[data-cabin-mood="noir"] {
+  background: linear-gradient(155deg, #080c12 0%, #0c131c 58%, #101926 100%);
+  --shadow: rgba(2, 4, 8, 0.48);
 }
 
 @media (prefers-reduced-motion: reduce) {
