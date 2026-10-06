@@ -101,6 +101,52 @@ export const SPATIAL_SCENARIOS = {
   },
 };
 
+export const ACOUSTIC_PRESETS = {
+  bypass: {
+    id: "bypass",
+    name: "原音純淨",
+    icon: "sliders",
+    eq: { bass: 0, mid: 0, treble: 0 },
+    reverb: { wet: 0.0, duration: 1.0, decay: 2.0 },
+  },
+  cabin: {
+    id: "cabin",
+    name: "原木小木屋",
+    icon: "home",
+    eq: { bass: 2.5, mid: 1.0, treble: -1.5 },
+    reverb: { wet: 0.22, duration: 1.2, decay: 2.4 },
+  },
+  library: {
+    id: "library",
+    name: "寂靜圖書館",
+    icon: "book-open",
+    eq: { bass: -2.0, mid: 0.5, treble: 2.0 },
+    reverb: { wet: 0.12, duration: 0.7, decay: 3.2 },
+  },
+  cathedral: {
+    id: "cathedral",
+    name: "星空大廳",
+    icon: "sparkles",
+    eq: { bass: 1.5, mid: 1.5, treble: 2.5 },
+    reverb: { wet: 0.38, duration: 2.6, decay: 1.8 },
+  },
+};
+
+export function createProceduralImpulseResponse(ctx, duration = 1.2, decay = 2.2) {
+  if (!ctx || !ctx.createBuffer) return null;
+  const sampleRate = ctx.sampleRate || 44100;
+  const length = Math.max(1, Math.round(sampleRate * Math.max(0.1, duration)));
+  const impulse = ctx.createBuffer(2, length, sampleRate);
+  const left = impulse.getChannelData(0);
+  const right = impulse.getChannelData(1);
+  for (let i = 0; i < length; i++) {
+    const envelope = Math.pow(1 - i / length, Math.max(0.5, decay));
+    left[i] = (Math.random() * 2 - 1) * envelope;
+    right[i] = (Math.random() * 2 - 1) * envelope;
+  }
+  return impulse;
+}
+
 export class AmbientSoundscapeManager {
   constructor() {
     this.audioCtx = null;
@@ -115,6 +161,14 @@ export class AmbientSoundscapeManager {
       binaural_alpha: { base: 210, diff: 10 },
       binaural_gamma: { base: 220, diff: 40 },
     };
+    this.masterEQ = { bass: 0, mid: 0, treble: 0 };
+    this.masterReverb = { wet: 0.0, preset: "bypass", duration: 1.0, decay: 2.0 };
+    this.eqBass = null;
+    this.eqMid = null;
+    this.eqTreble = null;
+    this.dryGain = null;
+    this.wetGain = null;
+    this.convolver = null;
   }
 
   setBinauralBeatFrequency(name, baseFreq, diffFreq) {
@@ -142,6 +196,129 @@ export class AmbientSoundscapeManager {
     return this.binauralFrequencies[name] ? { ...this.binauralFrequencies[name] } : null;
   }
 
+  setupAcousticChain() {
+    if (!this.audioCtx || !this.masterGain) return;
+    try {
+      if (
+        this.audioCtx.createBiquadFilter &&
+        this.audioCtx.createGain &&
+        this.audioCtx.createConvolver &&
+        this.audioCtx.destination
+      ) {
+        this.eqBass = this.audioCtx.createBiquadFilter();
+        this.eqBass.type = "lowshelf";
+        this.eqBass.frequency.value = 200;
+        this.eqBass.gain.value = this.masterEQ.bass;
+
+        this.eqMid = this.audioCtx.createBiquadFilter();
+        this.eqMid.type = "peaking";
+        this.eqMid.frequency.value = 1000;
+        this.eqMid.Q.value = 1.0;
+        this.eqMid.gain.value = this.masterEQ.mid;
+
+        this.eqTreble = this.audioCtx.createBiquadFilter();
+        this.eqTreble.type = "highshelf";
+        this.eqTreble.frequency.value = 3200;
+        this.eqTreble.gain.value = this.masterEQ.treble;
+
+        this.dryGain = this.audioCtx.createGain();
+        this.dryGain.gain.value = Math.max(0, 1 - this.masterReverb.wet);
+
+        this.wetGain = this.audioCtx.createGain();
+        this.wetGain.gain.value = Math.max(0, this.masterReverb.wet);
+
+        this.convolver = this.audioCtx.createConvolver();
+        if (this.masterReverb.wet > 0) {
+          this.convolver.buffer = createProceduralImpulseResponse(
+            this.audioCtx,
+            this.masterReverb.duration,
+            this.masterReverb.decay,
+          );
+        }
+
+        this.masterGain.connect(this.eqBass);
+        this.eqBass.connect(this.eqMid);
+        this.eqMid.connect(this.eqTreble);
+
+        // Dry path
+        this.eqTreble.connect(this.dryGain);
+        this.dryGain.connect(this.audioCtx.destination);
+
+        // Reverb wet path
+        this.eqTreble.connect(this.convolver);
+        this.convolver.connect(this.wetGain);
+        this.wetGain.connect(this.audioCtx.destination);
+        return;
+      }
+    } catch {
+      // Fallback on limitation
+    }
+    if (this.audioCtx.destination) {
+      this.masterGain.connect(this.audioCtx.destination);
+    }
+  }
+
+  setMasterEQ({ bass = 0, mid = 0, treble = 0 }) {
+    this.masterEQ = {
+      bass: Math.max(-12, Math.min(12, Number(bass) || 0)),
+      mid: Math.max(-12, Math.min(12, Number(mid) || 0)),
+      treble: Math.max(-12, Math.min(12, Number(treble) || 0)),
+    };
+    if (this.audioCtx) {
+      const now = this.audioCtx.currentTime;
+      if (this.eqBass?.gain) this.eqBass.gain.setValueAtTime(this.masterEQ.bass, now);
+      if (this.eqMid?.gain) this.eqMid.gain.setValueAtTime(this.masterEQ.mid, now);
+      if (this.eqTreble?.gain) this.eqTreble.gain.setValueAtTime(this.masterEQ.treble, now);
+    }
+    return { ...this.masterEQ };
+  }
+
+  getMasterEQ() {
+    return { ...this.masterEQ };
+  }
+
+  setMasterReverb({ wet = 0, preset = "custom", duration = 1.2, decay = 2.2 }) {
+    const clampedWet = Math.max(0, Math.min(0.7, Number(wet) || 0));
+    this.masterReverb = {
+      wet: clampedWet,
+      preset: String(preset || "custom"),
+      duration: Math.max(0.2, Math.min(4.0, Number(duration) || 1.2)),
+      decay: Math.max(0.5, Math.min(5.0, Number(decay) || 2.2)),
+    };
+    if (this.audioCtx) {
+      const now = this.audioCtx.currentTime;
+      if (this.wetGain?.gain) this.wetGain.gain.setValueAtTime(clampedWet, now);
+      if (this.dryGain?.gain) this.dryGain.gain.setValueAtTime(Math.max(0, 1 - clampedWet), now);
+      if (this.convolver && clampedWet > 0) {
+        try {
+          this.convolver.buffer = createProceduralImpulseResponse(
+            this.audioCtx,
+            this.masterReverb.duration,
+            this.masterReverb.decay,
+          );
+        } catch {}
+      }
+    }
+    return { ...this.masterReverb };
+  }
+
+  getMasterReverb() {
+    return { ...this.masterReverb };
+  }
+
+  applyAcousticPreset(presetKey) {
+    const config = ACOUSTIC_PRESETS[presetKey];
+    if (!config) return false;
+    this.setMasterEQ(config.eq);
+    this.setMasterReverb({
+      wet: config.reverb.wet,
+      preset: config.id,
+      duration: config.reverb.duration,
+      decay: config.reverb.decay,
+    });
+    return true;
+  }
+
   ensureContext() {
     if (!this.audioCtx) {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -149,7 +326,7 @@ export class AmbientSoundscapeManager {
       this.audioCtx = new AudioContextClass();
       this.masterGain = this.audioCtx.createGain();
       this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : this.masterVolume, this.audioCtx.currentTime);
-      this.masterGain.connect(this.audioCtx.destination);
+      this.setupAcousticChain();
     }
     if (this.audioCtx.state === "suspended") {
       this.audioCtx.resume().catch(() => {});

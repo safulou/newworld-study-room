@@ -51,6 +51,7 @@ import {
   Send,
   Share2,
   Shuffle,
+  Sliders,
   Smartphone,
   Sparkle,
   Sparkles,
@@ -67,6 +68,7 @@ import {
 import {
   AmbientSoundscapeManager,
   SOUNDSCAPE_PRESETS,
+  ACOUSTIC_PRESETS,
   encodeSoundscapeCode,
   decodeSoundscapeCode,
 } from "./services/ambient-sound.js";
@@ -81,7 +83,7 @@ import { TaskTracker } from "./services/task-tracker.js";
 import { FocusPosterGenerator } from "./services/poster-generator.js";
 import { renderQrToCanvas, downloadQrCanvas, copyQrCanvasToClipboard } from "./services/qr-generator.js";
 import { WeatherEngine } from "./services/weather-engine.js";
-import { createStore } from "./state/store.js";
+import { createStore, AFFINITY_RANKS, getAffinityRank } from "./state/store.js";
 
 const icons = {
   Activity,
@@ -135,6 +137,7 @@ const icons = {
   Send,
   Share2,
   Shuffle,
+  Sliders,
   Smartphone,
   Sparkle,
   Sparkles,
@@ -388,6 +391,40 @@ const elements = {
   prepBreathCounter: $("#prepBreathCounter"),
   btnSkipPrepBreath: $("#btnSkipPrepBreath"),
   btnStartFlowFromPrep: $("#btnStartFlowFromPrep"),
+
+  // Acoustic FX
+  btnToggleAcousticFX: $("#btnToggleAcousticFX"),
+  acousticFxPanel: $("#acousticFxPanel"),
+  acousticPresetBtns: [...document.querySelectorAll(".acoustic-preset-btn")],
+  sliderReverbWet: $("#sliderReverbWet"),
+  reverbWetValue: $("#reverbWetValue"),
+  sliderEqBass: $("#sliderEqBass"),
+  eqBassValue: $("#eqBassValue"),
+  sliderEqMid: $("#sliderEqMid"),
+  eqMidValue: $("#eqMidValue"),
+  sliderEqTreble: $("#sliderEqTreble"),
+  eqTrebleValue: $("#eqTrebleValue"),
+
+  // Timeline Filter
+  timelineFilterBar: $("#timelineFilterBar"),
+  timelineRangeChips: [...document.querySelectorAll(".timeline-range-chip")],
+  timelineFilterPills: [...document.querySelectorAll(".timeline-filter-pill")],
+  timelineSummaryText: $("#timelineSummaryText"),
+
+  // Companion Affinity
+  btnCompanionAffinity: $("#btnCompanionAffinity"),
+  affinityBadgeIcon: $("#affinityBadgeIcon"),
+  affinityBadgeLevel: $("#affinityBadgeLevel"),
+  affinityBadgeExp: $("#affinityBadgeExp"),
+  affinityMiniFill: $("#affinityMiniFill"),
+  affinityModal: $("#affinityModal"),
+  closeAffinity: $("#closeAffinity"),
+  affinityCurrentAvatar: $("#affinityCurrentAvatar"),
+  affinityCurrentTitle: $("#affinityCurrentTitle"),
+  affinityTotalExp: $("#affinityTotalExp"),
+  affinityProgressFill: $("#affinityProgressFill"),
+  affinityCurrentQuote: $("#affinityCurrentQuote"),
+  affinityTiersList: $("#affinityTiersList"),
 };
 
 const store = createStore({
@@ -853,14 +890,22 @@ function renderCategoryBreakdown() {
     .join("");
 }
 
+const timelineFilter = {
+  range: "today",
+  rating: "all",
+};
+
 function renderSessionTimeline() {
   if (!elements.sessionTimelineList) return;
-  const todaySessions = studyStats.getTodaySessions();
+  const filtered = studyStats.getFilteredSessions(timelineFilter);
   if (elements.sessionTimelineCount) {
-    elements.sessionTimelineCount.textContent = `${todaySessions.length} 次完成`;
+    elements.sessionTimelineCount.textContent = `${filtered.totalCount} 次完成`;
   }
-  if (todaySessions.length === 0) {
-    elements.sessionTimelineList.innerHTML = `<div class="session-timeline-empty">今日尚無完成的番茄鐘記錄，開始專注來播種吧！🌱</div>`;
+  if (elements.timelineSummaryText) {
+    elements.timelineSummaryText.textContent = `共 ${filtered.totalCount} 輪 · ${filtered.totalMinutes} 分鐘 · 心流率 ${filtered.flowRate}%`;
+  }
+  if (filtered.sessions.length === 0) {
+    elements.sessionTimelineList.innerHTML = `<div class="session-timeline-empty">此篩選條件下尚無專注記錄，開始專注來播種吧！🌱</div>`;
     return;
   }
 
@@ -882,11 +927,12 @@ function renderSessionTimeline() {
   };
 
   elements.sessionTimelineList.innerHTML = "";
-  todaySessions.forEach((session) => {
+  filtered.sessions.forEach((session) => {
     const item = document.createElement("div");
     item.className = "session-timeline-item";
 
     const timeStr = session.timestamp ? new Date(session.timestamp).toTimeString().slice(0, 5) : "--:--";
+    const datePrefix = timelineFilter.range !== "today" && session.date ? `${session.date.slice(5)} ` : "";
     const cat = categoryConfigs[session.category] || categoryConfigs.dev;
     const plantEmoji = plantEmojis[session.plantHarvested] || "🌱";
 
@@ -899,7 +945,7 @@ function renderSessionTimeline() {
     const noteHtml = session.note ? `<span class="timeline-note" title="${session.note}">${session.note}</span>` : "";
 
     item.innerHTML = `
-      <span class="timeline-time">${timeStr}</span>
+      <span class="timeline-time">${datePrefix}${timeStr}</span>
       <span class="timeline-category-badge" style="background: ${cat.bg}; color: ${cat.color};">
         <span>${cat.icon}</span>
         <span>${cat.label}</span>
@@ -938,6 +984,24 @@ function renderSessionTimeline() {
 
     item.append(delBtn);
     elements.sessionTimelineList.append(item);
+  });
+}
+
+function bindStatsTimeline() {
+  elements.timelineRangeChips?.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      timelineFilter.range = chip.dataset.range || "today";
+      elements.timelineRangeChips.forEach((c) => c.classList.toggle("active", c === chip));
+      renderSessionTimeline();
+    });
+  });
+
+  elements.timelineFilterPills?.forEach((pill) => {
+    pill.addEventListener("click", () => {
+      timelineFilter.rating = pill.dataset.rating || "all";
+      elements.timelineFilterPills.forEach((p) => p.classList.toggle("active", p === pill));
+      renderSessionTimeline();
+    });
   });
 }
 
@@ -1240,6 +1304,7 @@ function renderState(state) {
   updateAtmosphere(state.ambientMode);
   updateNotificationUI(state);
   renderCustomPresets();
+  updateAffinityUI();
 }
 
 function makeTip(text, by = store.get().nickname) {
@@ -1345,6 +1410,116 @@ function bindDollStyle() {
             : "已換回暖心公仔。 ";
       showToast(label);
     });
+  });
+}
+
+const lastAffinityInteractionTime = {
+  pet: 0,
+  peer: 0,
+};
+
+function updateAffinityUI() {
+  const exp = store.get().companionAffinityExp || 0;
+  const rank = getAffinityRank(exp);
+
+  if (elements.affinityBadgeIcon) elements.affinityBadgeIcon.textContent = rank.icon;
+  if (elements.affinityBadgeLevel) elements.affinityBadgeLevel.textContent = `Lv.${rank.level} ${rank.title}`;
+  if (elements.affinityBadgeExp) {
+    elements.affinityBadgeExp.textContent = rank.nextExp === Infinity ? "MAX" : `${rank.currentExp}/${rank.nextExp}`;
+  }
+  if (elements.affinityMiniFill) {
+    elements.affinityMiniFill.style.width = `${rank.progressPercent}%`;
+  }
+
+  if (elements.affinityCurrentAvatar) elements.affinityCurrentAvatar.textContent = rank.icon;
+  if (elements.affinityCurrentTitle) elements.affinityCurrentTitle.textContent = `Lv.${rank.level} ${rank.title}`;
+  if (elements.affinityTotalExp) elements.affinityTotalExp.textContent = `累計 ${rank.currentExp} EXP`;
+  if (elements.affinityProgressFill) elements.affinityProgressFill.style.width = `${rank.progressPercent}%`;
+  if (elements.affinityCurrentQuote) elements.affinityCurrentQuote.textContent = `「${rank.quote}」`;
+}
+
+function renderAffinityModal() {
+  if (!elements.affinityTiersList) return;
+  const currentExp = store.get().companionAffinityExp || 0;
+  const currentRank = getAffinityRank(currentExp);
+
+  elements.affinityTiersList.replaceChildren();
+  AFFINITY_RANKS.forEach((tier) => {
+    const isUnlocked = currentExp >= tier.minExp;
+    const isCurrent = tier.level === currentRank.level;
+
+    const item = document.createElement("div");
+    item.className = `affinity-tier-item${isUnlocked ? " unlocked" : ""}${isCurrent ? " current" : ""}`;
+
+    const left = document.createElement("div");
+    left.className = "affinity-tier-left";
+    const icon = document.createElement("span");
+    icon.className = "affinity-tier-icon";
+    icon.textContent = tier.icon;
+    const title = document.createElement("span");
+    title.className = "affinity-tier-title";
+    title.textContent = `Lv.${tier.level} ${tier.title}`;
+    left.append(icon, title);
+
+    const right = document.createElement("div");
+    right.className = "affinity-tier-right";
+    const expSpan = document.createElement("span");
+    expSpan.className = "affinity-tier-exp";
+    expSpan.textContent = `${tier.minExp} EXP`;
+    const statusSpan = document.createElement("span");
+    statusSpan.className = "affinity-tier-status";
+    statusSpan.textContent = isCurrent ? "📍 當前" : isUnlocked ? "✓ 已解鎖" : "🔒 未解鎖";
+    right.append(expSpan, statusSpan);
+
+    item.append(left, right);
+    elements.affinityTiersList.append(item);
+  });
+}
+
+function addAffinityExp(amount = 0, reason = "") {
+  if (!amount || amount <= 0) return;
+  const currentExp = store.get().companionAffinityExp || 0;
+  const oldRank = getAffinityRank(currentExp);
+  const newExp = currentExp + amount;
+  store.update({ companionAffinityExp: newExp });
+  const newRank = getAffinityRank(newExp);
+
+  updateAffinityUI();
+
+  if (newRank.level > oldRank.level) {
+    showToast(`🎉 伴讀夥伴默契升級！邁入【Lv.${newRank.level} ${newRank.title}】！`);
+    companionSound.playCelebrationFanfare();
+    showCompanionBubble(`哇！我們的默契等級提升到【Lv.${newRank.level} ${newRank.title}】了！✨`, 5000);
+    spawnZenSpark(`✨ 默契升級 Lv.${newRank.level}！`);
+    viewer?.triggerBounce();
+    elements.btnCompanionAffinity?.classList.add("affinity-level-up");
+    setTimeout(() => {
+      elements.btnCompanionAffinity?.classList.remove("affinity-level-up");
+    }, 1200);
+  } else if (reason && reason !== "撫摸夥伴") {
+    // Subtle visual indicator for non-petting affinity gains
+    elements.btnCompanionAffinity?.classList.add("affinity-level-up");
+    setTimeout(() => {
+      elements.btnCompanionAffinity?.classList.remove("affinity-level-up");
+    }, 400);
+  }
+}
+
+function bindCompanionAffinity() {
+  elements.btnCompanionAffinity?.addEventListener("click", () => {
+    updateAffinityUI();
+    renderAffinityModal();
+    elements.affinityModal?.showModal();
+  });
+
+  elements.closeAffinity?.addEventListener("click", () => {
+    elements.affinityModal?.close();
+  });
+
+  elements.affinityModal?.addEventListener("click", (e) => {
+    if (e.target === elements.affinityModal) {
+      elements.affinityModal.close();
+    }
   });
 }
 
@@ -1485,6 +1660,7 @@ function bindTimer() {
       lastRecordedSessionId = recorded?.id || null;
       showFlowReflectionPrompt();
       renderStats();
+      addAffinityExp(25, "專注完成");
 
       if (store.get().desktopNotifications) {
         notificationManager.notifyFocusComplete({
@@ -1731,6 +1907,71 @@ function bindAmbientSound() {
     ambientSound.applySpatialScenario("centered");
     renderAmbientMixer();
     showToast("所有運行軌道立體聲道已居中 🎯");
+  });
+
+  elements.btnToggleAcousticFX?.addEventListener("click", () => {
+    if (!elements.acousticFxPanel) return;
+    const isHidden = elements.acousticFxPanel.hidden;
+    elements.acousticFxPanel.hidden = !isHidden;
+    elements.btnToggleAcousticFX.classList.toggle("active", isHidden);
+  });
+
+  const syncAcousticUI = () => {
+    const eq = ambientSound.getMasterEQ();
+    const reverb = ambientSound.getMasterReverb();
+    if (elements.sliderReverbWet) elements.sliderReverbWet.value = String(Math.round(reverb.wet * 100));
+    if (elements.reverbWetValue) elements.reverbWetValue.textContent = `${Math.round(reverb.wet * 100)}%`;
+    if (elements.sliderEqBass) elements.sliderEqBass.value = String(eq.bass);
+    if (elements.eqBassValue) elements.eqBassValue.textContent = `${eq.bass > 0 ? "+" : ""}${eq.bass} dB`;
+    if (elements.sliderEqMid) elements.sliderEqMid.value = String(eq.mid);
+    if (elements.eqMidValue) elements.eqMidValue.textContent = `${eq.mid > 0 ? "+" : ""}${eq.mid} dB`;
+    if (elements.sliderEqTreble) elements.sliderEqTreble.value = String(eq.treble);
+    if (elements.eqTrebleValue) elements.eqTrebleValue.textContent = `${eq.treble > 0 ? "+" : ""}${eq.treble} dB`;
+
+    elements.acousticPresetBtns?.forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.acoustic === reverb.preset);
+    });
+  };
+
+  elements.acousticPresetBtns?.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const presetKey = btn.dataset.acoustic;
+      if (ambientSound.applyAcousticPreset(presetKey)) {
+        syncAcousticUI();
+        showToast(`已套用聲學空間：「${ACOUSTIC_PRESETS[presetKey]?.name || presetKey}」🎛️`);
+      }
+    });
+  });
+
+  elements.sliderReverbWet?.addEventListener("input", (e) => {
+    const wet = Number(e.target.value) / 100;
+    ambientSound.setMasterReverb({ wet, preset: "custom" });
+    if (elements.reverbWetValue) elements.reverbWetValue.textContent = `${e.target.value}%`;
+    elements.acousticPresetBtns?.forEach((btn) => btn.classList.remove("active"));
+  });
+
+  elements.sliderEqBass?.addEventListener("input", (e) => {
+    const bass = Number(e.target.value);
+    const current = ambientSound.getMasterEQ();
+    ambientSound.setMasterEQ({ ...current, bass });
+    if (elements.eqBassValue) elements.eqBassValue.textContent = `${bass > 0 ? "+" : ""}${bass} dB`;
+    elements.acousticPresetBtns?.forEach((btn) => btn.classList.remove("active"));
+  });
+
+  elements.sliderEqMid?.addEventListener("input", (e) => {
+    const mid = Number(e.target.value);
+    const current = ambientSound.getMasterEQ();
+    ambientSound.setMasterEQ({ ...current, mid });
+    if (elements.eqMidValue) elements.eqMidValue.textContent = `${mid > 0 ? "+" : ""}${mid} dB`;
+    elements.acousticPresetBtns?.forEach((btn) => btn.classList.remove("active"));
+  });
+
+  elements.sliderEqTreble?.addEventListener("input", (e) => {
+    const treble = Number(e.target.value);
+    const current = ambientSound.getMasterEQ();
+    ambientSound.setMasterEQ({ ...current, treble });
+    if (elements.eqTrebleValue) elements.eqTrebleValue.textContent = `${treble > 0 ? "+" : ""}${treble} dB`;
+    elements.acousticPresetBtns?.forEach((btn) => btn.classList.remove("active"));
   });
 
   elements.ambientChips.forEach((chip) => {
@@ -2153,6 +2394,11 @@ function bindP2PCheer() {
     spawnFloatingReaction("🥂", "你");
     spawnZenSpark("🥂 乾杯！");
     p2p?.sendInteraction("clink", store.get().nickname);
+    const now = Date.now();
+    if (now - lastAffinityInteractionTime.peer > 3000) {
+      lastAffinityInteractionTime.peer = now;
+      addAffinityExp(5, "伴讀交流");
+    }
     showToast("乾杯！與同房夥伴碰杯 🥂");
   });
 
@@ -2161,6 +2407,11 @@ function bindP2PCheer() {
     spawnFloatingReaction("🪵", "你");
     spawnZenSpark("🪵 叩叩！");
     p2p?.sendInteraction("knock", store.get().nickname);
+    const now = Date.now();
+    if (now - lastAffinityInteractionTime.peer > 3000) {
+      lastAffinityInteractionTime.peer = now;
+      addAffinityExp(5, "伴讀交流");
+    }
     showToast("叩叩！輕敲小木屋木桌打招呼 🪵");
   });
 }
@@ -2201,10 +2452,18 @@ function bindExports() {
   });
 
   elements.btnExportWeeklyReport?.addEventListener("click", async () => {
-    const md = studyStats.exportExecutiveMarkdownReport(store.get().nickname, taskTracker.tasks);
+    const md = studyStats.exportExecutiveMarkdownReport(store.get().nickname, taskTracker.tasks, timelineFilter);
     try {
       await navigator.clipboard.writeText(md);
-      showToast("週度心流復盤週報已複製到剪貼簿！📋");
+      const scopeName =
+        timelineFilter.range === "today"
+          ? "今日"
+          : timelineFilter.range === "month"
+            ? "本月"
+            : timelineFilter.range === "all"
+              ? "全時段"
+              : "週度";
+      showToast(`${scopeName}心流復盤報告已複製到剪貼簿！📋`);
     } catch {
       showToast("無法存取剪貼簿，請稍後重試。");
     }
@@ -2613,6 +2872,7 @@ function bindTasks() {
         companionSound.playSingingBowl();
         spawnZenSpark("🏆 任務達成！");
         viewer?.triggerBounce();
+        addAffinityExp(10, "完成任務");
         showCompanionBubble("恭喜完成任務！你今天超有毅力 ✨", 4000);
         showToast("任務已完成！繼續保持 🌟");
       } else {
@@ -3639,6 +3899,7 @@ function startFlowFromRitual() {
     timer.start();
   }
   viewer?.triggerBounce();
+  addAffinityExp(15, "靜心儀式");
   showCompanionBubble("鎖定意圖，我們一起進入心流狀態！💫", 3500);
   showToast("心流儀式完成，專注啟動！🚀");
   elements.flowPrepModal?.close();
@@ -3780,6 +4041,11 @@ async function startViewer() {
       companionSound.playPettingPurr();
       spawnPetHearts(x, y);
       wakeUpDoll();
+      const now = Date.now();
+      if (now - lastAffinityInteractionTime.pet > 3000) {
+        lastAffinityInteractionTime.pet = now;
+        addAffinityExp(3, "撫摸夥伴");
+      }
       const petQuotes = [
         "好舒服呀～摸摸頭最治癒了！(｡♥‿♥｡)",
         "咕嚕咕嚕... 充滿能量，繼續陪你專注！✨",
@@ -3881,15 +4147,23 @@ function init() {
   bindQrModal();
   bindPosterModal();
   bindHeatmapControls();
+  bindStatsTimeline();
   renderStats();
   bindTips();
   bindTipSignal();
   bindSettings();
   bindMobileNavigation();
   syncWeatherAtmosphere();
+  bindCompanionAffinity();
+  updateAffinityUI();
   elements.avatarFallback?.addEventListener("click", () => {
     viewer?.triggerBounce();
     viewer?.onTap?.();
+    const now = Date.now();
+    if (now - lastAffinityInteractionTime.pet > 3000) {
+      lastAffinityInteractionTime.pet = now;
+      addAffinityExp(3, "撫摸夥伴");
+    }
   });
   updateTimerModeUI(timer.mode, timer.cycleRound);
   timer.emitTick();

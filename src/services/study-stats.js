@@ -73,6 +73,65 @@ export class StudyStatsManager {
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }
 
+  getFilteredSessions({ range = "today", category = "all", rating = "all", now = Date.now() } = {}) {
+    const nowDate = new Date(now);
+    const todayStr = nowDate.toISOString().split("T")[0];
+    const sevenDaysAgo = now - 7 * 86400000;
+    const thirtyDaysAgo = now - 30 * 86400000;
+
+    const matched = this.history.filter((item) => {
+      // 1. Time range filter
+      if (range === "today") {
+        if (item.date !== todayStr) return false;
+      } else if (range === "week") {
+        const itemTime = new Date(item.timestamp || item.date).getTime();
+        if (itemTime < sevenDaysAgo) return false;
+      } else if (range === "month") {
+        const itemTime = new Date(item.timestamp || item.date).getTime();
+        if (itemTime < thirtyDaysAgo) return false;
+      }
+
+      // 2. Category filter
+      if (category && category !== "all") {
+        if (item.category !== category) return false;
+      }
+
+      // 3. Rating filter
+      if (rating && rating !== "all") {
+        if (item.rating !== rating) return false;
+      }
+
+      return true;
+    });
+
+    matched.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    const totalMinutes = matched.reduce((sum, h) => sum + (h.durationMinutes || 0), 0);
+    const flowCount = matched.filter((h) => h.rating === "flow").length;
+    const steadyCount = matched.filter((h) => h.rating === "steady").length;
+    const warmupCount = matched.filter((h) => h.rating === "warmup").length;
+    const flowRate = matched.length > 0 ? Math.round((flowCount / matched.length) * 100) : 0;
+
+    let rangeLabel = "今日專注";
+    if (range === "week") rangeLabel = "近 7 天";
+    else if (range === "month") rangeLabel = "近 30 天";
+    else if (range === "all") rangeLabel = "全部歷史";
+
+    return {
+      sessions: matched,
+      totalCount: matched.length,
+      totalMinutes,
+      flowCount,
+      steadyCount,
+      warmupCount,
+      flowRate,
+      range,
+      category,
+      rating,
+      rangeLabel,
+    };
+  }
+
   deleteSession(sessionId) {
     const index = this.history.findIndex((h) => h.id === sessionId);
     if (index === -1) return null;
@@ -359,10 +418,12 @@ export class StudyStatsManager {
     return md;
   }
 
-  exportExecutiveMarkdownReport(nickname = "自習旅人", tasks = []) {
+  exportExecutiveMarkdownReport(nickname = "自習旅人", tasks = [], filterOptions = null) {
     const summary = this.getExecutiveSummary();
     const trend = this.getWeeklyTrend();
     const breakdown = this.getCategoryBreakdown();
+    const hasFilter = Boolean(filterOptions && (filterOptions.range || filterOptions.category || filterOptions.rating));
+    const filteredResult = hasFilter ? this.getFilteredSessions(filterOptions) : null;
     const plantNames = {
       rose: "玫瑰",
       tulip: "鬱金香",
@@ -373,7 +434,11 @@ export class StudyStatsManager {
       lavender: "薰衣草",
     };
 
-    let md = `# 🌿 NewWorld Study Room · 心流復盤週報\n`;
+    const scopeTitle =
+      filteredResult && filteredResult.rangeLabel
+        ? ` · 心流復盤報告（${filteredResult.rangeLabel}）`
+        : " · 心流復盤週報";
+    let md = `# 🌿 NewWorld Study Room${scopeTitle}\n`;
     md += `> 產生時間：${new Date().toLocaleString("zh-TW", { hour12: false })}\n`;
     md += `> 旅人暱稱：${nickname || "自習旅人"}\n\n`;
     md += `---\n\n`;
@@ -416,19 +481,24 @@ export class StudyStatsManager {
       md += `\n`;
     }
 
-    const todaySessions = this.getTodaySessions();
-    if (todaySessions && todaySessions.length > 0) {
+    const reportSessions = filteredResult ? filteredResult.sessions : this.getTodaySessions();
+    if (reportSessions && reportSessions.length > 0) {
       const ratingBadges = {
         flow: "🔥 深度心流",
         steady: "✨ 穩定推進",
         warmup: "🌱 漸入佳境",
       };
-      md += `## 📝 今日專注時序與心流筆記\n`;
-      todaySessions.forEach((s) => {
+      const sectionLabel =
+        filteredResult && filteredResult.rangeLabel
+          ? `📝 專注時序與心流筆記（${filteredResult.rangeLabel}）`
+          : "📝 今日專注時序與心流筆記";
+      md += `## ${sectionLabel}\n`;
+      reportSessions.forEach((s) => {
         const timeStr = s.timestamp ? new Date(s.timestamp).toTimeString().slice(0, 5) : "--:--";
         const rat = ratingBadges[s.rating] || ratingBadges.flow;
         const noteStr = s.note ? ` · 筆記：「${s.note}」` : "";
-        md += `- [${timeStr}] ${s.durationMinutes}m [${rat}] ${s.taskTitle || "自主專注"}${noteStr}\n`;
+        const catInfo = FOCUS_CATEGORIES[s.category] || { label: s.category || "開發", icon: "💻" };
+        md += `- [${timeStr}] ${s.durationMinutes}m · ${catInfo.icon} ${catInfo.label} [${rat}]${noteStr}\n`;
       });
       md += `\n`;
     }

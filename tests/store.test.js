@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createStore } from "../src/state/store.js";
+import { createStore, AFFINITY_RANKS, getAffinityRank } from "../src/state/store.js";
 
 const tip = {
   id: "tip-1",
@@ -205,5 +205,32 @@ describe("room-scoped store", () => {
     store.update({ flowAutopilot: true, windDownAlert: false });
     expect(store.get().flowAutopilot).toBe(true);
     expect(store.get().windDownAlert).toBe(false);
+  });
+
+  it("manages companion affinity EXP and calculates bonding ranks", () => {
+    const store = createStore({ roomId: "room-a", includeStarterTips: false });
+    expect(store.get().companionAffinityExp).toBe(0);
+
+    store.update({ companionAffinityExp: 140 });
+    expect(store.get().companionAffinityExp).toBe(140);
+
+    expect(AFFINITY_RANKS).toHaveLength(10);
+    expect(AFFINITY_RANKS[0].title).toBe("初識書伴");
+    expect(AFFINITY_RANKS[9].title).toBe("靈魂旅伴");
+
+    const rank0 = getAffinityRank(0);
+    expect(rank0.level).toBe(1);
+    expect(rank0.title).toBe("初識書伴");
+    expect(rank0.progressPercent).toBe(0);
+
+    const rank3 = getAffinityRank(140);
+    expect(rank3.level).toBe(3);
+    expect(rank3.title).toBe("共讀默契");
+    expect(rank3.progressPercent).toBe(20); // (140 - 120) / (220 - 120) = 20%
+
+    const rankMax = getAffinityRank(2500);
+    expect(rankMax.level).toBe(10);
+    expect(rankMax.title).toBe("靈魂旅伴");
+    expect(rankMax.progressPercent).toBe(100);
   });
 });

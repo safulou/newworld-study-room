@@ -63,7 +63,55 @@ const profileDefaults = {
   flowAutopilot: false,
   windDownAlert: true,
   customPresets: [],
+  companionAffinityExp: 0,
 };
+
+export const AFFINITY_RANKS = [
+  { level: 1, title: "初識書伴", minExp: 0, nextExp: 50, icon: "🌱", quote: "你好呀！今天開始我們一起讀書吧。" },
+  { level: 2, title: "溫暖相伴", minExp: 50, nextExp: 120, icon: "🌿", quote: "看著你專注的樣子，身邊也暖洋洋的。" },
+  { level: 3, title: "共讀默契", minExp: 120, nextExp: 220, icon: "🍵", quote: "已經很習慣身邊有你的鍵盤與翻頁聲了。" },
+  { level: 4, title: "心領神會", minExp: 220, nextExp: 350, icon: "🌸", quote: "一個眼神就知道現在是該衝刺還是休息。" },
+  {
+    level: 5,
+    title: "心流共振",
+    minExp: 350,
+    nextExp: 520,
+    icon: "✨",
+    quote: "我們的心神已經進入同頻共振的深度心流！",
+  },
+  { level: 6, title: "深度同頻", minExp: 520, nextExp: 720, icon: "💫", quote: "無論多繁重的挑戰，我們都能從容化解。" },
+  { level: 7, title: "莫逆之交", minExp: 720, nextExp: 960, icon: "🌟", quote: "這間小木屋裡，有我們共同耕耘的時光。" },
+  { level: 8, title: "靈犀相通", minExp: 960, nextExp: 1250, icon: "🪄", quote: "靜默不語也能感知對方的專注力場。" },
+  { level: 9, title: "照亮前路", minExp: 1250, nextExp: 1600, icon: "🏮", quote: "你是我遇過最堅韌自律的學習旅人。" },
+  {
+    level: 10,
+    title: "靈魂旅伴",
+    minExp: 1600,
+    nextExp: Infinity,
+    icon: "👑",
+    quote: "此生同航，願我們的求知心流永不熄滅。",
+  },
+];
+
+export function getAffinityRank(exp = 0) {
+  const validExp = Math.max(0, Number(exp) || 0);
+  for (let i = AFFINITY_RANKS.length - 1; i >= 0; i--) {
+    if (validExp >= AFFINITY_RANKS[i].minExp) {
+      const current = AFFINITY_RANKS[i];
+      const nextExp = current.nextExp;
+      const progressInLevel =
+        nextExp === Infinity
+          ? 100
+          : Math.min(100, Math.round(((validExp - current.minExp) / (nextExp - current.minExp)) * 100));
+      return {
+        ...current,
+        currentExp: validExp,
+        progressPercent: progressInLevel,
+      };
+    }
+  }
+  return { ...AFFINITY_RANKS[0], currentExp: validExp, progressPercent: 0 };
+}
 
 const roomDefaults = {
   roomName: "Midnight Study Room",
@@ -206,6 +254,7 @@ function sanitizeProfile(value = {}) {
                 : {},
           }))
       : [],
+    companionAffinityExp: Math.max(0, Math.min(100000, Number(value.companionAffinityExp) || 0)),
   };
 }
 

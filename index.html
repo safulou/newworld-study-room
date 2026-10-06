@@ -154,6 +154,20 @@
               <span class="bubble-text" id="bubbleText"></span>
             </div>
             <canvas class="doll-canvas" id="dollCanvas" aria-label="可旋轉與互動的 3D 伴讀娃娃"></canvas>
+            <button
+              class="companion-affinity-badge"
+              id="btnCompanionAffinity"
+              type="button"
+              title="點擊查看伴讀夥伴默契成長里程碑"
+              aria-label="伴讀夥伴默契等級"
+            >
+              <span class="affinity-badge-icon" id="affinityBadgeIcon">🌱</span>
+              <span class="affinity-badge-level" id="affinityBadgeLevel">Lv.1 初識書伴</span>
+              <span class="affinity-badge-exp" id="affinityBadgeExp">0/50</span>
+              <div class="affinity-mini-bar">
+                <div class="affinity-mini-fill" id="affinityMiniFill" style="width: 0%"></div>
+              </div>
+            </button>
             <div class="avatar-fallback" id="avatarFallback" aria-hidden="true">
               <div class="fallback-head">•‿•</div>
               <div class="fallback-body"></div>
@@ -479,8 +493,81 @@
                   >
                     🎯 全居中
                   </button>
+                  <button
+                    type="button"
+                    class="spatial-preset-btn"
+                    id="btnToggleAcousticFX"
+                    title="展開/收合聲學混響與三段等化器微調面板"
+                  >
+                    🎛️ 聲學空間
+                  </button>
                 </div>
                 <span class="ambient-mixer-sub" id="ambientMixerCount">0 軌運行中</span>
+              </div>
+              <div class="acoustic-fx-panel" id="acousticFxPanel" hidden>
+                <div class="acoustic-fx-presets">
+                  <span class="acoustic-label">空間預設：</span>
+                  <button type="button" class="acoustic-preset-btn active" data-acoustic="bypass">🎯 原音</button>
+                  <button type="button" class="acoustic-preset-btn" data-acoustic="cabin">🪵 木屋</button>
+                  <button type="button" class="acoustic-preset-btn" data-acoustic="library">🏛️ 圖書館</button>
+                  <button type="button" class="acoustic-preset-btn" data-acoustic="cathedral">🌌 星空</button>
+                </div>
+                <div class="acoustic-sliders-grid">
+                  <div class="acoustic-slider-group">
+                    <div class="acoustic-slider-label"><span>混響 (Wet)</span><span id="reverbWetValue">0%</span></div>
+                    <input
+                      id="sliderReverbWet"
+                      class="acoustic-slider"
+                      type="range"
+                      min="0"
+                      max="70"
+                      step="2"
+                      value="0"
+                      aria-label="空間混響深度"
+                    />
+                  </div>
+                  <div class="acoustic-slider-group">
+                    <div class="acoustic-slider-label"><span>低頻 (200Hz)</span><span id="eqBassValue">0 dB</span></div>
+                    <input
+                      id="sliderEqBass"
+                      class="acoustic-slider"
+                      type="range"
+                      min="-12"
+                      max="12"
+                      step="0.5"
+                      value="0"
+                      aria-label="低頻增益"
+                    />
+                  </div>
+                  <div class="acoustic-slider-group">
+                    <div class="acoustic-slider-label"><span>中頻 (1kHz)</span><span id="eqMidValue">0 dB</span></div>
+                    <input
+                      id="sliderEqMid"
+                      class="acoustic-slider"
+                      type="range"
+                      min="-12"
+                      max="12"
+                      step="0.5"
+                      value="0"
+                      aria-label="中頻增益"
+                    />
+                  </div>
+                  <div class="acoustic-slider-group">
+                    <div class="acoustic-slider-label">
+                      <span>高頻 (3.2kHz)</span><span id="eqTrebleValue">0 dB</span>
+                    </div>
+                    <input
+                      id="sliderEqTreble"
+                      class="acoustic-slider"
+                      type="range"
+                      min="-12"
+                      max="12"
+                      step="0.5"
+                      value="0"
+                      aria-label="高頻增益"
+                    />
+                  </div>
+                </div>
               </div>
               <div class="ambient-mixer-tracks" id="ambientMixerTracks"></div>
             </div>
@@ -773,10 +860,29 @@
 
             <div class="session-timeline-section" id="sessionTimelineSection">
               <div class="session-timeline-head">
-                <span class="session-timeline-title">今日專注時序記錄</span>
+                <span class="session-timeline-title">專注時序歷程回顧</span>
                 <span class="session-timeline-count" id="sessionTimelineCount">0 次完成</span>
               </div>
-              <div class="session-timeline-list" id="sessionTimelineList" aria-label="今日專注歷史列表"></div>
+              <div class="timeline-filter-bar" id="timelineFilterBar">
+                <div class="timeline-filter-row">
+                  <div class="timeline-range-chips" role="radiogroup" aria-label="時間區間">
+                    <button type="button" class="timeline-range-chip active" data-range="today">今日</button>
+                    <button type="button" class="timeline-range-chip" data-range="week">近 7 天</button>
+                    <button type="button" class="timeline-range-chip" data-range="month">近 30 天</button>
+                    <button type="button" class="timeline-range-chip" data-range="all">全部</button>
+                  </div>
+                  <div class="timeline-rating-filter-chips" role="radiogroup" aria-label="心流狀態篩選">
+                    <button type="button" class="timeline-filter-pill active" data-rating="all">全部狀態</button>
+                    <button type="button" class="timeline-filter-pill" data-rating="flow">🔥 心流</button>
+                    <button type="button" class="timeline-filter-pill" data-rating="steady">✨ 穩定</button>
+                    <button type="button" class="timeline-filter-pill" data-rating="warmup">🌱 熱身</button>
+                  </div>
+                </div>
+                <div class="timeline-summary-bar" id="timelineSummaryBar">
+                  <span id="timelineSummaryText">0 輪專注 · 0 分鐘 · 心流率 0%</span>
+                </div>
+              </div>
+              <div class="session-timeline-list" id="sessionTimelineList" aria-label="專注歷史列表"></div>
             </div>
 
             <div class="stats-export-row">
@@ -1175,6 +1281,37 @@
             <span>啟動專注旅程</span>
           </button>
         </div>
+      </div>
+    </dialog>
+
+    <dialog class="affinity-modal" id="affinityModal">
+      <div class="affinity-dialog-card">
+        <div class="affinity-dialog-header">
+          <div class="affinity-dialog-title-group">
+            <h2>✨ 伴讀夥伴默契里程碑</h2>
+            <span class="affinity-dialog-subtitle">與伴讀夥伴共同沉浸專注，逐步解鎖深層心流共振</span>
+          </div>
+          <button class="icon-btn subtle close-btn" id="closeAffinity" type="button" aria-label="關閉默契手冊">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="affinity-current-card">
+          <div class="affinity-current-avatar" id="affinityCurrentAvatar">🌱</div>
+          <div class="affinity-current-info">
+            <div class="affinity-current-name-row">
+              <span class="affinity-current-title" id="affinityCurrentTitle">Lv.1 初識書伴</span>
+              <span class="affinity-total-exp" id="affinityTotalExp">累計 0 EXP</span>
+            </div>
+            <div class="affinity-progress-track">
+              <div class="affinity-progress-fill" id="affinityProgressFill" style="width: 0%"></div>
+            </div>
+            <span class="affinity-quote" id="affinityCurrentQuote">「你好呀！今天開始我們一起讀書吧。」</span>
+          </div>
+        </div>
+        <div class="affinity-rules-row">
+          <span>獲取默契方式：🍅 專注完成 (+25) · 🧘 靜心儀式 (+15) · 🏆 完成任務 (+10) · 🐾 撫摸安撫 (+3)</span>
+        </div>
+        <div class="affinity-tiers-list" id="affinityTiersList"></div>
       </div>
     </dialog>
 

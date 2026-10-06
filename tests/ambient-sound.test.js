@@ -5,6 +5,8 @@ import {
   SOUNDSCAPE_PRESETS,
   encodeSoundscapeCode,
   decodeSoundscapeCode,
+  ACOUSTIC_PRESETS,
+  createProceduralImpulseResponse,
 } from "../src/services/ambient-sound.js";
 
 describe("AmbientSoundscapeManager", () => {
@@ -155,5 +157,53 @@ describe("AmbientSoundscapeManager", () => {
     // Invalid track name
     expect(manager.setBinauralBeatFrequency("non_existent", 200, 10)).toBe(false);
     expect(manager.getBinauralBeatFrequency("non_existent")).toBeNull();
+  });
+
+  it("exposes acoustic presets and generates procedural impulse responses", () => {
+    expect(ACOUSTIC_PRESETS.bypass).toBeDefined();
+    expect(ACOUSTIC_PRESETS.cabin).toBeDefined();
+    expect(ACOUSTIC_PRESETS.library).toBeDefined();
+    expect(ACOUSTIC_PRESETS.cathedral).toBeDefined();
+
+    // Mock audio context
+    const mockCtx = {
+      sampleRate: 44100,
+      createBuffer: (channels, length, sampleRate) => ({
+        numberOfChannels: channels,
+        length,
+        sampleRate,
+        getChannelData: () => new Float32Array(length),
+      }),
+    };
+    const impulse = createProceduralImpulseResponse(mockCtx, 0.5, 2.0);
+    expect(impulse).not.toBeNull();
+    expect(impulse.length).toBe(22050);
+
+    expect(createProceduralImpulseResponse(null)).toBeNull();
+  });
+
+  it("controls master EQ and reverb wet/dry mix and applies presets", () => {
+    const manager = new AmbientSoundscapeManager();
+    expect(manager.getMasterEQ()).toEqual({ bass: 0, mid: 0, treble: 0 });
+    expect(manager.getMasterReverb().wet).toBe(0.0);
+
+    manager.setMasterEQ({ bass: 3.5, mid: -1.0, treble: 4.0 });
+    expect(manager.getMasterEQ()).toEqual({ bass: 3.5, mid: -1.0, treble: 4.0 });
+
+    // Clamping to -12 ~ +12 dB
+    manager.setMasterEQ({ bass: 20, mid: -25, treble: 0 });
+    expect(manager.getMasterEQ()).toEqual({ bass: 12, mid: -12, treble: 0 });
+
+    // Reverb wet clamping
+    manager.setMasterReverb({ wet: 0.9, duration: 1.5, decay: 2.0 });
+    expect(manager.getMasterReverb().wet).toBe(0.7);
+
+    // Apply preset
+    expect(manager.applyAcousticPreset("cabin")).toBe(true);
+    expect(manager.getMasterEQ()).toEqual(ACOUSTIC_PRESETS.cabin.eq);
+    expect(manager.getMasterReverb().preset).toBe("cabin");
+    expect(manager.getMasterReverb().wet).toBe(ACOUSTIC_PRESETS.cabin.reverb.wet);
+
+    expect(manager.applyAcousticPreset("invalid_preset")).toBe(false);
   });
 });

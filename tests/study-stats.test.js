@@ -252,4 +252,58 @@ describe("StudyStatsManager Service", () => {
     expect(report).toContain("🔥 深度心流");
     expect(report).toContain("重構核心服務架構");
   });
+
+  it("filters sessions by date range, category, and rating and generates scoped reports", () => {
+    const now = new Date("2026-10-06T12:00:00Z").getTime();
+    stats.history = [
+      {
+        id: "s1",
+        timestamp: "2026-10-06T09:00:00Z",
+        date: "2026-10-06",
+        durationMinutes: 25,
+        category: "dev",
+        rating: "flow",
+      },
+      {
+        id: "s2",
+        timestamp: "2026-10-05T14:00:00Z",
+        date: "2026-10-05",
+        durationMinutes: 50,
+        category: "read",
+        rating: "steady",
+      },
+      {
+        id: "s3",
+        timestamp: "2026-09-20T10:00:00Z",
+        date: "2026-09-20",
+        durationMinutes: 30,
+        category: "dev",
+        rating: "warmup",
+      },
+    ];
+
+    // Filter today
+    const todayResult = stats.getFilteredSessions({ range: "today", now });
+    expect(todayResult.totalCount).toBe(1);
+    expect(todayResult.totalMinutes).toBe(25);
+    expect(todayResult.flowCount).toBe(1);
+
+    // Filter week
+    const weekResult = stats.getFilteredSessions({ range: "week", now });
+    expect(weekResult.totalCount).toBe(2);
+    expect(weekResult.totalMinutes).toBe(75);
+
+    // Filter by category
+    const devResult = stats.getFilteredSessions({ range: "all", category: "dev", now });
+    expect(devResult.totalCount).toBe(2);
+    expect(devResult.totalMinutes).toBe(55);
+
+    // Filter by rating
+    const flowResult = stats.getFilteredSessions({ range: "all", rating: "flow", now });
+    expect(flowResult.totalCount).toBe(1);
+
+    // Scoped Markdown Report
+    const weekReport = stats.exportExecutiveMarkdownReport("Lina", [], { range: "week", now });
+    expect(weekReport).toContain("心流復盤報告（近 7 天）");
+  });
 });
