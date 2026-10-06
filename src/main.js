@@ -407,11 +407,19 @@ const elements = {
   sliderEqTreble: $("#sliderEqTreble"),
   eqTrebleValue: $("#eqTrebleValue"),
 
-  // Timeline Filter
+  // Ambient Sleep Timer
+  sleepTimerSelect: $("#sleepTimerSelect"),
+  sleepTimerBadge: $("#sleepTimerBadge"),
+  btnCancelSleepTimer: $("#btnCancelSleepTimer"),
+
+  // Timeline Filter & Search
   timelineFilterBar: $("#timelineFilterBar"),
   timelineRangeChips: [...document.querySelectorAll(".timeline-range-chip")],
   timelineFilterPills: [...document.querySelectorAll(".timeline-filter-pill")],
   timelineSummaryText: $("#timelineSummaryText"),
+  timelineSearchInput: $("#timelineSearchInput"),
+  timelineSearchClear: $("#timelineSearchClear"),
+  timelinePlantFilterSelect: $("#timelinePlantFilterSelect"),
 
   // Companion Affinity
   btnCompanionAffinity: $("#btnCompanionAffinity"),
@@ -1008,6 +1016,8 @@ function renderCategoryBreakdown() {
 const timelineFilter = {
   range: "today",
   rating: "all",
+  plant: "all",
+  query: "",
 };
 
 function renderSessionTimeline() {
@@ -1017,10 +1027,33 @@ function renderSessionTimeline() {
     elements.sessionTimelineCount.textContent = `${filtered.totalCount} 次完成`;
   }
   if (elements.timelineSummaryText) {
-    elements.timelineSummaryText.textContent = `共 ${filtered.totalCount} 輪 · ${filtered.totalMinutes} 分鐘 · 心流率 ${filtered.flowRate}%`;
+    let extra = "";
+    if (timelineFilter.query) {
+      extra += ` · 關鍵字「${timelineFilter.query}」`;
+    }
+    if (timelineFilter.plant && timelineFilter.plant !== "all") {
+      const pNames = {
+        rose: "玫瑰",
+        tulip: "鬱金香",
+        cactus: "仙人掌",
+        succulent: "多肉",
+        pine: "冷杉",
+        sunflower: "向日葵",
+        lavender: "薰衣草",
+      };
+      extra += ` · 植物「${pNames[timelineFilter.plant] || timelineFilter.plant}」`;
+    }
+    elements.timelineSummaryText.textContent = `共 ${filtered.totalCount} 輪 · ${filtered.totalMinutes} 分鐘 · 心流率 ${filtered.flowRate}%${extra}`;
   }
   if (filtered.sessions.length === 0) {
-    elements.sessionTimelineList.innerHTML = `<div class="session-timeline-empty">此篩選條件下尚無專注記錄，開始專注來播種吧！🌱</div>`;
+    const isFiltered =
+      Boolean(timelineFilter.query) ||
+      timelineFilter.plant !== "all" ||
+      timelineFilter.rating !== "all" ||
+      timelineFilter.range !== "today";
+    elements.sessionTimelineList.innerHTML = `<div class="session-timeline-empty">${
+      isFiltered ? "此搜尋與篩選條件下無符合的專注歷程 🔍" : "此篩選條件下尚無專注記錄，開始專注來播種吧！🌱"
+    }</div>`;
     return;
   }
 
@@ -1211,6 +1244,30 @@ function bindStatsTimeline() {
       elements.timelineFilterPills.forEach((p) => p.classList.toggle("active", p === pill));
       renderSessionTimeline();
     });
+  });
+
+  elements.timelineSearchInput?.addEventListener("input", (e) => {
+    timelineFilter.query = e.target.value?.trim() || "";
+    if (elements.timelineSearchClear) {
+      elements.timelineSearchClear.hidden = !timelineFilter.query;
+    }
+    renderSessionTimeline();
+  });
+
+  elements.timelineSearchClear?.addEventListener("click", () => {
+    timelineFilter.query = "";
+    if (elements.timelineSearchInput) {
+      elements.timelineSearchInput.value = "";
+    }
+    if (elements.timelineSearchClear) {
+      elements.timelineSearchClear.hidden = true;
+    }
+    renderSessionTimeline();
+  });
+
+  elements.timelinePlantFilterSelect?.addEventListener("change", (e) => {
+    timelineFilter.plant = e.target.value || "all";
+    renderSessionTimeline();
   });
 }
 
@@ -2511,6 +2568,55 @@ function bindAmbientSound() {
     lofiGenerator.setVolume(volume);
     elements.ambientVolumeValue.value = `${elements.ambientVolume.value}%`;
   });
+
+  // Soundscape Sleep Timer with adaptive auto-fadeout
+  ambientSound.onSleepTimerTick = (remainingSec) => {
+    if (!elements.sleepTimerBadge) return;
+    if (remainingSec > 0) {
+      elements.sleepTimerBadge.hidden = false;
+      if (elements.btnCancelSleepTimer) elements.btnCancelSleepTimer.hidden = false;
+      const m = String(Math.floor(remainingSec / 60)).padStart(2, "0");
+      const s = String(remainingSec % 60).padStart(2, "0");
+      if (remainingSec <= 60) {
+        elements.sleepTimerBadge.classList.add("fading-out");
+        elements.sleepTimerBadge.textContent = `${m}:${s} 漸弱淡出中...`;
+      } else {
+        elements.sleepTimerBadge.classList.remove("fading-out");
+        elements.sleepTimerBadge.textContent = `🌙 ${m}:${s}`;
+      }
+    } else {
+      elements.sleepTimerBadge.hidden = true;
+      elements.sleepTimerBadge.classList.remove("fading-out");
+      if (elements.btnCancelSleepTimer) elements.btnCancelSleepTimer.hidden = true;
+      if (elements.sleepTimerSelect) elements.sleepTimerSelect.value = "0";
+    }
+  };
+
+  ambientSound.onSleepTimerComplete = () => {
+    renderAmbientMixer();
+    elements.ambientChips.forEach((chip) => {
+      chip.classList.remove("active");
+      chip.setAttribute("aria-pressed", "false");
+    });
+    showToast("🌙 白噪音睡眠定時已淡出關閉，願你享有安穩寧靜時光。");
+  };
+
+  elements.sleepTimerSelect?.addEventListener("change", (e) => {
+    const mins = Number(e.target.value) || 0;
+    if (mins > 0) {
+      ambientSound.setSleepTimer(mins);
+      showToast(`🌙 已設定 ${mins} 分鐘後自動漸弱淡出關閉。`);
+    } else {
+      ambientSound.clearSleepTimer();
+      showToast("已取消睡眠定時器。");
+    }
+  });
+
+  elements.btnCancelSleepTimer?.addEventListener("click", () => {
+    ambientSound.clearSleepTimer();
+    if (elements.sleepTimerSelect) elements.sleepTimerSelect.value = "0";
+    showToast("已取消睡眠定時器。");
+  });
 }
 
 function bindPresets() {
@@ -3317,12 +3423,26 @@ function bindQrModal() {
 let currentPosterCanvas = null;
 let currentPosterMode = "focus";
 let currentSoundscapeData = null;
+let currentBookmarkData = null;
 
 function renderPosterCard(theme = store.get().posterTheme || "midnight") {
   const today = new Date().toISOString().split("T")[0];
   const nickname = store.get().nickname || "旅人";
 
-  if (currentPosterMode === "soundscape") {
+  if (currentPosterMode === "bookmark" && currentBookmarkData) {
+    if (elements.posterModalTitle) elements.posterModalTitle.textContent = "🔖 草木手作標本自習書籤";
+    if (elements.posterModalSubtitle)
+      elements.posterModalSubtitle.textContent = "純前端 Retina 2x 高解析度繪製 · 絲線孔扣與火漆封印 · 專屬花語典藏";
+
+    currentPosterCanvas = FocusPosterGenerator.generateBotanicalBookmark({
+      plantKey: currentBookmarkData.plantKey,
+      harvestCount: currentBookmarkData.harvestCount,
+      nickname: currentBookmarkData.nickname,
+      firstHarvestDate: currentBookmarkData.firstHarvestDate,
+      personalInscription: currentBookmarkData.personalInscription,
+      theme,
+    });
+  } else if (currentPosterMode === "soundscape") {
     if (elements.posterModalTitle) elements.posterModalTitle.textContent = "🎴 音景調音拍立得分享卡";
     if (elements.posterModalSubtitle)
       elements.posterModalSubtitle.textContent = "純前端 Retina 2x 高解析度繪製 · 頻譜波形與調音參數 · 內嵌 QR Code";
@@ -3389,6 +3509,7 @@ function renderPosterCard(theme = store.get().posterTheme || "midnight") {
 
 function openSoundscapePosterModal(preset = null) {
   currentPosterMode = "soundscape";
+  currentBookmarkData = null;
   currentSoundscapeData = preset || {
     name: "當前專注音景",
     tracks: ambientSound.getCurrentTrackMix(),
@@ -3397,6 +3518,30 @@ function openSoundscapePosterModal(preset = null) {
     reverb: ambientSound.getMasterReverb(),
   };
   const activeTheme = store.get().posterTheme || "midnight";
+  elements.posterThemeChips?.forEach((c) => c.classList.toggle("active", c.dataset.posterTheme === activeTheme));
+  renderPosterCard(activeTheme);
+  elements.posterModal?.showModal();
+}
+
+function openBookmarkPoster(plantKey) {
+  currentPosterMode = "bookmark";
+  currentSoundscapeData = null;
+  const herbarium = studyStats.getHerbarium();
+  const plant = herbarium.find((p) => p.id === plantKey) || {
+    id: plantKey,
+    harvestCount: 1,
+    firstUnlockedAt: new Date().toISOString(),
+  };
+
+  currentBookmarkData = {
+    plantKey,
+    harvestCount: plant.harvestCount || 1,
+    nickname: store.get().nickname || "自習旅人",
+    firstHarvestDate: plant.firstUnlockedAt || new Date().toISOString().split("T")[0],
+    personalInscription: store.get().focusIntention || "",
+  };
+
+  const activeTheme = store.get().posterTheme || "forest";
   elements.posterThemeChips?.forEach((c) => c.classList.toggle("active", c.dataset.posterTheme === activeTheme));
   renderPosterCard(activeTheme);
   elements.posterModal?.showModal();
@@ -3416,6 +3561,7 @@ function bindPosterModal() {
   elements.btnOpenPoster?.addEventListener("click", () => {
     currentPosterMode = "focus";
     currentSoundscapeData = null;
+    currentBookmarkData = null;
     const activeTheme = store.get().posterTheme || "midnight";
     elements.posterThemeChips?.forEach((c) => c.classList.toggle("active", c.dataset.posterTheme === activeTheme));
     renderPosterCard(activeTheme);
@@ -3436,23 +3582,39 @@ function bindPosterModal() {
     if (!currentPosterCanvas) return;
     const today = new Date().toISOString().split("T")[0];
     const filename =
-      currentPosterMode === "soundscape"
-        ? `soundscape-${(currentSoundscapeData?.name || "mix").replace(/\s+/g, "_")}-${today}.png`
-        : `focus-flow-${today}.png`;
+      currentPosterMode === "bookmark"
+        ? `botanical-bookmark-${currentBookmarkData?.plantKey || "specimen"}-${today}.png`
+        : currentPosterMode === "soundscape"
+          ? `soundscape-${(currentSoundscapeData?.name || "mix").replace(/\s+/g, "_")}-${today}.png`
+          : `focus-flow-${today}.png`;
     FocusPosterGenerator.download(currentPosterCanvas, filename);
-    showToast(currentPosterMode === "soundscape" ? "音景拍立得卡片已開始下載 📸" : "拍立得卡片已開始下載 📸");
+    const toastMsg =
+      currentPosterMode === "bookmark"
+        ? "草木標本書籤已開始下載 🔖"
+        : currentPosterMode === "soundscape"
+          ? "音景拍立得卡片已開始下載 📸"
+          : "拍立得卡片已開始下載 📸";
+    showToast(toastMsg);
   });
 
   elements.btnCopyPoster?.addEventListener("click", async () => {
     if (!currentPosterCanvas) return;
     const today = new Date().toISOString().split("T")[0];
     const filename =
-      currentPosterMode === "soundscape"
-        ? `soundscape-${(currentSoundscapeData?.name || "mix").replace(/\s+/g, "_")}-${today}.png`
-        : `focus-flow-${today}.png`;
+      currentPosterMode === "bookmark"
+        ? `botanical-bookmark-${currentBookmarkData?.plantKey || "specimen"}-${today}.png`
+        : currentPosterMode === "soundscape"
+          ? `soundscape-${(currentSoundscapeData?.name || "mix").replace(/\s+/g, "_")}-${today}.png`
+          : `focus-flow-${today}.png`;
     const success = await FocusPosterGenerator.copyToClipboard(currentPosterCanvas);
     if (success) {
-      showToast(currentPosterMode === "soundscape" ? "音景拍立得卡片已複製至剪貼簿 📋" : "拍立得卡片已複製至剪貼簿 📋");
+      const toastMsg =
+        currentPosterMode === "bookmark"
+          ? "草木標本書籤已複製至剪貼簿 🔖"
+          : currentPosterMode === "soundscape"
+            ? "音景拍立得卡片已複製至剪貼簿 📋"
+            : "拍立得卡片已複製至剪貼簿 📋";
+      showToast(toastMsg);
     } else {
       FocusPosterGenerator.download(currentPosterCanvas, filename);
       showToast("因瀏覽器安全限制，已自動為您下載 PNG 📸");
@@ -4717,6 +4879,22 @@ function renderHerbarium() {
               <span>採收次數：<strong>${p.harvestCount}</strong> 次</span>
               ${p.firstUnlockedAt ? `<span>初次綻放：${new Date(p.firstUnlockedAt).toLocaleDateString()}</span>` : ""}
             </div>
+            ${
+              p.unlocked
+                ? `
+              <div class="plant-card-actions">
+                <button
+                  type="button"
+                  class="btn-create-bookmark-mini"
+                  data-plant-key="${p.id}"
+                  title="將此植物壓花製成手作草木書籤並匯出"
+                >
+                  🔖 製作草木書籤
+                </button>
+              </div>
+            `
+                : ""
+            }
           </div>
         </div>
       `,
@@ -4750,6 +4928,15 @@ function renderHerbarium() {
 }
 
 function bindHerbarium() {
+  elements.plantsView?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".btn-create-bookmark-mini");
+    if (!btn) return;
+    const plantKey = btn.dataset.plantKey;
+    if (plantKey) {
+      openBookmarkPoster(plantKey);
+    }
+  });
+
   elements.openHerbarium?.addEventListener("click", () => {
     renderHerbarium();
     elements.herbariumModal?.showModal();

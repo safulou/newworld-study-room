@@ -286,4 +286,56 @@ describe("AmbientSoundscapeManager", () => {
     manager.unduck(0.8);
     expect(manager.masterGain.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.6, 10.8);
   });
+
+  it("manages sleep timer lifecycle with callbacks and auto-fadeout", () => {
+    vi.useFakeTimers();
+    try {
+      const manager = new AmbientSoundscapeManager();
+      const tickSpy = vi.fn();
+      const completeSpy = vi.fn();
+      manager.onSleepTimerTick = tickSpy;
+      manager.onSleepTimerComplete = completeSpy;
+
+      expect(manager.isSleepTimerActive()).toBe(false);
+      expect(manager.getSleepTimerRemaining()).toBe(0);
+
+      // Setting 0 or negative does nothing
+      expect(manager.setSleepTimer(0)).toBe(0);
+      expect(manager.isSleepTimerActive()).toBe(false);
+
+      // Set 1 minute (60 seconds)
+      const remaining = manager.setSleepTimer(1);
+      expect(remaining).toBe(60);
+      expect(manager.isSleepTimerActive()).toBe(true);
+      expect(manager.getSleepTimerRemaining()).toBe(60);
+      expect(tickSpy).toHaveBeenCalledWith(60);
+
+      // Advance by 1 second
+      vi.advanceTimersByTime(1000);
+      expect(manager.getSleepTimerRemaining()).toBe(59);
+      expect(tickSpy).toHaveBeenCalledWith(59);
+
+      // Clear timer
+      manager.clearSleepTimer();
+      expect(manager.isSleepTimerActive()).toBe(false);
+      expect(manager.getSleepTimerRemaining()).toBe(0);
+      expect(tickSpy).toHaveBeenCalledWith(0);
+
+      // Start new timer with 2 seconds (0.0333 mins -> 2 sec)
+      manager.sleepTimerRemainingSec = 2;
+      manager.sleepTimerDurationSec = 2;
+      manager.setSleepTimer(2 / 60);
+      expect(manager.isSleepTimerActive()).toBe(true);
+
+      const stopSpy = vi.spyOn(manager, "stopAll");
+
+      // Advance 2 seconds to completion
+      vi.advanceTimersByTime(2000);
+      expect(stopSpy).toHaveBeenCalledWith(1.2);
+      expect(completeSpy).toHaveBeenCalled();
+      expect(manager.isSleepTimerActive()).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

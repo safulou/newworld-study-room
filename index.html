@@ -612,6 +612,32 @@
               <input id="ambientVolume" type="range" min="0" max="100" step="1" value="40" aria-label="白噪音音量" />
               <output id="ambientVolumeValue" for="ambientVolume">40%</output>
             </div>
+            <div class="ambient-sleep-timer-row">
+              <div class="sleep-timer-label-group">
+                <span class="ambient-label">🌙 睡眠定時</span>
+                <span class="sleep-timer-badge" id="sleepTimerBadge" hidden>00:00</span>
+              </div>
+              <div class="sleep-timer-actions">
+                <select id="sleepTimerSelect" class="sleep-timer-select" aria-label="白噪音定時關閉設定">
+                  <option value="0">常開 (無定時)</option>
+                  <option value="15">15 分鐘後淡出</option>
+                  <option value="30">30 分鐘後淡出</option>
+                  <option value="45">45 分鐘後淡出</option>
+                  <option value="60">60 分鐘後淡出</option>
+                  <option value="90">90 分鐘後淡出</option>
+                </select>
+                <button
+                  type="button"
+                  id="btnCancelSleepTimer"
+                  class="sleep-timer-cancel-btn"
+                  title="取消睡眠定時器"
+                  aria-label="取消定時"
+                  hidden
+                >
+                  ✕ 取消
+                </button>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -913,6 +939,39 @@
                     <button type="button" class="timeline-filter-pill" data-rating="steady">✨ 穩定</button>
                     <button type="button" class="timeline-filter-pill" data-rating="warmup">🌱 熱身</button>
                   </div>
+                </div>
+                <div class="timeline-search-row">
+                  <div class="timeline-search-input-wrap">
+                    <i data-lucide="search" class="timeline-search-icon"></i>
+                    <input
+                      type="text"
+                      id="timelineSearchInput"
+                      class="timeline-search-input"
+                      placeholder="搜尋任務關鍵字、心得筆記、領域或草木..."
+                      aria-label="搜尋專注歷程"
+                      autocomplete="off"
+                    />
+                    <button
+                      type="button"
+                      id="timelineSearchClear"
+                      class="timeline-search-clear-btn"
+                      title="清除關鍵字"
+                      aria-label="清除關鍵字"
+                      hidden
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <select id="timelinePlantFilterSelect" class="timeline-plant-filter-select" aria-label="篩選收穫植物">
+                    <option value="all">🌿 全部植物</option>
+                    <option value="rose">🌹 玫瑰</option>
+                    <option value="tulip">🌷 鬱金香</option>
+                    <option value="cactus">🌵 仙人掌</option>
+                    <option value="succulent">🪴 多肉</option>
+                    <option value="pine">🌲 冷杉</option>
+                    <option value="sunflower">🌻 向日葵</option>
+                    <option value="lavender">🪻 薰衣草</option>
+                  </select>
                 </div>
                 <div class="timeline-summary-bar" id="timelineSummaryBar">
                   <span id="timelineSummaryText">0 輪專注 · 0 分鐘 · 心流率 0%</span>

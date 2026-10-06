@@ -189,6 +189,11 @@ export class AmbientSoundscapeManager {
     this.dryGain = null;
     this.wetGain = null;
     this.convolver = null;
+    this.sleepTimerRemainingSec = 0;
+    this.sleepTimerDurationSec = 0;
+    this.sleepTimerInterval = null;
+    this.onSleepTimerTick = null;
+    this.onSleepTimerComplete = null;
   }
 
   setBinauralBeatFrequency(name, baseFreq, diffFreq) {
@@ -909,6 +914,91 @@ export class AmbientSoundscapeManager {
     for (const name of Array.from(this.nodes.keys())) {
       this.stopTrack(name, fadeDuration);
     }
+  }
+
+  /**
+   * Set soundscape sleep timer with smooth auto-fadeout
+   * @param {number} minutes - Duration in minutes (0 to cancel)
+   * @returns {number} Initial remaining seconds
+   */
+  setSleepTimer(minutes) {
+    this.clearSleepTimer();
+    const mins = Math.max(0, Number(minutes) || 0);
+    if (mins <= 0) return 0;
+
+    this.sleepTimerDurationSec = Math.round(mins * 60);
+    this.sleepTimerRemainingSec = this.sleepTimerDurationSec;
+
+    this.sleepTimerInterval = setInterval(() => {
+      if (this.sleepTimerRemainingSec > 0) {
+        this.sleepTimerRemainingSec -= 1;
+        this.onSleepTimerTick?.(this.sleepTimerRemainingSec);
+
+        // Gentle volume fadeout during the final 60 seconds
+        if (this.sleepTimerRemainingSec <= 60 && this.audioCtx && this.masterGain && !this.isMuted) {
+          const fadeProgress = Math.max(0, this.sleepTimerRemainingSec / 60);
+          const currentTargetVol = this.masterVolume * fadeProgress;
+          const now = this.audioCtx.currentTime;
+          try {
+            this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, now);
+            this.masterGain.gain.linearRampToValueAtTime(Math.max(0.0001, currentTargetVol), now + 0.95);
+          } catch {}
+        }
+
+        if (this.sleepTimerRemainingSec <= 0) {
+          this.clearSleepTimer();
+          this.stopAll(1.2);
+          if (this.audioCtx && this.masterGain) {
+            setTimeout(() => {
+              if (this.masterGain && !this.isMuted) {
+                try {
+                  this.masterGain.gain.setValueAtTime(this.masterVolume, this.audioCtx.currentTime);
+                } catch {}
+              }
+            }, 1400);
+          }
+          this.onSleepTimerComplete?.();
+        }
+      }
+    }, 1000);
+
+    this.onSleepTimerTick?.(this.sleepTimerRemainingSec);
+    return this.sleepTimerRemainingSec;
+  }
+
+  /**
+   * Cancel and clear the soundscape sleep timer
+   */
+  clearSleepTimer() {
+    if (this.sleepTimerInterval) {
+      clearInterval(this.sleepTimerInterval);
+      this.sleepTimerInterval = null;
+    }
+    const hadTimer = this.sleepTimerRemainingSec > 0;
+    this.sleepTimerRemainingSec = 0;
+    this.sleepTimerDurationSec = 0;
+    if (hadTimer && this.audioCtx && this.masterGain && !this.isMuted) {
+      try {
+        this.masterGain.gain.setValueAtTime(this.masterVolume, this.audioCtx.currentTime);
+      } catch {}
+    }
+    this.onSleepTimerTick?.(0);
+  }
+
+  /**
+   * Get remaining sleep timer seconds
+   * @returns {number}
+   */
+  getSleepTimerRemaining() {
+    return this.sleepTimerRemainingSec;
+  }
+
+  /**
+   * Check whether sleep timer is currently running
+   * @returns {boolean}
+   */
+  isSleepTimerActive() {
+    return this.sleepTimerRemainingSec > 0;
   }
 }
 

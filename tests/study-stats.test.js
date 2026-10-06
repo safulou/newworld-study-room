@@ -314,6 +314,74 @@ describe("StudyStatsManager Service", () => {
     expect(weekReport).toContain("心流復盤報告（近 7 天）");
   });
 
+  it("filters sessions with keyword search and plant harvested tags", () => {
+    stats.history = [
+      {
+        id: "s1",
+        timestamp: "2026-10-05T10:00:00Z",
+        date: "2026-10-05",
+        durationMinutes: 45,
+        category: "dev",
+        rating: "flow",
+        taskTitle: "重構音景音頻節點",
+        note: "完成 Web Audio 衰減平滑曲線",
+        plantHarvested: "rose",
+      },
+      {
+        id: "s2",
+        timestamp: "2026-10-04T10:00:00Z",
+        date: "2026-10-04",
+        durationMinutes: 30,
+        category: "read",
+        rating: "steady",
+        taskTitle: "閱讀 Three.js 著色器專著",
+        note: "自訂頂點著色器筆記",
+        plantHarvested: "tulip",
+      },
+      {
+        id: "s3",
+        timestamp: "2026-10-03T10:00:00Z",
+        date: "2026-10-03",
+        durationMinutes: 25,
+        category: "design",
+        rating: "warmup",
+        taskTitle: "繪製自習室草木書籤",
+        note: "手作壓花金屬銘牌樣式",
+        plantHarvested: "pine",
+      },
+    ];
+
+    // Search by taskTitle keyword
+    const titleMatch = stats.getFilteredSessions({ range: "all", query: "重構" });
+    expect(titleMatch.totalCount).toBe(1);
+    expect(titleMatch.sessions[0].id).toBe("s1");
+
+    // Search by note keyword
+    const noteMatch = stats.getFilteredSessions({ range: "all", query: "著色器" });
+    expect(noteMatch.totalCount).toBe(1);
+    expect(noteMatch.sessions[0].id).toBe("s2");
+
+    // Search by plant name (Chinese)
+    const plantMatch = stats.getFilteredSessions({ range: "all", query: "玫瑰" });
+    expect(plantMatch.totalCount).toBe(1);
+    expect(plantMatch.sessions[0].id).toBe("s1");
+
+    // Search by category label (Chinese)
+    const catMatch = stats.getFilteredSessions({ range: "all", query: "設計" });
+    expect(catMatch.totalCount).toBe(1);
+    expect(catMatch.sessions[0].id).toBe("s3");
+
+    // Filter by plant key
+    const plantFilter = stats.getFilteredSessions({ range: "all", plant: "tulip" });
+    expect(plantFilter.totalCount).toBe(1);
+    expect(plantFilter.sessions[0].id).toBe("s2");
+
+    // Non-matching query returns empty
+    const noMatch = stats.getFilteredSessions({ range: "all", query: "宇宙太空" });
+    expect(noMatch.totalCount).toBe(0);
+    expect(noMatch.sessions).toEqual([]);
+  });
+
   it("calculates flow momentum gauge and adaptive smart break recommendations", () => {
     // 1. Dormant momentum (no sessions)
     const emptyMomentum = stats.getFlowMomentum([]);

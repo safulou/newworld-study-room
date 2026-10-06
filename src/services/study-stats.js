@@ -79,11 +79,19 @@ export class StudyStatsManager {
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }
 
-  getFilteredSessions({ range = "today", category = "all", rating = "all", now = Date.now() } = {}) {
+  getFilteredSessions({
+    range = "today",
+    category = "all",
+    rating = "all",
+    plant = "all",
+    query = "",
+    now = Date.now(),
+  } = {}) {
     const nowDate = new Date(now);
     const todayStr = nowDate.toISOString().split("T")[0];
     const sevenDaysAgo = now - 7 * 86400000;
     const thirtyDaysAgo = now - 30 * 86400000;
+    const cleanQuery = typeof query === "string" ? query.trim().toLowerCase() : "";
 
     const matched = this.history.filter((item) => {
       // 1. Time range filter
@@ -105,6 +113,33 @@ export class StudyStatsManager {
       // 3. Rating filter
       if (rating && rating !== "all") {
         if (item.rating !== rating) return false;
+      }
+
+      // 4. Plant harvested filter
+      if (plant && plant !== "all") {
+        if (item.plantHarvested !== plant) return false;
+      }
+
+      // 5. Keyword search query
+      if (cleanQuery) {
+        const taskTitle = (item.taskTitle || "").toLowerCase();
+        const note = (item.note || "").toLowerCase();
+        const catKey = (item.category || "").toLowerCase();
+        const catLabel = (FOCUS_CATEGORIES[item.category]?.label || "").toLowerCase();
+        const plantKey = (item.plantHarvested || "").toLowerCase();
+        const plantName = (PLANT_BOTANICAL_SPECIES[item.plantHarvested]?.name || "").toLowerCase();
+        const dateStr = (item.date || "").toLowerCase();
+
+        const match =
+          taskTitle.includes(cleanQuery) ||
+          note.includes(cleanQuery) ||
+          catKey.includes(cleanQuery) ||
+          catLabel.includes(cleanQuery) ||
+          plantKey.includes(cleanQuery) ||
+          plantName.includes(cleanQuery) ||
+          dateStr.includes(cleanQuery);
+
+        if (!match) return false;
       }
 
       return true;
@@ -134,6 +169,8 @@ export class StudyStatsManager {
       range,
       category,
       rating,
+      plant,
+      query: cleanQuery,
       rangeLabel,
     };
   }
@@ -428,7 +465,14 @@ export class StudyStatsManager {
     const summary = this.getExecutiveSummary();
     const trend = this.getWeeklyTrend();
     const breakdown = this.getCategoryBreakdown();
-    const hasFilter = Boolean(filterOptions && (filterOptions.range || filterOptions.category || filterOptions.rating));
+    const hasFilter = Boolean(
+      filterOptions &&
+      (filterOptions.range ||
+        filterOptions.category ||
+        filterOptions.rating ||
+        filterOptions.query ||
+        filterOptions.plant),
+    );
     const filteredResult = hasFilter ? this.getFilteredSessions(filterOptions) : null;
     const plantNames = {
       rose: "玫瑰",

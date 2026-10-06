@@ -5,11 +5,13 @@
  */
 
 export const PLANT_FLOWER_LANGUAGES = {
-  rose: { name: "玫瑰", emoji: "🌹", language: "熱情專注與堅持不懈" },
-  tulip: { name: "鬱金香", emoji: "🌷", language: "寧靜自律與心靈沉澱" },
-  cactus: { name: "仙人掌", emoji: "🌵", language: "堅韌不拔與無畏挑戰" },
-  succulent: { name: "多肉植物", emoji: "🪴", language: "溫柔生長與細水長流" },
-  pine: { name: "松樹", emoji: "🌲", language: "從容沈穩與永恆守候" },
+  rose: { name: "緋紅玫瑰", emoji: "🌹", language: "熱情專注與自我超越", latin: "Rosa chinensis" },
+  tulip: { name: "明黃鬱金香", emoji: "🌷", language: "沈靜心靈與永恆專注", latin: "Tulipa gesneriana" },
+  cactus: { name: "翡翠仙人掌", emoji: "🌵", language: "堅毅頑強與抵禦干擾", latin: "Cactaceae" },
+  succulent: { name: "碧玉多肉", emoji: "🪴", language: "踏實累積與細水長流", latin: "Echeveria" },
+  pine: { name: "雪嶺冷杉", emoji: "🌲", language: "歲月深沈與從容自律", latin: "Pinus sylvestris" },
+  sunflower: { name: "朝陽向日葵", emoji: "🌻", language: "光明勇敢與追尋希望", latin: "Helianthus annuus" },
+  lavender: { name: "幽香薰衣草", emoji: "🪻", language: "放鬆舒緩與心靈寧靜", latin: "Lavandula" },
 };
 
 const CATEGORY_MAP = {
@@ -552,6 +554,244 @@ export class FocusPosterGenerator {
     ctx.fillStyle = themeConfig.signature;
     ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
     ctx.fillText("— 願舒適聲景陪伴你的每一次沉浸 —", width / 2, 592);
+
+    return canvas;
+  }
+
+  /**
+   * Generate an artisanal pressed-flower botanical bookmark (2x Retina Canvas)
+   * @param {Object} options
+   * @param {string} [options.plantKey='rose'] - Key of the harvested plant (rose, tulip, etc.)
+   * @param {number} [options.harvestCount=1] - Times harvested
+   * @param {string} [options.nickname='夥伴'] - User nickname
+   * @param {string} [options.firstHarvestDate] - First date unlocked/harvested
+   * @param {string} [options.personalInscription] - Personal reflection / motto
+   * @param {string} [options.theme='midnight'] - Theme palette
+   * @returns {HTMLCanvasElement}
+   */
+  static generateBotanicalBookmark({
+    plantKey = "rose",
+    harvestCount = 1,
+    nickname = "夥伴",
+    firstHarvestDate = null,
+    personalInscription = "",
+    theme = "midnight",
+  } = {}) {
+    const width = 380;
+    const height = 820;
+    const canvas = document.createElement("canvas");
+    canvas.width = width * 2;
+    canvas.height = height * 2;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(2, 2);
+
+    const themeConfig = POSTER_THEMES[theme] || POSTER_THEMES.midnight;
+    const plant = PLANT_FLOWER_LANGUAGES[plantKey] || PLANT_FLOWER_LANGUAGES.rose;
+    const safeNickname = String(nickname || "夥伴").slice(0, 16);
+    const safeCount = Math.max(1, Number(harvestCount) || 1);
+    const dateStr = firstHarvestDate || new Date().toISOString().split("T")[0];
+
+    // 1. Background Fill with theme gradient
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
+    bgGrad.addColorStop(0, themeConfig.bgGradient[0]);
+    bgGrad.addColorStop(0.5, themeConfig.bgGradient[1]);
+    bgGrad.addColorStop(1, themeConfig.bgGradient[2]);
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, width, height);
+
+    // Decorative Starlight Points
+    ctx.fillStyle = themeConfig.stars;
+    const starCoords = [
+      [40, 90],
+      [340, 80],
+      [60, 240],
+      [320, 220],
+      [30, 480],
+      [350, 460],
+      [50, 680],
+      [330, 720],
+    ];
+    starCoords.forEach(([sx, sy]) => {
+      ctx.beginPath();
+      ctx.arc(sx, sy, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // 2. Outer Bookmark Card with Double Ornate Borders
+    const cardX = 14;
+    const cardY = 14;
+    const cardW = width - 28;
+    const cardH = height - 28;
+    const cardRadius = 22;
+
+    ctx.strokeStyle = themeConfig.outerBorder;
+    ctx.lineWidth = 1.8;
+    this.strokeRoundRect(ctx, cardX, cardY, cardW, cardH, cardRadius);
+
+    ctx.strokeStyle = themeConfig.innerBorder;
+    ctx.lineWidth = 1;
+    this.strokeRoundRect(ctx, cardX + 6, cardY + 6, cardW - 12, cardH - 12, cardRadius - 4);
+
+    // 3. Top Ribbon Eyelet Hole & Hanging Silk Cord
+    const eyeletX = width / 2;
+    const eyeletY = 46;
+    const eyeletR = 9;
+
+    // Silk Cord Loop extending off top
+    ctx.strokeStyle = "#e2b36f";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(eyeletX - 4, eyeletY - 2);
+    if (ctx.quadraticCurveTo) {
+      ctx.quadraticCurveTo(eyeletX - 10, 10, eyeletX, 4);
+      ctx.quadraticCurveTo(eyeletX + 10, 10, eyeletX + 4, eyeletY - 2);
+    } else {
+      ctx.lineTo(eyeletX, 4);
+      ctx.lineTo(eyeletX + 4, eyeletY - 2);
+    }
+    ctx.stroke();
+
+    // Eyelet Ring
+    ctx.fillStyle = themeConfig.bgGradient[2];
+    ctx.beginPath();
+    ctx.arc(eyeletX, eyeletY, eyeletR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#f1b65f";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 4. Header Titles
+    ctx.textAlign = "center";
+    ctx.fillStyle = themeConfig.brandTitle;
+    ctx.font = "bold 10px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillText("NEWWORLD BOTANICAL ARCHIVE", width / 2, 82);
+
+    ctx.fillStyle = themeConfig.accent;
+    ctx.font = "12px ui-serif, Georgia, Cambria, serif";
+    ctx.fillText("— 草 木 自 習 標 本 書 籤 —", width / 2, 100);
+
+    // 5. Specimen Plaque (Pressed-Flower Display Area)
+    const specX = 32;
+    const specY = 118;
+    const specW = width - 64;
+    const specH = 268;
+
+    ctx.fillStyle = themeConfig.cardBg;
+    this.fillRoundRect(ctx, specX, specY, specW, specH, 16);
+    ctx.strokeStyle = themeConfig.cardBorder;
+    ctx.lineWidth = 1;
+    this.strokeRoundRect(ctx, specX, specY, specW, specH, 16);
+
+    // Specimen Flower Icon
+    ctx.font = "72px 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif";
+    ctx.fillText(plant.emoji, width / 2, specY + 85);
+
+    // Specimen Plant Title
+    ctx.fillStyle = themeConfig.plantTitle;
+    ctx.font = "bold 19px ui-serif, Georgia, Cambria, serif";
+    ctx.fillText(plant.name, width / 2, specY + 130);
+
+    // Latin Scientific Name
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "italic 11px ui-serif, Georgia, serif";
+    ctx.fillText(`${plant.latin || "Flora"} · Herbarium Specimen`, width / 2, specY + 152);
+
+    // Decorative Wreath Line
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+    ctx.beginPath();
+    ctx.moveTo(specX + 36, specY + 172);
+    ctx.lineTo(specX + specW - 36, specY + 172);
+    ctx.stroke();
+
+    ctx.fillStyle = themeConfig.accent;
+    ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillText("🌿 花語典藏 🌿", width / 2, specY + 195);
+
+    ctx.fillStyle = "#f8fafc";
+    ctx.font = "bold 13px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillText(`「${plant.language}」`, width / 2, specY + 225);
+
+    // 6. Provenance & Harvest Metadata Plaque
+    const metaX = 32;
+    const metaY = 404;
+    const metaW = width - 64;
+    const metaH = 176;
+
+    ctx.fillStyle = "rgba(0, 0, 0, 0.22)";
+    this.fillRoundRect(ctx, metaX, metaY, metaW, metaH, 14);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+    this.strokeRoundRect(ctx, metaX, metaY, metaW, metaH, 14);
+
+    ctx.textAlign = "left";
+    ctx.fillStyle = themeConfig.accent;
+    ctx.font = "bold 11px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillText("📜 標本銘牌 Provenance", metaX + 16, metaY + 28);
+
+    const rows = [
+      { label: "培育書伴：", val: safeNickname },
+      { label: "累計綻放：", val: `共 ${safeCount} 次收穫` },
+      { label: "紀錄時日：", val: dateStr },
+      { label: "標本編號：", val: `#NW-${plantKey.toUpperCase()}-${String(safeCount).padStart(3, "0")}` },
+    ];
+
+    rows.forEach((r, idx) => {
+      const ry = metaY + 56 + idx * 26;
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "12px ui-sans-serif, system-ui, sans-serif";
+      ctx.fillText(r.label, metaX + 16, ry);
+
+      ctx.fillStyle = "#f1f5f9";
+      ctx.font = "bold 12px ui-sans-serif, system-ui, sans-serif";
+      ctx.fillText(r.val, metaX + 88, ry);
+    });
+
+    // 7. Personal Inscription / Handcrafted Motto Plaque
+    const noteX = 32;
+    const noteY = 598;
+    const noteW = width - 64;
+    const noteH = 110;
+
+    ctx.fillStyle = themeConfig.cardBg;
+    this.fillRoundRect(ctx, noteX, noteY, noteW, noteH, 14);
+    ctx.strokeStyle = themeConfig.cardBorder;
+    this.strokeRoundRect(ctx, noteX, noteY, noteW, noteH, 14);
+
+    ctx.textAlign = "left";
+    ctx.fillStyle = themeConfig.brandTitle;
+    ctx.font = "bold 11px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillText("✍️ 旅人題字 Inscription", noteX + 16, noteY + 28);
+
+    const noteText = personalInscription?.trim() || "在寧靜專注的時光中，靜靜扎根，等待下一季綻放。";
+    ctx.fillStyle = "#fed7aa";
+    ctx.font = "italic 12px ui-serif, Georgia, serif";
+
+    // Text wrap 2 lines if needed
+    if (noteText.length > 18) {
+      ctx.fillText(noteText.slice(0, 18), noteX + 16, noteY + 54);
+      ctx.fillText(noteText.slice(18, 38), noteX + 16, noteY + 76);
+    } else {
+      ctx.fillText(`“${noteText}”`, noteX + 16, noteY + 62);
+    }
+
+    // 8. Bottom Monogram & Artisanal Seal Stamp
+    const sealX = width / 2;
+    const sealY = 744;
+    const sealR = 17;
+
+    ctx.strokeStyle = "#e2b36f";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(sealX, sealY, sealR, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = "#f1b65f";
+    ctx.textAlign = "center";
+    ctx.font = "bold 12px ui-serif, Georgia, serif";
+    ctx.fillText("NW", sealX, sealY + 4);
+
+    ctx.fillStyle = themeConfig.signature;
+    ctx.font = "10px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillText("— 手作自習標本典藏 · 願專注常伴 —", width / 2, 782);
 
     return canvas;
   }

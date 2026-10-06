@@ -14,6 +14,8 @@ describe("FocusPosterGenerator", () => {
       beginPath: vi.fn(),
       moveTo: vi.fn(),
       lineTo: vi.fn(),
+      quadraticCurveTo: vi.fn(),
+      bezierCurveTo: vi.fn(),
       rect: vi.fn(),
       roundRect: vi.fn(),
       arc: vi.fn(),
@@ -154,5 +156,22 @@ describe("FocusPosterGenerator", () => {
     expect(canvas).toBeDefined();
     expect(canvas.width).toBe(880);
     expect(canvas.height).toBe(1240);
+  });
+
+  it("generates botanical pressed-flower bookmarks across themes", () => {
+    const plants = ["rose", "tulip", "cactus", "succulent", "pine", "sunflower", "lavender"];
+    plants.forEach((plantKey) => {
+      const canvas = FocusPosterGenerator.generateBotanicalBookmark({
+        plantKey,
+        harvestCount: 5,
+        nickname: "Arsen",
+        firstHarvestDate: "2026-10-01",
+        personalInscription: "寧靜致遠，生生不息。",
+        theme: "forest",
+      });
+      expect(canvas).toBeDefined();
+      expect(canvas.width).toBe(760);
+      expect(canvas.height).toBe(1640);
+    });
   });
 });
