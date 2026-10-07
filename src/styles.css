@@ -3715,6 +3715,198 @@ body.zen-mode.zen-inactive .zen-focus-intention {
   margin-top: 4px;
 }
 
+.badge-category-tag {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  margin-right: 4px;
+}
+
+.badge-progress-wrap {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.badge-progress-bar {
+  width: 100%;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.badge-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--teal), var(--gold-soft));
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.badge-progress-text {
+  font-size: 10px;
+  color: var(--gold-soft);
+  font-family: var(--font-mono, monospace);
+  align-self: flex-end;
+}
+
+/* Herbarium Gifts Showcase */
+.gifts-view {
+  min-height: 200px;
+}
+
+.empty-gifts-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 20px;
+  text-align: center;
+  background: rgba(22, 31, 46, 0.4);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  color: var(--muted);
+}
+
+.empty-gifts-icon {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+.empty-gifts-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.empty-gifts-desc {
+  font-size: 12px;
+  color: var(--muted);
+  max-width: 320px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.gifts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.gift-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(25, 36, 54, 0.85), rgba(16, 23, 36, 0.9));
+  border: 1px solid rgba(246, 200, 81, 0.25);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.gift-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(246, 200, 81, 0.45);
+}
+
+.gift-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.gift-sender-badge {
+  font-size: 11px;
+  color: var(--gold-soft);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.gift-time {
+  font-size: 10px;
+  color: var(--faint);
+}
+
+.gift-card-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.gift-plant-icon {
+  font-size: 2rem;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.gift-plant-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.gift-plant-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.gift-quote {
+  font-size: 11px;
+  color: var(--gold-soft);
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gift-inscription {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 2px solid var(--teal);
+  padding: 4px 8px;
+  border-radius: 0 4px 4px 0;
+  margin: 0;
+}
+
+.btn-view-gift-bookmark {
+  align-self: flex-end;
+  font-size: 11px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  background: rgba(246, 200, 81, 0.15);
+  border: 1px solid rgba(246, 200, 81, 0.3);
+  color: var(--gold-soft);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-view-gift-bookmark:hover {
+  background: rgba(246, 200, 81, 0.25);
+  border-color: var(--gold);
+}
+
 /* Universal Shortcuts HUD Modal */
 .shortcuts-modal {
   border: 0;
@@ -6177,6 +6369,52 @@ button.timeline-rating:hover {
   accent-color: var(--teal);
   cursor: pointer;
   height: 4px;
+}
+
+.acoustic-visualizer-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.visualizer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+.visualizer-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--teal);
+  font-weight: 600;
+}
+
+.visualizer-label svg {
+  width: 13px;
+  height: 13px;
+}
+
+.visualizer-status {
+  font-size: 10px;
+  color: var(--muted);
+  font-family: var(--font-mono, monospace);
+}
+
+.acoustic-visualizer-canvas {
+  width: 100%;
+  height: 64px;
+  border-radius: 6px;
+  background: radial-gradient(ellipse at 50% 50%, rgba(13, 25, 38, 0.95), rgba(7, 12, 20, 0.98));
+  border: 1px solid rgba(105, 200, 189, 0.15);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+  display: block;
 }
 
 /* Timeline Filter Bar */

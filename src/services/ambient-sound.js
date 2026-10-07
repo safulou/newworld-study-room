@@ -202,6 +202,7 @@ export class AmbientSoundscapeManager {
     this.dryGain = null;
     this.wetGain = null;
     this.convolver = null;
+    this.analyser = null;
     this.sleepTimerRemainingSec = 0;
     this.sleepTimerDurationSec = 0;
     this.sleepTimerInterval = null;
@@ -286,6 +287,13 @@ export class AmbientSoundscapeManager {
         this.eqTreble.connect(this.convolver);
         this.convolver.connect(this.wetGain);
         this.wetGain.connect(this.audioCtx.destination);
+
+        // Tap for real-time visualizer
+        if (this.analyser && this.masterGain.connect) {
+          try {
+            this.masterGain.connect(this.analyser);
+          } catch {}
+        }
         return;
       }
     } catch {
@@ -364,12 +372,27 @@ export class AmbientSoundscapeManager {
       this.audioCtx = new AudioContextClass();
       this.masterGain = this.audioCtx.createGain();
       this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : this.masterVolume, this.audioCtx.currentTime);
+      if (this.audioCtx.createAnalyser) {
+        this.analyser = this.audioCtx.createAnalyser();
+        this.analyser.fftSize = 128;
+        this.analyser.smoothingTimeConstant = 0.8;
+      }
       this.setupAcousticChain();
     }
     if (this.audioCtx.state === "suspended") {
       this.audioCtx.resume().catch(() => {});
     }
     return this.audioCtx;
+  }
+
+  getAnalyserData() {
+    if (!this.analyser) return null;
+    const bufferLength = this.analyser.frequencyBinCount;
+    const freqData = new Uint8Array(bufferLength);
+    const timeData = new Uint8Array(bufferLength);
+    this.analyser.getByteFrequencyData(freqData);
+    this.analyser.getByteTimeDomainData(timeData);
+    return { freqData, timeData, bufferLength };
   }
 
   createNoiseBuffer(seconds = 5) {

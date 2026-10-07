@@ -340,4 +340,23 @@ describe("AmbientSoundscapeManager", () => {
       vi.useRealTimers();
     }
   });
+
+  it("provides real-time acoustic visualizer analyser data safely", () => {
+    const manager = new AmbientSoundscapeManager();
+    expect(manager.getAnalyserData()).toBeNull();
+
+    manager.analyser = {
+      frequencyBinCount: 32,
+      getByteFrequencyData: vi.fn((arr) => arr.fill(128)),
+      getByteTimeDomainData: vi.fn((arr) => arr.fill(64)),
+    };
+
+    const data = manager.getAnalyserData();
+    expect(data).not.toBeNull();
+    expect(data.bufferLength).toBe(32);
+    expect(data.freqData.length).toBe(32);
+    expect(data.timeData.length).toBe(32);
+    expect(data.freqData[0]).toBe(128);
+    expect(data.timeData[0]).toBe(64);
+  });
 });

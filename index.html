@@ -608,6 +608,19 @@
                     />
                   </div>
                 </div>
+                <div class="acoustic-visualizer-row">
+                  <div class="visualizer-header">
+                    <span class="visualizer-label"><i data-lucide="activity"></i> 即時聲學頻譜示波器</span>
+                    <span class="visualizer-status" id="visualizerStatus">靜候音訊中...</span>
+                  </div>
+                  <canvas
+                    id="acousticVisualizerCanvas"
+                    class="acoustic-visualizer-canvas"
+                    width="480"
+                    height="68"
+                    aria-label="即時聲波頻譜"
+                  ></canvas>
+                </div>
               </div>
               <div class="ambient-mixer-tracks" id="ambientMixerTracks"></div>
             </div>
@@ -1274,10 +1287,12 @@
         <div class="herbarium-tabs">
           <button class="tab-btn active" id="tabPlants" type="button" data-tab="plants">植物圖鑑</button>
           <button class="tab-btn" id="tabBadges" type="button" data-tab="badges">成就徽章</button>
+          <button class="tab-btn" id="tabGifts" type="button" data-tab="gifts">書伴贈禮 (0)</button>
         </div>
         <div class="herbarium-content" id="herbariumContent">
           <div class="herbarium-view plants-view" id="plantsView"></div>
           <div class="herbarium-view badges-view" id="badgesView" hidden></div>
+          <div class="herbarium-view gifts-view" id="giftsView" hidden></div>
         </div>
       </div>
     </dialog>

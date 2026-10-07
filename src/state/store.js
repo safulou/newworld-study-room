@@ -71,6 +71,8 @@ const profileDefaults = {
   clockworkTickVolume: 0.25,
   cabinAtmosphereMood: "auto",
   dailyGoalMinutes: 100,
+  receivedBookmarks: [],
+  celebratedBadgeIds: [],
 };
 
 export const AFFINITY_RANKS = [
@@ -312,6 +314,29 @@ function sanitizeProfile(value = {}) {
       ? value.cabinAtmosphereMood
       : profileDefaults.cabinAtmosphereMood,
     dailyGoalMinutes: Math.max(10, Math.min(720, Number(value.dailyGoalMinutes) || profileDefaults.dailyGoalMinutes)),
+    receivedBookmarks: Array.isArray(value.receivedBookmarks)
+      ? value.receivedBookmarks
+          .filter((b) => b && typeof b.plantKey === "string")
+          .slice(0, 40)
+          .map((b) => ({
+            id: String(b.id || crypto.randomUUID()).slice(0, 64),
+            plantKey: String(b.plantKey).trim().slice(0, 24),
+            senderNickname: String(b.senderNickname || "書伴")
+              .trim()
+              .slice(0, 24),
+            personalInscription: String(b.personalInscription || "")
+              .trim()
+              .slice(0, 80),
+            receivedAt: Number.isFinite(Number(b.receivedAt)) ? Number(b.receivedAt) : Date.now(),
+            theme: ["midnight", "aurora", "sunset", "forest", "cyber"].includes(b.theme) ? b.theme : "forest",
+          }))
+      : [],
+    celebratedBadgeIds: Array.isArray(value.celebratedBadgeIds)
+      ? value.celebratedBadgeIds
+          .filter((id) => typeof id === "string")
+          .slice(0, 30)
+          .map((id) => String(id).slice(0, 32))
+      : [],
   };
 }
 
@@ -513,6 +538,36 @@ export function createStore({ roomId = "local-draft", includeStarterTips = true,
       const idx = current.indexOf(target);
       current.splice(idx + 1, 0, copy);
       profile = sanitizeProfile({ ...profile, customPresets: current });
+      emit({ saveProfile: true, saveRoom: false });
+      return true;
+    },
+    addReceivedBookmark(gift) {
+      if (!gift || !gift.plantKey) return false;
+      const currentList = profile.receivedBookmarks || [];
+      const newBookmark = {
+        id: String(gift.id || crypto.randomUUID()).slice(0, 64),
+        plantKey: String(gift.plantKey).trim().slice(0, 24),
+        senderNickname: String(gift.senderNickname || "書伴")
+          .trim()
+          .slice(0, 24),
+        personalInscription: String(gift.personalInscription || "")
+          .trim()
+          .slice(0, 80),
+        receivedAt: Number.isFinite(Number(gift.receivedAt || gift.timestamp))
+          ? Number(gift.receivedAt || gift.timestamp)
+          : Date.now(),
+        theme: ["midnight", "aurora", "sunset", "forest", "cyber"].includes(gift.theme) ? gift.theme : "forest",
+      };
+      profile = sanitizeProfile({ ...profile, receivedBookmarks: [newBookmark, ...currentList].slice(0, 40) });
+      emit({ saveProfile: true, saveRoom: false });
+      return true;
+    },
+    markBadgeCelebrated(badgeId) {
+      if (!badgeId || typeof badgeId !== "string") return false;
+      const celebrated = new Set(profile.celebratedBadgeIds || []);
+      if (celebrated.has(badgeId)) return false;
+      celebrated.add(badgeId);
+      profile = sanitizeProfile({ ...profile, celebratedBadgeIds: Array.from(celebrated).slice(0, 30) });
       emit({ saveProfile: true, saveRoom: false });
       return true;
     },

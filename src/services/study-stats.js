@@ -615,47 +615,173 @@ export class StudyStatsManager {
     });
   }
 
-  getBadges() {
+  getBadges(extraState = {}) {
     const totalHarvest = Object.values(this.getHarvestCounts()).reduce((a, b) => a + b, 0);
     const streak = this.getCurrentStreakDays();
     const uniquePlants = Object.keys(this.getHarvestCounts()).length;
     const totalMinutes = this.getTotalMinutes();
+    const flowCount = this.history.filter((h) => h.rating === "flow").length;
+    const nightCount = this.history.filter((h) => {
+      const d = new Date(h.timestamp || h.date);
+      const hour = d.getHours();
+      return hour >= 22 || hour < 5;
+    }).length;
+    const earlyCount = this.history.filter((h) => {
+      const d = new Date(h.timestamp || h.date);
+      const hour = d.getHours();
+      return hour >= 5 && hour < 9;
+    }).length;
+    const hasMarathon = this.history.some((h) => (h.durationMinutes || 0) >= 50);
+    const dailyGoalHit = Boolean(
+      extraState.dailyGoalAchieved ||
+      extraState.dailyGoalCompleted ||
+      (this.getDailyGoalProgress && this.getDailyGoalProgress().completed),
+    );
 
     return [
       {
         id: "first_sprout",
         title: "萌芽初綻",
+        name: "萌芽初綻",
         icon: "🌱",
+        category: "botany",
+        rarity: "common",
         description: "完成第一次專注並收穫第 1 株植物",
         unlocked: totalHarvest >= 1,
+        progressText: `${Math.min(1, totalHarvest)}/1 株`,
+        progressPercent: totalHarvest >= 1 ? 100 : 0,
       },
       {
         id: "botanist",
         title: "木屋植物學家",
+        name: "木屋植物學家",
         icon: "🌸",
+        category: "botany",
+        rarity: "rare",
         description: "培育收穫全部 5 種不同的專注植物",
         unlocked: uniquePlants >= 5,
+        progressText: `${uniquePlants}/5 種`,
+        progressPercent: Math.min(100, Math.round((uniquePlants / 5) * 100)),
       },
       {
         id: "streak_master",
         title: "連貫心流",
+        name: "連貫心流",
         icon: "🔥",
+        category: "habit",
+        rarity: "common",
         description: "保持連續 3 天專注陪伴",
         unlocked: streak >= 3,
+        progressText: `${Math.min(3, streak)}/3 天`,
+        progressPercent: Math.min(100, Math.round((Math.min(3, streak) / 3) * 100)),
       },
       {
         id: "golden_gardener",
         title: "黃金七天紀律",
+        name: "黃金七天紀律",
         icon: "👑",
+        category: "habit",
+        rarity: "uncommon",
         description: "達成連續 7 天專注，解鎖黃金花盆榮耀",
         unlocked: streak >= 7,
+        progressText: `${Math.min(7, streak)}/7 天`,
+        progressPercent: Math.min(100, Math.round((Math.min(7, streak) / 7) * 100)),
+      },
+      {
+        id: "pine_endurance",
+        title: "寒冬松柏",
+        name: "寒冬松柏",
+        icon: "🌲",
+        category: "habit",
+        rarity: "rare",
+        description: "達成連續 14 天自習，堅韌不拔的恆久意志",
+        unlocked: streak >= 14,
+        progressText: `${Math.min(14, streak)}/14 天`,
+        progressPercent: Math.min(100, Math.round((Math.min(14, streak) / 14) * 100)),
       },
       {
         id: "master_hour",
         title: "百刻求索",
+        name: "百刻求索",
         icon: "⏳",
+        category: "time",
+        rarity: "uncommon",
         description: "累計專注時間突破 10 小時（600 分鐘）",
         unlocked: totalMinutes >= 600,
+        progressText: `${Math.min(600, totalMinutes)}/600 分`,
+        progressPercent: Math.min(100, Math.round((Math.min(600, totalMinutes) / 600) * 100)),
+      },
+      {
+        id: "summit_scholar",
+        title: "登峰造極",
+        name: "登峰造極",
+        icon: "🌌",
+        category: "time",
+        rarity: "epic",
+        description: "累計專注突破 50 小時（3000 分鐘），深度學者的至高之境",
+        unlocked: totalMinutes >= 3000,
+        progressText: `${Math.min(3000, totalMinutes)}/3000 分`,
+        progressPercent: Math.min(100, Math.round((Math.min(3000, totalMinutes) / 3000) * 100)),
+      },
+      {
+        id: "deep_diver",
+        title: "深度潛航",
+        name: "深度潛航",
+        icon: "🌊",
+        category: "rhythm",
+        rarity: "uncommon",
+        description: "完成單輪 50 分鐘以上的深度心流衝刺",
+        unlocked: hasMarathon,
+        progressText: hasMarathon ? "已達成" : "需單次 ≥ 50m",
+        progressPercent: hasMarathon ? 100 : 0,
+      },
+      {
+        id: "flow_resonance",
+        title: "心流共鳴",
+        name: "心流共鳴",
+        icon: "✨",
+        category: "rhythm",
+        rarity: "rare",
+        description: "累計獲得 10 輪「🔥 深度心流」高品質專注評級",
+        unlocked: flowCount >= 10,
+        progressText: `${Math.min(10, flowCount)}/10 輪`,
+        progressPercent: Math.min(100, Math.round((Math.min(10, flowCount) / 10) * 100)),
+      },
+      {
+        id: "goal_achiever",
+        title: "目標踐行者",
+        name: "目標踐行者",
+        icon: "🎯",
+        category: "rhythm",
+        rarity: "uncommon",
+        description: "達成今日設定的每日專注目標（滿環）",
+        unlocked: dailyGoalHit,
+        progressText: dailyGoalHit ? "今日已達成" : "進行中",
+        progressPercent: dailyGoalHit ? 100 : 0,
+      },
+      {
+        id: "night_owl",
+        title: "暗夜守望",
+        name: "暗夜守望",
+        icon: "🌙",
+        category: "time",
+        rarity: "common",
+        description: "在深夜時段（22:00～05:00）完成至少一輪專注",
+        unlocked: nightCount >= 1,
+        progressText: `${Math.min(1, nightCount)}/1 輪`,
+        progressPercent: nightCount >= 1 ? 100 : 0,
+      },
+      {
+        id: "early_bird",
+        title: "晨曦出發",
+        name: "晨曦出發",
+        icon: "🌅",
+        category: "time",
+        rarity: "common",
+        description: "在清晨時段（05:00～09:00）完成至少一輪專注",
+        unlocked: earlyCount >= 1,
+        progressText: `${Math.min(1, earlyCount)}/1 輪`,
+        progressPercent: earlyCount >= 1 ? 100 : 0,
       },
     ];
   }

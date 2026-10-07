@@ -366,4 +366,41 @@ describe("room-scoped store", () => {
     store.update({ dailyGoalMinutes: "not-a-number" });
     expect(store.get().dailyGoalMinutes).toBe(100);
   });
+
+  it("manages receivedBookmarks collection and deduplication/limits", () => {
+    const store = createStore({ roomId: "room-e", includeStarterTips: false });
+    expect(store.get().receivedBookmarks).toEqual([]);
+
+    expect(store.addReceivedBookmark(null)).toBe(false);
+    expect(store.addReceivedBookmark({})).toBe(false);
+
+    const gift = {
+      plantKey: "rose",
+      senderNickname: "Alice",
+      personalInscription: "一起專注加油！",
+      receivedAt: 123456789,
+      theme: "midnight",
+    };
+    expect(store.addReceivedBookmark(gift)).toBe(true);
+    const list = store.get().receivedBookmarks;
+    expect(list).toHaveLength(1);
+    expect(list[0].plantKey).toBe("rose");
+    expect(list[0].senderNickname).toBe("Alice");
+    expect(list[0].personalInscription).toBe("一起專注加油！");
+    expect(list[0].theme).toBe("midnight");
+  });
+
+  it("manages celebratedBadgeIds deduplication", () => {
+    const store = createStore({ roomId: "room-f", includeStarterTips: false });
+    expect(store.get().celebratedBadgeIds).toEqual([]);
+
+    expect(store.markBadgeCelebrated("first_sprout")).toBe(true);
+    expect(store.get().celebratedBadgeIds).toContain("first_sprout");
+
+    // Duplicate call returns false
+    expect(store.markBadgeCelebrated("first_sprout")).toBe(false);
+    expect(store.get().celebratedBadgeIds).toHaveLength(1);
+
+    expect(store.markBadgeCelebrated("")).toBe(false);
+  });
 });

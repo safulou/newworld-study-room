@@ -104,9 +104,22 @@ describe("StudyStatsManager Service", () => {
     expect(tulip.unlocked).toBe(false);
 
     const badges = stats.getBadges();
-    expect(badges.length).toBe(5);
+    expect(badges.length).toBe(12);
     const firstSprout = badges.find((b) => b.id === "first_sprout");
     expect(firstSprout.unlocked).toBe(true);
+    expect(firstSprout.progressPercent).toBe(100);
+    const botanist = badges.find((b) => b.id === "botanist");
+    expect(botanist.unlocked).toBe(false);
+    expect(botanist.progressPercent).toBe(20);
+
+    const badgesWithGoal = stats.getBadges({ dailyGoalAchieved: true });
+    const goalBadge = badgesWithGoal.find((b) => b.id === "goal_achiever");
+    expect(goalBadge.unlocked).toBe(true);
+    expect(goalBadge.progressPercent).toBe(100);
+
+    const badgesWithoutGoal = stats.getBadges({ dailyGoalAchieved: false });
+    const unachievedGoalBadge = badgesWithoutGoal.find((b) => b.id === "goal_achiever");
+    expect(unachievedGoalBadge.unlocked).toBe(false);
   });
 
   it("calculates 24-hour focus distribution and peak flow window", () => {

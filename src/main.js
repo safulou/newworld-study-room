@@ -333,8 +333,10 @@ const elements = {
   closeHerbarium: $("#closeHerbarium"),
   tabPlants: $("#tabPlants"),
   tabBadges: $("#tabBadges"),
+  tabGifts: $("#tabGifts"),
   plantsView: $("#plantsView"),
   badgesView: $("#badgesView"),
+  giftsView: $("#giftsView"),
   breathingModal: $("#breathingModal"),
   closeBreathing: $("#closeBreathing"),
   modeBoxBreathing: $("#modeBoxBreathing"),
@@ -423,6 +425,8 @@ const elements = {
   eqMidValue: $("#eqMidValue"),
   sliderEqTreble: $("#sliderEqTreble"),
   eqTrebleValue: $("#eqTrebleValue"),
+  acousticVisualizerCanvas: $("#acousticVisualizerCanvas"),
+  visualizerStatus: $("#visualizerStatus"),
 
   // Ambient Sleep Timer
   sleepTimerSelect: $("#sleepTimerSelect"),
@@ -2186,6 +2190,7 @@ function bindTimer() {
         showToast(`🎯 恭喜！今日自習目標已達成 (${newGoal.todayMinutes}/${newGoal.goalMinutes} 分鐘)！🎉`, 6000);
         showCompanionBubble(`🎯 太厲害了！你完成了今天的 ${newGoal.goalMinutes} 分鐘自習目標！一起繼續發光吧 ✨`, 7000);
       }
+      checkNewBadges(false);
 
       if (store.get().desktopNotifications) {
         notificationManager.notifyFocusComplete({
@@ -2695,6 +2700,125 @@ function bindAmbientSound() {
     if (elements.sleepTimerSelect) elements.sleepTimerSelect.value = "0";
     showToast("已取消睡眠定時器。");
   });
+}
+
+let visualizerAnimationId = null;
+
+function startAcousticVisualizer() {
+  const canvas = elements.acousticVisualizerCanvas;
+  if (!canvas) return;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  function renderVisualizer() {
+    visualizerAnimationId = requestAnimationFrame(renderVisualizer);
+
+    if (elements.acousticFxPanel && elements.acousticFxPanel.hidden) {
+      return;
+    }
+
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const width = rect.width || 480;
+    const height = rect.height || 64;
+
+    const targetWidth = Math.round(width * dpr);
+    const targetHeight = Math.round(height * dpr);
+    if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+    }
+
+    ctx.save();
+    ctx.scale(dpr, dpr);
+
+    ctx.fillStyle = "rgba(10, 16, 26, 0.45)";
+    ctx.fillRect(0, 0, width, height);
+
+    const data = ambientSound.getAnalyserData();
+    let hasSignal = false;
+
+    if (data && data.freqData && data.bufferLength > 0) {
+      const { freqData, timeData, bufferLength } = data;
+      let sum = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        sum += freqData[i];
+      }
+      const avgEnergy = sum / bufferLength;
+      hasSignal = avgEnergy > 1.2;
+
+      // 1. Draw Spectrum Frequency Bars
+      const barCount = 32;
+      const step = Math.max(1, Math.floor(bufferLength / barCount));
+      const barGap = 2;
+      const barWidth = Math.max(1, (width - (barCount - 1) * barGap) / barCount);
+
+      for (let i = 0; i < barCount; i++) {
+        const val = freqData[i * step] || 0;
+        const barHeight = Math.max(2, (val / 255) * (height - 10));
+        const x = i * (barWidth + barGap);
+        const y = height - barHeight;
+
+        const grad = ctx.createLinearGradient(0, height, 0, y);
+        grad.addColorStop(0, "rgba(72, 187, 120, 0.3)");
+        grad.addColorStop(0.5, "rgba(105, 200, 189, 0.7)");
+        grad.addColorStop(1, "rgba(246, 200, 81, 0.95)");
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        if (ctx.roundRect) {
+          ctx.roundRect(x, y, barWidth, barHeight, [2, 2, 0, 0]);
+        } else {
+          ctx.rect(x, y, barWidth, barHeight);
+        }
+        ctx.fill();
+      }
+
+      // 2. Draw Oscilloscope Ribbon Curve
+      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = "rgba(105, 200, 189, 0.85)";
+      ctx.shadowColor = "rgba(105, 200, 189, 0.6)";
+      ctx.shadowBlur = 4;
+      ctx.beginPath();
+
+      const sliceWidth = width / (bufferLength - 1);
+      for (let i = 0; i < bufferLength; i++) {
+        const v = timeData[i] / 128.0;
+        const currentY = v * (height / 2.3) + height / 10;
+        const currentX = i * sliceWidth;
+
+        if (i === 0) {
+          ctx.moveTo(currentX, currentY);
+        } else {
+          ctx.lineTo(currentX, currentY);
+        }
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    } else {
+      ctx.strokeStyle = "rgba(105, 200, 189, 0.25)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, height / 2);
+      ctx.lineTo(width, height / 2);
+      ctx.stroke();
+    }
+
+    if (elements.visualizerStatus) {
+      if (hasSignal) {
+        elements.visualizerStatus.textContent = "聲波流動中 🌊";
+        elements.visualizerStatus.style.color = "var(--teal)";
+      } else {
+        elements.visualizerStatus.textContent = "靜候音訊中...";
+        elements.visualizerStatus.style.color = "var(--muted)";
+      }
+    }
+
+    ctx.restore();
+  }
+
+  renderVisualizer();
 }
 
 function bindPresets() {
@@ -3520,10 +3644,17 @@ function renderPosterCard(theme = store.get().posterTheme || "midnight") {
   const nickname = store.get().nickname || "旅人";
 
   if (currentPosterMode === "bookmark" && currentBookmarkData) {
-    if (elements.btnGiftBookmarkToPeers) elements.btnGiftBookmarkToPeers.hidden = false;
-    if (elements.posterModalTitle) elements.posterModalTitle.textContent = "🔖 草木手作標本自習書籤";
-    if (elements.posterModalSubtitle)
-      elements.posterModalSubtitle.textContent = "純前端 Retina 2x 高解析度繪製 · 絲線孔扣與火漆封印 · 專屬花語典藏";
+    if (elements.btnGiftBookmarkToPeers) elements.btnGiftBookmarkToPeers.hidden = Boolean(currentBookmarkData.isGift);
+    if (elements.posterModalTitle) {
+      elements.posterModalTitle.textContent = currentBookmarkData.isGift
+        ? "🎁 書伴贈予草木典藏書籤"
+        : "🔖 草木手作標本自習書籤";
+    }
+    if (elements.posterModalSubtitle) {
+      elements.posterModalSubtitle.textContent = currentBookmarkData.isGift
+        ? "跨越空間的書伴溫暖贈禮 · 純前端 Retina 2x 高解析度繪製 · 銘記專注時光"
+        : "純前端 Retina 2x 高解析度繪製 · 絲線孔扣與火漆封印 · 專屬花語典藏";
+    }
 
     currentPosterCanvas = FocusPosterGenerator.generateBotanicalBookmark({
       plantKey: currentBookmarkData.plantKey,
@@ -3632,6 +3763,26 @@ function openBookmarkPoster(plantKey) {
     nickname: store.get().nickname || "自習旅人",
     firstHarvestDate: plant.firstUnlockedAt || new Date().toISOString().split("T")[0],
     personalInscription: store.get().focusIntention || "",
+  };
+
+  const activeTheme = store.get().posterTheme || "forest";
+  elements.posterThemeChips?.forEach((c) => c.classList.toggle("active", c.dataset.posterTheme === activeTheme));
+  renderPosterCard(activeTheme);
+  elements.posterModal?.showModal();
+}
+
+function openGiftedBookmarkPoster(gift) {
+  if (!gift) return;
+  currentPosterMode = "bookmark";
+  currentSoundscapeData = null;
+  const plantMeta = PLANT_BOTANICAL_SPECIES[gift.plantKey];
+  currentBookmarkData = {
+    plantKey: gift.plantKey,
+    harvestCount: gift.harvestCount || 1,
+    nickname: `${gift.senderNickname || "書伴"} (贈禮)`,
+    firstHarvestDate: gift.receivedAt ? gift.receivedAt.split("T")[0] : new Date().toISOString().split("T")[0],
+    personalInscription: gift.personalInscription || gift.inscription || plantMeta?.flowerLanguage || "",
+    isGift: true,
   };
 
   const activeTheme = store.get().posterTheme || "forest";
@@ -4345,11 +4496,27 @@ async function startP2P() {
     const plantMeta = PLANT_BOTANICAL_SPECIES[gift.plantKey];
     const plantName = plantMeta?.name || "草木標本書籤";
     const sender = gift.senderNickname || "同房書伴";
+
+    store.addReceivedBookmark({
+      id: "gift_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+      plantKey: gift.plantKey,
+      senderNickname: sender,
+      receivedAt: gift.timestamp ? new Date(gift.timestamp).toISOString() : new Date().toISOString(),
+      personalInscription: gift.personalInscription || "",
+      quote: gift.quote || plantMeta?.flowerLanguage || "",
+      plantName,
+      plantIcon: plantMeta?.icon || "🌿",
+    });
+
     spawnFloatingReaction("🔖", sender);
     spawnZenSpark("🎁 收到草木書籤！");
-    showCompanionBubble(`🎁 收到來自「${sender}」贈送的【${plantName}】標本書籤！`, 8000);
-    showToast(`🎁 收到來自「${sender}」的草木書籤【${plantName}】！`, 7000);
+    showCompanionBubble(`🎁 收到來自「${sender}」贈送的【${plantName}】標本書籤！已珍藏至圖鑑櫃。`, 8000);
+    showToast(`🎁 收到來自「${sender}」的草木書籤【${plantName}】！已珍藏至圖鑑櫃 🔖`, 7000);
     addAffinityExp(15, "收到書伴贈送的草木書籤");
+
+    if (elements.herbariumModal?.open) {
+      renderHerbarium();
+    }
   });
   p2p.addEventListener("migration-data", (event) => {
     const detail = event.detail;
@@ -4983,6 +5150,32 @@ function bindFlowPrep() {
   });
 }
 
+function checkNewBadges(silentOnInitial = false) {
+  const profile = store.get();
+  const celebrated = new Set(profile.celebratedBadgeIds || []);
+  const todayMinutes = studyStats.getTodayMinutes ? studyStats.getTodayMinutes() : 0;
+  const dailyGoalMinutes = profile.dailyFocusGoalMinutes || 60;
+  const dailyGoalAchieved = todayMinutes >= dailyGoalMinutes;
+  const badges = studyStats.getBadges({ dailyGoalAchieved });
+
+  const newlyUnlocked = [];
+  for (const b of badges) {
+    if (b.unlocked && !celebrated.has(b.id)) {
+      store.markBadgeCelebrated(b.id);
+      newlyUnlocked.push(b);
+    }
+  }
+
+  if (newlyUnlocked.length > 0 && !silentOnInitial) {
+    const first = newlyUnlocked[0];
+    companionSound?.playCelebrationFanfare?.();
+    viewer?.triggerCheer?.();
+    addAffinityExp(20, `解鎖成就：${first.name}`);
+    showToast(`🏆 達成新成就：【${first.name}】！獲得 +20 羈絆值！✨`);
+    showCompanionBubble(`太棒了！我們解鎖了成就【${first.name}】！🎉🌟`, 4500);
+  }
+}
+
 function renderHerbarium() {
   if (!elements.plantsView || !elements.badgesView) return;
   const plants = studyStats.getHerbarium();
@@ -4998,11 +5191,11 @@ function renderHerbarium() {
               <span class="plant-card-name">${p.name}</span>
               <span class="plant-card-status">${p.unlocked ? "已綻放" : "未解鎖"}</span>
             </div>
-            <div class="plant-card-lang">花語：${p.language}</div>
-            <div class="plant-card-desc">${p.description}</div>
+            <div class="plant-card-lang">花語：${p.flowerLanguage || p.language || ""}</div>
+            <div class="plant-card-desc">${p.description || ""}</div>
             <div class="plant-card-stats">
               <span>採收次數：<strong>${p.harvestCount}</strong> 次</span>
-              ${p.firstUnlockedAt ? `<span>初次綻放：${new Date(p.firstUnlockedAt).toLocaleDateString()}</span>` : ""}
+              ${p.firstUnlockedDate ? `<span>初次綻放：${p.firstUnlockedDate}</span>` : ""}
             </div>
             ${
               p.unlocked
@@ -5028,7 +5221,11 @@ function renderHerbarium() {
     </div>
   `;
 
-  const badges = studyStats.getBadges();
+  const dailyGoalMinutes = store.get().dailyFocusGoalMinutes || 60;
+  const todayMinutes = studyStats.getTodayMinutes ? studyStats.getTodayMinutes() : 0;
+  const dailyGoalAchieved = todayMinutes >= dailyGoalMinutes;
+  const badges = studyStats.getBadges({ dailyGoalAchieved });
+
   elements.badgesView.innerHTML = `
     <div class="badge-grid">
       ${badges
@@ -5039,10 +5236,26 @@ function renderHerbarium() {
           <div class="badge-body">
             <div class="badge-title-row">
               <span class="badge-name">${b.name}</span>
-              <span class="badge-rarity ${b.rarity}">${b.rarity}</span>
+              <div class="badge-tags">
+                ${b.category ? `<span class="badge-category-tag">${b.category}</span>` : ""}
+                <span class="badge-rarity ${b.rarity}">${b.rarity}</span>
+              </div>
             </div>
             <div class="badge-desc">${b.description}</div>
-            ${b.unlocked && b.unlockedAt ? `<div class="badge-meta">達成時間：${new Date(b.unlockedAt).toLocaleDateString()}</div>` : ""}
+            ${
+              b.unlocked && b.unlockedAt
+                ? `<div class="badge-meta">達成時間：${new Date(b.unlockedAt).toLocaleDateString()}</div>`
+                : b.progressText
+                  ? `
+                <div class="badge-progress-wrap" title="${b.progressText}">
+                  <div class="badge-progress-bar">
+                    <div class="badge-progress-fill" style="width: ${b.progressPercent || 0}%"></div>
+                  </div>
+                  <span class="badge-progress-text">${b.progressText}</span>
+                </div>
+              `
+                  : ""
+            }
           </div>
         </div>
       `,
@@ -5050,6 +5263,65 @@ function renderHerbarium() {
         .join("")}
     </div>
   `;
+
+  const gifts = store.get().receivedBookmarks || [];
+  if (elements.tabGifts) {
+    elements.tabGifts.textContent = `書伴贈禮 (${gifts.length})`;
+  }
+
+  if (elements.giftsView) {
+    if (gifts.length === 0) {
+      elements.giftsView.innerHTML = `
+        <div class="empty-gifts-card">
+          <div class="empty-gifts-icon">📬</div>
+          <div class="empty-gifts-title">尚無書伴贈禮</div>
+          <p class="empty-gifts-desc">在連線自習室與同伴一同專注，完成專注後可將草木書籤空中贈送給彼此！</p>
+        </div>
+      `;
+    } else {
+      elements.giftsView.innerHTML = `
+        <div class="gifts-grid">
+          ${gifts
+            .map((g) => {
+              const meta = PLANT_BOTANICAL_SPECIES[g.plantKey] || {};
+              const plantName = g.plantName || meta.name || "草木標本";
+              const plantIcon = g.plantIcon || meta.icon || "🌿";
+              const dateStr = g.receivedAt ? new Date(g.receivedAt).toLocaleDateString() : "";
+              const sender = g.senderNickname || "書伴";
+              const quote = g.quote || meta.flowerLanguage || "";
+              const note = g.personalInscription || g.inscription || "";
+
+              return `
+              <div class="gift-card">
+                <div class="gift-card-header">
+                  <span class="gift-sender-badge">💌 來自「${sender}」</span>
+                  <span class="gift-time">${dateStr}</span>
+                </div>
+                <div class="gift-card-body">
+                  <div class="gift-plant-icon">${plantIcon}</div>
+                  <div class="gift-plant-info">
+                    <div class="gift-plant-name">${plantName}</div>
+                    ${quote ? `<div class="gift-quote" title="${quote}">${quote}</div>` : ""}
+                  </div>
+                </div>
+                ${note ? `<p class="gift-inscription">${note}</p>` : ""}
+                <button
+                  type="button"
+                  class="btn-view-gift-bookmark"
+                  data-gift-id="${g.id || ""}"
+                  data-plant-key="${g.plantKey || ""}"
+                  title="展開檢視草木書籤拍立得卡片"
+                >
+                  🔖 展閱書籤
+                </button>
+              </div>
+            `;
+            })
+            .join("")}
+        </div>
+      `;
+    }
+  }
 }
 
 function bindHerbarium() {
@@ -5078,15 +5350,43 @@ function bindHerbarium() {
   elements.tabPlants?.addEventListener("click", () => {
     elements.tabPlants.classList.add("active");
     elements.tabBadges.classList.remove("active");
+    elements.tabGifts?.classList.remove("active");
     elements.plantsView.hidden = false;
     elements.badgesView.hidden = true;
+    if (elements.giftsView) elements.giftsView.hidden = true;
   });
 
   elements.tabBadges?.addEventListener("click", () => {
     elements.tabBadges.classList.add("active");
     elements.tabPlants.classList.remove("active");
+    elements.tabGifts?.classList.remove("active");
     elements.badgesView.hidden = false;
     elements.plantsView.hidden = true;
+    if (elements.giftsView) elements.giftsView.hidden = true;
+  });
+
+  elements.tabGifts?.addEventListener("click", () => {
+    elements.tabGifts.classList.add("active");
+    elements.tabPlants.classList.remove("active");
+    elements.tabBadges.classList.remove("active");
+    if (elements.giftsView) elements.giftsView.hidden = false;
+    elements.plantsView.hidden = true;
+    elements.badgesView.hidden = true;
+  });
+
+  elements.giftsView?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".btn-view-gift-bookmark");
+    if (!btn) return;
+    const giftId = btn.dataset.giftId;
+    const plantKey = btn.dataset.plantKey;
+    const gifts = store.get().receivedBookmarks || [];
+    const gift = gifts.find((g) => g.id === giftId) ||
+      gifts.find((g) => g.plantKey === plantKey) || {
+        plantKey: plantKey || "rose",
+        senderNickname: "同房書伴",
+        receivedAt: new Date().toISOString(),
+      };
+    openGiftedBookmarkPoster(gift);
   });
 }
 
@@ -5273,12 +5573,17 @@ function init() {
   updateTimerModeUI(timer.mode, timer.cycleRound);
   timer.emitTick();
   startViewer();
+  startAcousticVisualizer();
+  checkNewBadges(true);
   restartP2P();
   createIcons({ icons });
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
   }
   window.addEventListener("beforeunload", () => {
+    if (visualizerAnimationId) {
+      cancelAnimationFrame(visualizerAnimationId);
+    }
     p2p?.destroy();
     viewer?.dispose();
     music.destroy();
