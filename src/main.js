@@ -22,8 +22,10 @@ import {
   Crosshair,
   Crown,
   Cuboid,
+  Disc,
   Download,
   Flame,
+  Gift,
   Glasses,
   GripVertical,
   HandMetal,
@@ -57,6 +59,7 @@ import {
   Sparkle,
   Sparkles,
   SunMoon,
+  Target,
   Trash2,
   Volume2,
   Wand2,
@@ -79,7 +82,7 @@ import { createCompanionAsset } from "./services/doll-generation.js";
 import { FocusTimer, SPRINT_PRESETS } from "./services/focus-timer.js";
 import { LofiGenerator } from "./services/lofi-generator.js";
 import { NotificationManager } from "./services/notification-manager.js";
-import { StudyStatsManager } from "./services/study-stats.js";
+import { StudyStatsManager, PLANT_BOTANICAL_SPECIES } from "./services/study-stats.js";
 import { TaskTracker } from "./services/task-tracker.js";
 import { FocusPosterGenerator } from "./services/poster-generator.js";
 import { renderQrToCanvas, downloadQrCanvas, copyQrCanvasToClipboard } from "./services/qr-generator.js";
@@ -109,8 +112,10 @@ const icons = {
   Crosshair,
   Crown,
   Cuboid,
+  Disc,
   Download,
   Flame,
+  Gift,
   Glasses,
   GripVertical,
   HandMetal,
@@ -144,6 +149,7 @@ const icons = {
   Sparkle,
   Sparkles,
   SunMoon,
+  Target,
   Trash2,
   Volume2,
   Wand2,
@@ -237,6 +243,16 @@ const elements = {
   statTotalHours: $("#statTotalHours"),
   statCompletedSessions: $("#statCompletedSessions"),
   statTotalHarvest: $("#statTotalHarvest"),
+  dailyGoalCard: $("#dailyGoalCard"),
+  dailyGoalBadge: $("#dailyGoalBadge"),
+  dailyGoalRingCircle: $("#dailyGoalRingCircle"),
+  dailyGoalPercentText: $("#dailyGoalPercentText"),
+  dailyGoalRingSub: $("#dailyGoalRingSub"),
+  dailyGoalCurrentText: $("#dailyGoalCurrentText"),
+  dailyGoalTargetText: $("#dailyGoalTargetText"),
+  dailyGoalHint: $("#dailyGoalHint"),
+  dailyGoalPresets: $("#dailyGoalPresets"),
+  dailyGoalChips: [...document.querySelectorAll("#dailyGoalPresets .goal-chip")],
   heatmapSection: $("#heatmapSection"),
   heatmapRangeLabel: $("#heatmapRangeLabel"),
   heatmapPrev: $("#heatmapPrev"),
@@ -270,6 +286,7 @@ const elements = {
   posterThemeChips: document.querySelectorAll(".poster-theme-chip"),
   btnDownloadPoster: $("#btnDownloadPoster"),
   btnCopyPoster: $("#btnCopyPoster"),
+  btnGiftBookmarkToPeers: $("#btnGiftBookmarkToPeers"),
   photoInput: $("#photoInput"),
   photoDrop: $("#photoDrop"),
   clearPhoto: $("#clearPhoto"),
@@ -962,7 +979,56 @@ function renderStats() {
   renderHourlyDistribution();
   renderCategoryBreakdown();
   renderWeeklyTrend();
+  renderDailyGoal();
   renderSessionTimeline();
+}
+
+function renderDailyGoal() {
+  if (!elements.dailyGoalCard) return;
+  const goalMinutes = store.get().dailyGoalMinutes || 100;
+  const progress = studyStats.getDailyGoalProgress(goalMinutes);
+
+  elements.dailyGoalChips?.forEach((chip) => {
+    const chipGoal = Number(chip.dataset.goal);
+    chip.classList.toggle("active", chipGoal === goalMinutes);
+  });
+
+  if (elements.dailyGoalCurrentText) {
+    elements.dailyGoalCurrentText.textContent = String(progress.todayMinutes);
+  }
+  if (elements.dailyGoalTargetText) {
+    elements.dailyGoalTargetText.textContent = `${progress.goalMinutes} 分鐘`;
+  }
+  if (elements.dailyGoalPercentText) {
+    elements.dailyGoalPercentText.textContent = `${progress.percent}%`;
+  }
+  if (elements.dailyGoalBadge) {
+    if (progress.completed) {
+      elements.dailyGoalBadge.textContent = "🎉 今日目標達成！";
+      elements.dailyGoalBadge.classList.add("completed");
+    } else {
+      elements.dailyGoalBadge.textContent = `達成 ${progress.percent}%`;
+      elements.dailyGoalBadge.classList.remove("completed");
+    }
+  }
+  if (elements.dailyGoalHint) {
+    if (progress.completed) {
+      const extra = progress.todayMinutes - progress.goalMinutes;
+      elements.dailyGoalHint.textContent =
+        extra > 0
+          ? `太棒了！已超出目標 ${extra} 分鐘，持續精進中 🔥`
+          : "恭喜達成今日目標！給自己一個微笑或短暫休息吧 ☕";
+    } else {
+      elements.dailyGoalHint.textContent = `還需專注 ${progress.remainingMinutes} 分鐘達成今日目標`;
+    }
+  }
+
+  if (elements.dailyGoalRingCircle) {
+    const circumference = 238.76;
+    const offset = circumference - (circumference * Math.min(100, progress.percent)) / 100;
+    elements.dailyGoalRingCircle.style.strokeDashoffset = String(offset);
+    elements.dailyGoalRingCircle.classList.toggle("completed", progress.completed);
+  }
 }
 
 function renderWeeklyTrend() {
@@ -2096,6 +2162,8 @@ function bindTimer() {
         taskTracker.incrementPomodoro(completedTaskId);
         renderTasks();
       }
+      const goalMins = store.get().dailyGoalMinutes || 100;
+      const prevGoal = studyStats.getDailyGoalProgress(goalMins);
       const recorded = studyStats.recordSession({
         durationMinutes: timer.focusMinutes,
         plantHarvested: store.get().plantType,
@@ -2109,6 +2177,15 @@ function bindTimer() {
       updateFlowMomentumUI();
       renderStats();
       addAffinityExp(25, "專注完成");
+
+      const newGoal = studyStats.getDailyGoalProgress(goalMins);
+      if (!prevGoal.completed && newGoal.completed) {
+        companionSound.playFanfare();
+        viewer?.triggerCheer?.();
+        addAffinityExp(30, "達成今日自習目標");
+        showToast(`🎯 恭喜！今日自習目標已達成 (${newGoal.todayMinutes}/${newGoal.goalMinutes} 分鐘)！🎉`, 6000);
+        showCompanionBubble(`🎯 太厲害了！你完成了今天的 ${newGoal.goalMinutes} 分鐘自習目標！一起繼續發光吧 ✨`, 7000);
+      }
 
       if (store.get().desktopNotifications) {
         notificationManager.notifyFocusComplete({
@@ -2314,6 +2391,7 @@ const TRACK_METAS = {
   binaural_gamma: { name: "Gamma波 (40Hz 敏捷)", icon: "zap" },
   pink_noise: { name: "粉紅噪", icon: "activity" },
   ocean_waves: { name: "潮汐海浪", icon: "waves" },
+  vinyl: { name: "黑膠唱針", icon: "disc" },
 };
 
 function formatPanLabel(pan) {
@@ -3121,6 +3199,18 @@ function bindP2PCheer() {
   });
 }
 
+function bindDailyGoal() {
+  elements.dailyGoalChips?.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const minutes = Number(chip.dataset.goal);
+      if (!minutes) return;
+      store.update({ dailyGoalMinutes: minutes });
+      renderDailyGoal();
+      showToast(`🎯 今日自習目標已設定為 ${minutes} 分鐘`);
+    });
+  });
+}
+
 function bindHeatmapControls() {
   elements.heatmapPrev?.addEventListener("click", () => {
     heatmapOffsetDays += 28;
@@ -3430,6 +3520,7 @@ function renderPosterCard(theme = store.get().posterTheme || "midnight") {
   const nickname = store.get().nickname || "旅人";
 
   if (currentPosterMode === "bookmark" && currentBookmarkData) {
+    if (elements.btnGiftBookmarkToPeers) elements.btnGiftBookmarkToPeers.hidden = false;
     if (elements.posterModalTitle) elements.posterModalTitle.textContent = "🔖 草木手作標本自習書籤";
     if (elements.posterModalSubtitle)
       elements.posterModalSubtitle.textContent = "純前端 Retina 2x 高解析度繪製 · 絲線孔扣與火漆封印 · 專屬花語典藏";
@@ -3443,6 +3534,7 @@ function renderPosterCard(theme = store.get().posterTheme || "midnight") {
       theme,
     });
   } else if (currentPosterMode === "soundscape") {
+    if (elements.btnGiftBookmarkToPeers) elements.btnGiftBookmarkToPeers.hidden = true;
     if (elements.posterModalTitle) elements.posterModalTitle.textContent = "🎴 音景調音拍立得分享卡";
     if (elements.posterModalSubtitle)
       elements.posterModalSubtitle.textContent = "純前端 Retina 2x 高解析度繪製 · 頻譜波形與調音參數 · 內嵌 QR Code";
@@ -3477,6 +3569,7 @@ function renderPosterCard(theme = store.get().posterTheme || "midnight") {
       qrCanvas,
     });
   } else {
+    if (elements.btnGiftBookmarkToPeers) elements.btnGiftBookmarkToPeers.hidden = true;
     if (elements.posterModalTitle) elements.posterModalTitle.textContent = "📸 心流拍立得分享卡";
     if (elements.posterModalSubtitle)
       elements.posterModalSubtitle.textContent = "純前端 Retina 2x 高解析度繪製 · 免費下載或複製剪貼簿";
@@ -3619,6 +3712,25 @@ function bindPosterModal() {
       FocusPosterGenerator.download(currentPosterCanvas, filename);
       showToast("因瀏覽器安全限制，已自動為您下載 PNG 📸");
     }
+  });
+
+  elements.btnGiftBookmarkToPeers?.addEventListener("click", () => {
+    if (!currentBookmarkData) return;
+    const peers = p2p?.getPeers?.() || [];
+    if (peers.length === 0) {
+      showToast("目前房間內尚無其他書伴連線，請先分享房間邀請朋友加入 💌");
+      return;
+    }
+    p2p?.sendBookmarkGift?.({
+      plantKey: currentBookmarkData.plantKey,
+      senderNickname: store.get().nickname || "自習書伴",
+      personalInscription: currentBookmarkData.personalInscription || "",
+      timestamp: Date.now(),
+    });
+    const plantMeta = PLANT_BOTANICAL_SPECIES[currentBookmarkData.plantKey];
+    const plantName = plantMeta?.name || "草木標本書籤";
+    showToast(`🎁 已將【${plantName}】贈送給房內 ${peers.length} 位書伴！`);
+    addAffinityExp(10, "贈送草木書籤給書伴");
   });
 }
 
@@ -4225,6 +4337,19 @@ async function startP2P() {
       spawnZenSpark("🪵 叩叩！");
       showToast(`🪵 ${detail.by || "夥伴"} 敲敲木桌向你打招呼！`);
     }
+  });
+  p2p.addEventListener("bookmark-gift", (event) => {
+    const gift = event.detail;
+    if (!gift) return;
+    companionSound.playDeliveryChime();
+    const plantMeta = PLANT_BOTANICAL_SPECIES[gift.plantKey];
+    const plantName = plantMeta?.name || "草木標本書籤";
+    const sender = gift.senderNickname || "同房書伴";
+    spawnFloatingReaction("🔖", sender);
+    spawnZenSpark("🎁 收到草木書籤！");
+    showCompanionBubble(`🎁 收到來自「${sender}」贈送的【${plantName}】標本書籤！`, 8000);
+    showToast(`🎁 收到來自「${sender}」的草木書籤【${plantName}】！`, 7000);
+    addAffinityExp(15, "收到書伴贈送的草木書籤");
   });
   p2p.addEventListener("migration-data", (event) => {
     const detail = event.detail;
@@ -5124,6 +5249,7 @@ function init() {
   bindQrModal();
   bindPosterModal();
   bindHeatmapControls();
+  bindDailyGoal();
   bindStatsTimeline();
   renderStats();
   bindTips();

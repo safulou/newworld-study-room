@@ -22,12 +22,14 @@ describe("AmbientSoundscapeManager", () => {
     expect(AMBIENT_SOUND_TYPES).toContain("binaural_gamma");
     expect(AMBIENT_SOUND_TYPES).toContain("keyboard");
     expect(AMBIENT_SOUND_TYPES).toContain("pencil");
+    expect(AMBIENT_SOUND_TYPES).toContain("vinyl");
   });
 
   it("exposes soundscape presets", () => {
     expect(SOUNDSCAPE_PRESETS.cozy_fireplace).toBeDefined();
     expect(SOUNDSCAPE_PRESETS.forest_breeze).toBeDefined();
     expect(SOUNDSCAPE_PRESETS.deep_flow).toBeDefined();
+    expect(SOUNDSCAPE_PRESETS.vinyl_cafe).toBeDefined();
     expect(SOUNDSCAPE_PRESETS.ocean_tide).toBeDefined();
     expect(SOUNDSCAPE_PRESETS.zen_meditation).toBeDefined();
     expect(SOUNDSCAPE_PRESETS.study_library).toBeDefined();

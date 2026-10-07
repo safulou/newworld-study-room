@@ -508,6 +508,10 @@
                 <i data-lucide="waves"></i>
                 <span>潮汐海浪</span>
               </button>
+              <button class="ambient-chip" type="button" data-sound="vinyl" aria-pressed="false">
+                <i data-lucide="disc"></i>
+                <span>黑膠唱針</span>
+              </button>
             </div>
             <div class="ambient-mixer" id="ambientMixer" hidden>
               <div class="ambient-mixer-head">
@@ -825,6 +829,52 @@
               <div class="stat-card">
                 <span class="stat-number" id="statTotalHarvest">0</span>
                 <span class="stat-caption">收穫植物數</span>
+              </div>
+            </div>
+            <div class="daily-goal-card" id="dailyGoalCard">
+              <div class="daily-goal-header">
+                <span class="daily-goal-title">
+                  <i data-lucide="target"></i>
+                  <span>今日自習目標</span>
+                </span>
+                <span class="daily-goal-badge" id="dailyGoalBadge">達成 0%</span>
+              </div>
+              <div class="daily-goal-body">
+                <div class="daily-goal-ring-wrapper">
+                  <svg class="daily-goal-ring" viewBox="0 0 100 100" width="80" height="80" aria-hidden="true">
+                    <circle class="ring-bg" cx="50" cy="50" r="38" stroke-width="7" />
+                    <circle
+                      class="ring-progress"
+                      id="dailyGoalRingCircle"
+                      cx="50"
+                      cy="50"
+                      r="38"
+                      stroke-width="7"
+                      stroke-dasharray="238.76"
+                      stroke-dashoffset="238.76"
+                      transform="rotate(-90 50 50)"
+                    />
+                  </svg>
+                  <div class="ring-label-box">
+                    <span class="ring-percent" id="dailyGoalPercentText">0%</span>
+                    <span class="ring-sub" id="dailyGoalRingSub">今日</span>
+                  </div>
+                </div>
+                <div class="daily-goal-details">
+                  <div class="daily-goal-stat-row">
+                    <strong class="daily-goal-current" id="dailyGoalCurrentText">0</strong>
+                    <span class="daily-goal-slash">/</span>
+                    <span class="daily-goal-target" id="dailyGoalTargetText">100 分鐘</span>
+                  </div>
+                  <div class="daily-goal-hint" id="dailyGoalHint">還需專注 100 分鐘達成今日目標</div>
+                  <div class="daily-goal-presets" id="dailyGoalPresets" role="group" aria-label="目標時長調整">
+                    <button class="goal-chip" type="button" data-goal="50">50m</button>
+                    <button class="goal-chip" type="button" data-goal="75">75m</button>
+                    <button class="goal-chip" type="button" data-goal="100">100m</button>
+                    <button class="goal-chip" type="button" data-goal="150">150m</button>
+                    <button class="goal-chip" type="button" data-goal="200">200m</button>
+                  </div>
+                </div>
               </div>
             </div>
             <div class="weekly-trend-card" id="weeklyTrendCard">
@@ -1373,6 +1423,10 @@
           <button class="poster-action-btn secondary" id="btnCopyPoster" type="button">
             <i data-lucide="copy"></i>
             <span>複製到剪貼簿</span>
+          </button>
+          <button class="poster-action-btn accent" id="btnGiftBookmarkToPeers" type="button" hidden>
+            <i data-lucide="gift"></i>
+            <span>贈送給同房書伴</span>
           </button>
         </div>
       </div>

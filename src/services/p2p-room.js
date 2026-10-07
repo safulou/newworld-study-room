@@ -80,6 +80,17 @@ function isSoundscapeSync(msg) {
   );
 }
 
+function isBookmarkGift(msg) {
+  return Boolean(
+    msg &&
+    msg.type === "bookmark-gift" &&
+    msg.bookmark &&
+    typeof msg.bookmark === "object" &&
+    typeof msg.bookmark.plantKey === "string" &&
+    typeof msg.bookmark.senderNickname === "string",
+  );
+}
+
 function safeHostId(value) {
   return typeof value === "string" && /^[a-zA-Z0-9_-]{1,80}$/.test(value) ? value : "";
 }
@@ -340,6 +351,13 @@ export class P2PRoom extends EventTarget {
       }
       return;
     }
+    if (message.type === "bookmark-gift" && isBookmarkGift(message)) {
+      this.dispatchEvent(new CustomEvent("bookmark-gift", { detail: message.bookmark }));
+      if (this.role === "host") {
+        this.broadcast(message, source.peer);
+      }
+      return;
+    }
     if (message.type !== "tip" || !isTip(message.tip)) return;
 
     const tip = publicTip(message.tip);
@@ -541,6 +559,28 @@ export class P2PRoom extends EventTarget {
     return msg;
   }
 
+  sendBookmarkGift(bookmarkPayload) {
+    const msg = {
+      type: "bookmark-gift",
+      version: MESSAGE_VERSION,
+      bookmark: {
+        plantKey: String(bookmarkPayload?.plantKey || "rose").slice(0, 24),
+        harvestCount: Math.max(1, Number(bookmarkPayload?.harvestCount) || 1),
+        senderNickname: String(bookmarkPayload?.senderNickname || "書伴").slice(0, 24),
+        personalInscription: String(bookmarkPayload?.personalInscription || "").slice(0, 80),
+        theme: String(bookmarkPayload?.theme || "forest").slice(0, 20),
+        timestamp: Date.now(),
+      },
+    };
+    if (this.role === "host") {
+      this.broadcast(msg);
+    } else {
+      const host = this.connections.get(this.hostId);
+      if (host) this.send(host, msg);
+    }
+    return msg;
+  }
+
   broadcast(message, exceptPeer = "") {
     this.connections.forEach((connection, peerId) => {
       if (peerId !== exceptPeer) this.send(connection, message);
@@ -630,6 +670,7 @@ export const p2pInternals = {
   isSoundscapeSync,
   isInteraction,
   isPeerStatus,
+  isBookmarkGift,
   safeHostId,
   safeRoomToken,
   roomParams,

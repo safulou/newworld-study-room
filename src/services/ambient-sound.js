@@ -12,6 +12,7 @@ export const AMBIENT_SOUND_TYPES = [
   "brown_noise",
   "pink_noise",
   "ocean_waves",
+  "vinyl",
   "binaural_theta",
   "binaural_alpha",
   "binaural_gamma",
@@ -82,6 +83,16 @@ export const SOUNDSCAPE_PRESETS = {
     eq: { bass: 3, mid: 0, treble: -1 },
     reverb: { preset: "cabin", wet: 0.35 },
   },
+  vinyl_cafe: {
+    id: "vinyl_cafe",
+    name: "黑膠咖啡館",
+    icon: "disc",
+    tracks: { vinyl: 0.38, keyboard: 0.22, rain: 0.26 },
+    pans: { vinyl: -0.2, keyboard: 0.5, rain: -0.65 },
+    acoustic: "cabin",
+    eq: { bass: 2, mid: 1, treble: -1 },
+    reverb: { preset: "cabin", wet: 0.22 },
+  },
 };
 
 export const SPATIAL_SCENARIOS = {
@@ -97,6 +108,7 @@ export const SPATIAL_SCENARIOS = {
       brown_noise: 0.4,
       pink_noise: -0.25,
       ocean_waves: 0.25,
+      vinyl: -0.25,
       binaural_theta: 0,
       binaural_alpha: 0,
       binaural_gamma: 0,
@@ -114,6 +126,7 @@ export const SPATIAL_SCENARIOS = {
       brown_noise: 0,
       pink_noise: 0,
       ocean_waves: 0,
+      vinyl: 0,
       binaural_theta: 0,
       binaural_alpha: 0,
       binaural_gamma: 0,
@@ -537,6 +550,85 @@ export class AmbientSoundscapeManager {
         source: noiseSource,
         lfo,
         filter: hpFilter,
+        gain: trackGain,
+        panner,
+        volume,
+        pan: initialPan,
+      });
+      return true;
+    }
+
+    // Procedural Lo-Fi Vinyl Turntable (Hiss + Analog Groove Micro-Crackles)
+    if (name === "vinyl") {
+      // 1. Continuous Surface Friction Hiss & Turntable Contact
+      const hissBuffer = this.createPinkNoiseBuffer(4);
+      if (!hissBuffer) return false;
+      const hissSource = ctx.createBufferSource();
+      hissSource.buffer = hissBuffer;
+      hissSource.loop = true;
+
+      // Warm bandpass capturing vinyl needle contact
+      const hissFilter = ctx.createBiquadFilter();
+      hissFilter.type = "bandpass";
+      hissFilter.frequency.setValueAtTime(1600, ctx.currentTime);
+      hissFilter.Q.setValueAtTime(1.1, ctx.currentTime);
+
+      const hissGain = ctx.createGain();
+      hissGain.gain.setValueAtTime(0.35, ctx.currentTime);
+
+      hissSource.connect(hissFilter);
+      hissFilter.connect(hissGain);
+      hissGain.connect(trackGain);
+      hissSource.start();
+
+      // 2. Procedural Dust Pops & Crackles Scheduler
+      let active = true;
+      let timerId = null;
+
+      const scheduleCrackle = () => {
+        if (!active) return;
+        const now = ctx.currentTime;
+
+        try {
+          const clickOsc = ctx.createOscillator();
+          const clickGain = ctx.createGain();
+          const clickFilter = ctx.createBiquadFilter();
+
+          clickFilter.type = "bandpass";
+          clickFilter.frequency.setValueAtTime(2800 + Math.random() * 1800, now);
+          clickFilter.Q.setValueAtTime(3.8, now);
+
+          clickOsc.type = Math.random() < 0.5 ? "triangle" : "square";
+          clickOsc.frequency.setValueAtTime(120 + Math.random() * 450, now);
+
+          const clickVol = (0.08 + Math.random() * 0.16) * (Math.random() < 0.15 ? 1.8 : 1.0);
+          clickGain.gain.setValueAtTime(0.0001, now);
+          clickGain.gain.linearRampToValueAtTime(clickVol, now + 0.001);
+          clickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.015);
+
+          clickOsc.connect(clickFilter);
+          clickFilter.connect(clickGain);
+          clickGain.connect(trackGain);
+
+          clickOsc.start(now);
+          clickOsc.stop(now + 0.025);
+        } catch {}
+
+        const isCluster = Math.random() < 0.22;
+        const delay = isCluster ? 45 + Math.random() * 75 : 140 + Math.random() * 380;
+        timerId = window.setTimeout(scheduleCrackle, delay);
+      };
+
+      timerId = window.setTimeout(scheduleCrackle, 80);
+
+      this.nodes.set(name, {
+        source: hissSource,
+        filter: hissFilter,
+        timerId,
+        stopTimer: () => {
+          active = false;
+          window.clearTimeout(timerId);
+        },
         gain: trackGain,
         panner,
         volume,

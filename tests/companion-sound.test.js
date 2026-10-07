@@ -50,6 +50,7 @@ describe("CompanionSoundManager", () => {
     expect(() => manager.playWindDownChime()).not.toThrow();
     expect(() => manager.playGreetingWave()).not.toThrow();
     expect(() => manager.playAffirmativeNod()).not.toThrow();
+    expect(() => manager.playDeliveryChime()).not.toThrow();
     expect(() => manager.playClockworkTick({ isTock: false, mode: "wood", volume: 0.5 })).not.toThrow();
     expect(() => manager.playClockworkTick({ isTock: true, mode: "crisp", volume: 0.3 })).not.toThrow();
     expect(() => manager.playClockworkTick({ isTock: false, mode: "wood", volume: 0 })).not.toThrow();

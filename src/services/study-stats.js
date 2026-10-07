@@ -580,6 +580,26 @@ export class StudyStatsManager {
     };
   }
 
+  getDailyGoalProgress(goalMinutes = 100, now = Date.now()) {
+    const validGoal = Math.max(10, Math.min(720, Number(goalMinutes) || 100));
+    const todayStr = new Date(now).toISOString().split("T")[0];
+    const todaySessions = this.getTodaySessions(todayStr);
+    const todayMinutes = todaySessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+    const percent = Math.min(100, Math.round((todayMinutes / validGoal) * 100));
+    const completed = todayMinutes >= validGoal;
+    const remainingMinutes = Math.max(0, validGoal - todayMinutes);
+    const pomoCount = todaySessions.length;
+
+    return {
+      goalMinutes: validGoal,
+      todayMinutes,
+      percent,
+      completed,
+      remainingMinutes,
+      pomoCount,
+    };
+  }
+
   getHerbarium() {
     const counts = this.getHarvestCounts();
     return Object.entries(PLANT_BOTANICAL_SPECIES).map(([key, meta]) => {

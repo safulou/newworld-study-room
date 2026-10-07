@@ -423,4 +423,46 @@ describe("StudyStatsManager Service", () => {
     expect(recMarathon.recommendedMinutes).toBe(15);
     expect(recMarathon.reason).toContain("超過 3 小時");
   });
+
+  it("calculates daily goal progress correctly with clamping and completion status", () => {
+    // Empty state
+    const progress0 = stats.getDailyGoalProgress(100);
+    expect(progress0.goalMinutes).toBe(100);
+    expect(progress0.todayMinutes).toBe(0);
+    expect(progress0.percent).toBe(0);
+    expect(progress0.completed).toBe(false);
+    expect(progress0.remainingMinutes).toBe(100);
+    expect(progress0.pomoCount).toBe(0);
+
+    // Record 50m session
+    stats.recordSession({ durationMinutes: 50, rating: "flow" });
+    const progress50 = stats.getDailyGoalProgress(100);
+    expect(progress50.todayMinutes).toBe(50);
+    expect(progress50.percent).toBe(50);
+    expect(progress50.completed).toBe(false);
+    expect(progress50.remainingMinutes).toBe(50);
+    expect(progress50.pomoCount).toBe(1);
+
+    // Record another 50m session -> completed
+    stats.recordSession({ durationMinutes: 50, rating: "steady" });
+    const progress100 = stats.getDailyGoalProgress(100);
+    expect(progress100.todayMinutes).toBe(100);
+    expect(progress100.percent).toBe(100);
+    expect(progress100.completed).toBe(true);
+    expect(progress100.remainingMinutes).toBe(0);
+    expect(progress100.pomoCount).toBe(2);
+
+    // Exceed goal -> capped at 100%
+    stats.recordSession({ durationMinutes: 30, rating: "flow" });
+    const progressOver = stats.getDailyGoalProgress(100);
+    expect(progressOver.todayMinutes).toBe(130);
+    expect(progressOver.percent).toBe(100);
+    expect(progressOver.completed).toBe(true);
+    expect(progressOver.remainingMinutes).toBe(0);
+
+    // Sanitization & bounds (min 10, max 720)
+    expect(stats.getDailyGoalProgress(5).goalMinutes).toBe(10);
+    expect(stats.getDailyGoalProgress(1000).goalMinutes).toBe(720);
+    expect(stats.getDailyGoalProgress("invalid").goalMinutes).toBe(100);
+  });
 });

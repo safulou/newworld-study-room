@@ -562,4 +562,36 @@ export class CompanionSoundManager {
       osc.stop(now + delay + dur + 0.03);
     });
   }
+
+  /**
+   * Play an ethereal crystalline delivery chime when receiving/sending a gift or bookmark
+   */
+  playDeliveryChime() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const notes = [
+      { freq: 698.46, delay: 0.0, dur: 0.35 }, // F5
+      { freq: 880.0, delay: 0.06, dur: 0.38 }, // A5
+      { freq: 1046.5, delay: 0.12, dur: 0.45 }, // C6
+      { freq: 1318.51, delay: 0.18, dur: 0.65 }, // E6
+    ];
+
+    notes.forEach(({ freq, delay, dur }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + delay);
+
+      const peak = 0.16 * this.volume;
+      gain.gain.setValueAtTime(0.0001, now + delay);
+      gain.gain.linearRampToValueAtTime(peak, now + delay + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + delay);
+      osc.stop(now + delay + dur + 0.05);
+    });
+  }
 }

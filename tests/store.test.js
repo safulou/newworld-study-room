@@ -347,4 +347,23 @@ describe("room-scoped store", () => {
     store.update({ cabinAtmosphereMood: "invalid_mood" });
     expect(store.get().cabinAtmosphereMood).toBe("auto");
   });
+
+  it("sanitizes dailyGoalMinutes setting", () => {
+    const store = createStore({ roomId: "room-d", includeStarterTips: false });
+    expect(store.get().dailyGoalMinutes).toBe(100);
+
+    store.update({ dailyGoalMinutes: 150 });
+    expect(store.get().dailyGoalMinutes).toBe(150);
+
+    // Clamping min 10, max 720
+    store.update({ dailyGoalMinutes: 5 });
+    expect(store.get().dailyGoalMinutes).toBe(10);
+
+    store.update({ dailyGoalMinutes: 1000 });
+    expect(store.get().dailyGoalMinutes).toBe(720);
+
+    // Invalid fallback
+    store.update({ dailyGoalMinutes: "not-a-number" });
+    expect(store.get().dailyGoalMinutes).toBe(100);
+  });
 });

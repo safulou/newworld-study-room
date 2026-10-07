@@ -4342,6 +4342,18 @@ body.zen-mode.zen-inactive .zen-focus-intention {
   color: #fff;
 }
 
+.poster-action-btn.accent {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.2), rgba(16, 185, 129, 0.3));
+  border-color: rgba(52, 211, 153, 0.45);
+  color: #6ee7b7;
+}
+
+.poster-action-btn.accent:hover {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.35), rgba(16, 185, 129, 0.45));
+  color: #fff;
+  transform: translateY(-1px);
+}
+
 /* Peer Reaction Tray */
 .peer-reaction-tray {
   display: flex;
@@ -5355,6 +5367,191 @@ button.timeline-rating:hover {
   background: rgba(255, 255, 255, 0.15);
   border-color: rgba(255, 255, 255, 0.5);
   transform: scale(1.15);
+}
+
+/* Daily Focus Goal Card in Stats Panel */
+.daily-goal-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-top: 12px;
+  margin-bottom: 4px;
+  background: linear-gradient(135deg, rgba(20, 35, 52, 0.75), rgba(15, 23, 42, 0.85));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+
+.daily-goal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.daily-goal-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.daily-goal-title i,
+.daily-goal-title svg {
+  width: 15px;
+  height: 15px;
+  color: #38bdf8;
+}
+
+.daily-goal-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(56, 189, 248, 0.18);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+  transition: all 0.3s ease;
+}
+
+.daily-goal-badge.completed {
+  background: rgba(52, 211, 153, 0.22);
+  border-color: rgba(52, 211, 153, 0.45);
+  color: #34d399;
+}
+
+.daily-goal-body {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.daily-goal-ring-wrapper {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.daily-goal-ring {
+  width: 100%;
+  height: 100%;
+}
+
+.daily-goal-ring .ring-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+}
+
+.daily-goal-ring .ring-progress {
+  fill: none;
+  stroke: #38bdf8;
+  stroke-linecap: round;
+  transition:
+    stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+    stroke 0.3s ease;
+}
+
+.daily-goal-ring .ring-progress.completed {
+  stroke: #34d399;
+  filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.5));
+}
+
+.daily-goal-ring-wrapper .ring-label-box {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.daily-goal-ring-wrapper .ring-percent {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+}
+
+.daily-goal-ring-wrapper .ring-sub {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.daily-goal-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.daily-goal-stat-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.daily-goal-current {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.1;
+}
+
+.daily-goal-slash {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.daily-goal-target {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.daily-goal-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.daily-goal-presets {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.daily-goal-presets .goal-chip {
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.daily-goal-presets .goal-chip:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+}
+
+.daily-goal-presets .goal-chip.active {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #38bdf8;
 }
 
 /* Weekly Trend Card in Stats Panel */

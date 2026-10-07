@@ -159,4 +159,35 @@ describe("P2P protocol validation", () => {
       }),
     ).toBe(false);
   });
+
+  it("validates bookmark-gift payload", () => {
+    expect(p2pInternals.isBookmarkGift).toBeDefined();
+    expect(
+      p2pInternals.isBookmarkGift({
+        type: "bookmark-gift",
+        bookmark: {
+          plantKey: "rose",
+          harvestCount: 5,
+          senderNickname: "Arsen",
+          personalInscription: "寧靜致遠",
+          theme: "forest",
+        },
+      }),
+    ).toBe(true);
+
+    // Missing bookmark
+    expect(
+      p2pInternals.isBookmarkGift({
+        type: "bookmark-gift",
+      }),
+    ).toBe(false);
+
+    // Invalid type
+    expect(
+      p2pInternals.isBookmarkGift({
+        type: "other",
+        bookmark: { plantKey: "rose", senderNickname: "Arsen" },
+      }),
+    ).toBe(false);
+  });
 });

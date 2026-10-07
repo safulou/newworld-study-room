@@ -70,6 +70,7 @@ const profileDefaults = {
   clockworkTickSound: "off",
   clockworkTickVolume: 0.25,
   cabinAtmosphereMood: "auto",
+  dailyGoalMinutes: 100,
 };
 
 export const AFFINITY_RANKS = [
@@ -310,6 +311,7 @@ function sanitizeProfile(value = {}) {
     cabinAtmosphereMood: ["auto", "amber", "emerald", "violet", "rose", "noir"].includes(value.cabinAtmosphereMood)
       ? value.cabinAtmosphereMood
       : profileDefaults.cabinAtmosphereMood,
+    dailyGoalMinutes: Math.max(10, Math.min(720, Number(value.dailyGoalMinutes) || profileDefaults.dailyGoalMinutes)),
   };
 }
 
