@@ -403,4 +403,32 @@ describe("room-scoped store", () => {
 
     expect(store.markBadgeCelebrated("")).toBe(false);
   });
+
+  it("manages bookmark gratitude status and marks gratitude sent", () => {
+    const store = createStore({ roomId: "room-g", includeStarterTips: false });
+    const gift = {
+      id: "gift-101",
+      plantKey: "lavender",
+      senderNickname: "Bob",
+      personalInscription: "祝心流常駐",
+      theme: "aurora",
+    };
+    store.addReceivedBookmark(gift);
+    expect(store.get().receivedBookmarks[0].gratitudeSent).toBe(false);
+
+    expect(store.markBookmarkGratitudeSent("non-existent")).toBe(false);
+    expect(store.markBookmarkGratitudeSent("gift-101")).toBe(true);
+    expect(store.get().receivedBookmarks[0].gratitudeSent).toBe(true);
+    expect(typeof store.get().receivedBookmarks[0].gratitudeSentAt).toBe("string");
+  });
+
+  it("sanitizes orbitingBreeze and autoAtmosphereSync settings", () => {
+    const store = createStore({ roomId: "room-h", includeStarterTips: false });
+    expect(store.get().orbitingBreeze).toBe(false);
+    expect(store.get().autoAtmosphereSync).toBe(true);
+
+    store.update({ orbitingBreeze: true, autoAtmosphereSync: false });
+    expect(store.get().orbitingBreeze).toBe(true);
+    expect(store.get().autoAtmosphereSync).toBe(false);
+  });
 });

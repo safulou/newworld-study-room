@@ -57,7 +57,10 @@ A cozy online study cabin with a photo-textured 3D companion, a focus timer, and
 - Focus category tags & breakdown analytics: 5 domain pills above the timer (💻 開發 Dev, 📚 閱讀 Read, ✍️ 寫作 Write, 🎨 設計 Design, 🧠 複習 Review), recording session domain, and rendering category flow distribution progress bars in the stats panel.
 - Generative procedural Lo-Fi jazz chord progressions synthesized in real time via Web Audio API with vintage lowpass filter and tape flutter LFO.
 - Petting & doll mood interaction system: stroke/pet the doll head to trigger joyful squinting expressions, blushing cheeks, gentle body wiggles, purring chimes, floating hearts, procedural 3D study book, and idle sleep `Zzz` bubble.
-- Botanical Herbarium and milestone badge collection modal showcasing flower languages, harvest histories, and unlockable achievement ranks.
+- Botanical Herbarium and milestone badge collection modal showcasing flower languages, harvest histories, unlockable achievement ranks, and reciprocal peer gift bookmarks with airborne gratitude notes (`💌 空中回謝`).
+- Procedural acoustic spectrum visualizer & ribbon oscilloscope canvas (`#acousticVisualizerCanvas`) with 32-band real-time frequency bars and waveform curves.
+- Spatial Orbiting Breeze (`🌀 環繞微風`) dynamically rotating stereo pan positions via native Web Audio LFO oscillators for organic, gentle 3D spatial wrapping.
+- Pomodoro Atmosphere Auto-Sync (`番茄鐘情境適配`) auto-calibrating ambient track layers between deep focus immersion and restorative break acoustics.
 - ASMR mechanical keyboard and pencil sketching soundscapes with responsive tactile typing sound effects on task and note inputs.
 - Timer-driven focus garden with rose, tulip, cactus, succulent, and pine growth stages.
 - Browser-synthesized public-domain `Für Elise` background music with volume control.

@@ -359,4 +359,94 @@ describe("AmbientSoundscapeManager", () => {
     expect(data.freqData[0]).toBe(128);
     expect(data.timeData[0]).toBe(64);
   });
+
+  it("controls orbiting breeze LFO modulation smoothly", () => {
+    const manager = new AmbientSoundscapeManager();
+    expect(manager.isOrbitingBreeze()).toBe(false);
+
+    const mockOsc = {
+      type: "sine",
+      frequency: { setValueAtTime: vi.fn() },
+      connect: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+      disconnect: vi.fn(),
+    };
+    const mockGain = {
+      gain: { setValueAtTime: vi.fn() },
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+    };
+    const mockCtx = {
+      currentTime: 10,
+      createOscillator: vi.fn().mockReturnValue(mockOsc),
+      createGain: vi.fn().mockReturnValue(mockGain),
+    };
+    manager.audioCtx = mockCtx;
+
+    const mockTrack = {
+      volume: 0.4,
+      panner: {
+        pan: {
+          value: 0,
+          setValueAtTime: vi.fn(),
+        },
+      },
+    };
+    manager.nodes.set("rain", mockTrack);
+
+    // Enable orbiting breeze
+    manager.setOrbitingBreeze(true, { speed: 0.05, depth: 0.7 });
+    expect(manager.isOrbitingBreeze()).toBe(true);
+    expect(mockCtx.createOscillator).toHaveBeenCalled();
+    expect(mockCtx.createGain).toHaveBeenCalled();
+    expect(mockOsc.connect).toHaveBeenCalledWith(mockGain);
+    expect(mockGain.connect).toHaveBeenCalledWith(mockTrack.panner.pan);
+    expect(mockOsc.start).toHaveBeenCalled();
+
+    // Disable orbiting breeze
+    manager.setOrbitingBreeze(false);
+    expect(manager.isOrbitingBreeze()).toBe(false);
+    expect(mockOsc.stop).toHaveBeenCalled();
+    expect(mockOsc.disconnect).toHaveBeenCalled();
+    expect(mockGain.disconnect).toHaveBeenCalled();
+  });
+
+  it("handles automatic atmosphere mode synchronization", () => {
+    const manager = new AmbientSoundscapeManager();
+    expect(manager.isAutoAtmosphereSync()).toBe(false);
+
+    manager.setAutoAtmosphereSync(true);
+    expect(manager.isAutoAtmosphereSync()).toBe(true);
+
+    const mockCtx = {
+      currentTime: 15,
+    };
+    manager.audioCtx = mockCtx;
+
+    const trackGain = {
+      gain: {
+        setValueAtTime: vi.fn(),
+        linearRampToValueAtTime: vi.fn(),
+      },
+    };
+    manager.nodes.set("binaural_alpha", {
+      volume: 0.4,
+      gain: trackGain,
+    });
+
+    // In break mode: ducks binaural alpha
+    manager.setAtmosphereMode("break");
+    expect(trackGain.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.4 * 0.4, 16.2);
+
+    // Also supports shortBreak and longBreak timer modes
+    manager.setAtmosphereMode("shortBreak");
+    expect(manager.atmosphereMode).toBe("break");
+    manager.setAtmosphereMode("longBreak");
+    expect(manager.atmosphereMode).toBe("break");
+
+    // In focus mode: restores full immersion
+    manager.setAtmosphereMode("focus");
+    expect(trackGain.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.4, 16.2);
+  });
 });

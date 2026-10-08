@@ -203,6 +203,11 @@ export class AmbientSoundscapeManager {
     this.wetGain = null;
     this.convolver = null;
     this.analyser = null;
+    this.orbitingBreeze = false;
+    this.orbitBreezeOptions = { speed: 0.04, depth: 0.6 };
+    this.orbitLfoMap = new Map();
+    this.autoAtmosphereSync = false;
+    this.atmosphereMode = "neutral";
     this.sleepTimerRemainingSec = 0;
     this.sleepTimerDurationSec = 0;
     this.sleepTimerInterval = null;
@@ -503,7 +508,7 @@ export class AmbientSoundscapeManager {
       oscL.start();
       oscR.start();
 
-      this.nodes.set(name, {
+      this._registerTrack(name, {
         sources: [oscL, oscR],
         gain: trackGain,
         panner,
@@ -525,7 +530,7 @@ export class AmbientSoundscapeManager {
       };
       let timerId = window.setTimeout(playKey, 120);
 
-      this.nodes.set(name, {
+      this._registerTrack(name, {
         timerId,
         stopTimer: () => {
           active = false;
@@ -569,7 +574,7 @@ export class AmbientSoundscapeManager {
       noiseSource.start();
       lfo.start();
 
-      this.nodes.set(name, {
+      this._registerTrack(name, {
         source: noiseSource,
         lfo,
         filter: hpFilter,
@@ -644,7 +649,7 @@ export class AmbientSoundscapeManager {
 
       timerId = window.setTimeout(scheduleCrackle, 80);
 
-      this.nodes.set(name, {
+      this._registerTrack(name, {
         source: hissSource,
         filter: hissFilter,
         timerId,
@@ -676,7 +681,7 @@ export class AmbientSoundscapeManager {
       lpFilter.connect(trackGain);
       pinkSource.start();
 
-      this.nodes.set(name, {
+      this._registerTrack(name, {
         source: pinkSource,
         filter: lpFilter,
         gain: trackGain,
@@ -723,7 +728,7 @@ export class AmbientSoundscapeManager {
       waveSource.start();
       lfo.start();
 
-      this.nodes.set(name, {
+      this._registerTrack(name, {
         source: waveSource,
         lfo,
         filter: waveFilter,
@@ -770,7 +775,7 @@ export class AmbientSoundscapeManager {
     filter.connect(trackGain);
     noiseSource.start();
 
-    this.nodes.set(name, {
+    this._registerTrack(name, {
       source: noiseSource,
       filter,
       gain: trackGain,
@@ -779,6 +784,72 @@ export class AmbientSoundscapeManager {
       pan: initialPan,
     });
     return true;
+  }
+
+  _registerTrack(name, trackNode) {
+    this.nodes.set(name, trackNode);
+    if (this.orbitingBreeze) {
+      this._attachOrbitLfo(name, trackNode);
+    }
+  }
+
+  _attachOrbitLfo(trackName, trackNode) {
+    if (!this.audioCtx || !trackNode || !trackNode.panner || !this.audioCtx.createOscillator) {
+      return;
+    }
+    if (this.orbitLfoMap.has(trackName)) {
+      return;
+    }
+
+    try {
+      const lfo = this.audioCtx.createOscillator();
+      lfo.type = "sine";
+      const trackIndex = Array.from(this.nodes.keys()).indexOf(trackName);
+      const freqOffset = 1 + (trackIndex % 5) * 0.15;
+      const freq = (this.orbitBreezeOptions.speed || 0.04) * freqOffset;
+      if (lfo.frequency?.setValueAtTime) {
+        lfo.frequency.setValueAtTime(freq, this.audioCtx.currentTime);
+      }
+
+      const lfoGain = this.audioCtx.createGain();
+      const depth = Math.max(0.1, Math.min(0.95, this.orbitBreezeOptions.depth || 0.6));
+      if (lfoGain.gain?.setValueAtTime) {
+        lfoGain.gain.setValueAtTime(depth, this.audioCtx.currentTime);
+      }
+
+      lfo.connect(lfoGain);
+      if (trackNode.panner.pan && lfoGain.connect) {
+        lfoGain.connect(trackNode.panner.pan);
+      }
+      if (lfo.start) lfo.start();
+
+      this.orbitLfoMap.set(trackName, { lfo, lfoGain });
+    } catch {}
+  }
+
+  _detachOrbitLfo(trackName) {
+    const entry = this.orbitLfoMap.get(trackName);
+    if (!entry) return;
+    try {
+      if (entry.lfo) {
+        if (entry.lfo.stop) entry.lfo.stop();
+        if (entry.lfo.disconnect) entry.lfo.disconnect();
+      }
+      if (entry.lfoGain && entry.lfoGain.disconnect) {
+        entry.lfoGain.disconnect();
+      }
+    } catch {}
+    this.orbitLfoMap.delete(trackName);
+
+    const track = this.nodes.get(trackName);
+    if (track && track.panner && this.audioCtx) {
+      const staticPan = this.trackPans[trackName] !== undefined ? this.trackPans[trackName] : track.pan || 0;
+      try {
+        if (track.panner.pan?.setValueAtTime) {
+          track.panner.pan.setValueAtTime(staticPan, this.audioCtx.currentTime);
+        }
+      } catch {}
+    }
   }
 
   cleanupTrack(track) {
@@ -809,6 +880,7 @@ export class AmbientSoundscapeManager {
     const track = this.nodes.get(name);
     if (!track) return false;
 
+    this._detachOrbitLfo(name);
     this.nodes.delete(name);
 
     const ctx = this.audioCtx;
@@ -1114,6 +1186,79 @@ export class AmbientSoundscapeManager {
    */
   isSleepTimerActive() {
     return this.sleepTimerRemainingSec > 0;
+  }
+
+  setOrbitingBreeze(enabled, options = {}) {
+    this.orbitingBreeze = Boolean(enabled);
+    if (options.speed !== undefined) {
+      this.orbitBreezeOptions.speed = Math.max(0.01, Math.min(0.2, Number(options.speed) || 0.04));
+    }
+    if (options.depth !== undefined) {
+      this.orbitBreezeOptions.depth = Math.max(0.1, Math.min(0.95, Number(options.depth) || 0.6));
+    }
+
+    if (this.orbitingBreeze) {
+      for (const [name, track] of this.nodes.entries()) {
+        this._attachOrbitLfo(name, track);
+      }
+    } else {
+      for (const name of Array.from(this.orbitLfoMap.keys())) {
+        this._detachOrbitLfo(name);
+      }
+    }
+    return this.orbitingBreeze;
+  }
+
+  isOrbitingBreeze() {
+    return this.orbitingBreeze;
+  }
+
+  getOrbitBreezeOptions() {
+    return { ...this.orbitBreezeOptions };
+  }
+
+  setAtmosphereMode(mode) {
+    const normalizedMode = mode === "shortBreak" || mode === "longBreak" || mode === "break" ? "break" : mode;
+    if (normalizedMode !== "focus" && normalizedMode !== "break" && normalizedMode !== "neutral") return false;
+    this.atmosphereMode = normalizedMode;
+    if (!this.autoAtmosphereSync || !this.audioCtx) return true;
+
+    const now = this.audioCtx.currentTime;
+    const rampTime = 1.2;
+
+    for (const [name, track] of this.nodes.entries()) {
+      if (!track || !track.gain) continue;
+      const userVol = this.trackVolumes[name] !== undefined ? this.trackVolumes[name] : track.volume || 0.3;
+      let targetVol = userVol;
+
+      if (normalizedMode === "break") {
+        if (name.startsWith("binaural_") || name === "brown_noise" || name === "pink_noise") {
+          targetVol = userVol * 0.4;
+        } else if (name === "rain" || name === "ocean_waves") {
+          targetVol = userVol * 0.7;
+        }
+      } else if (mode === "focus") {
+        targetVol = userVol;
+      }
+
+      try {
+        if (track.gain.gain?.linearRampToValueAtTime) {
+          track.gain.gain.linearRampToValueAtTime(targetVol, now + rampTime);
+        } else if (track.gain.gain?.setValueAtTime) {
+          track.gain.gain.setValueAtTime(targetVol, now);
+        }
+      } catch {}
+    }
+    return true;
+  }
+
+  setAutoAtmosphereSync(enabled) {
+    this.autoAtmosphereSync = Boolean(enabled);
+    return this.autoAtmosphereSync;
+  }
+
+  isAutoAtmosphereSync() {
+    return this.autoAtmosphereSync;
   }
 }
 

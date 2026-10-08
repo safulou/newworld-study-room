@@ -190,4 +190,34 @@ describe("P2P protocol validation", () => {
       }),
     ).toBe(false);
   });
+
+  it("validates bookmark-gratitude payload", () => {
+    expect(p2pInternals.isBookmarkGratitude).toBeDefined();
+    expect(
+      p2pInternals.isBookmarkGratitude({
+        type: "bookmark-gratitude",
+        gratitude: {
+          giftId: "g-1",
+          plantKey: "pine",
+          senderNickname: "Alice",
+          replyMessage: "謝謝你的松樹書籤！",
+        },
+      }),
+    ).toBe(true);
+
+    // Missing gratitude
+    expect(
+      p2pInternals.isBookmarkGratitude({
+        type: "bookmark-gratitude",
+      }),
+    ).toBe(false);
+
+    // Invalid type
+    expect(
+      p2pInternals.isBookmarkGratitude({
+        type: "other",
+        gratitude: { senderNickname: "Alice" },
+      }),
+    ).toBe(false);
+  });
 });

@@ -226,6 +226,7 @@ const elements = {
   ambientMixerTracks: $("#ambientMixerTracks"),
   btnSpatialCabin: $("#btnSpatialCabin"),
   btnSpatialCenter: $("#btnSpatialCenter"),
+  btnToggleOrbitBreeze: $("#btnToggleOrbitBreeze"),
   presetButtons: [...document.querySelectorAll(".preset-btn")],
   customPresetsRow: $("#customPresetsRow"),
   customPresetsList: $("#customPresetsList"),
@@ -473,6 +474,7 @@ const elements = {
   p2pSoundscapeSyncRow: $("#p2pSoundscapeSyncRow"),
   syncWithHostSoundscape: $("#syncWithHostSoundscape"),
   audioDuckingOnPause: $("#audioDuckingOnPause"),
+  autoAtmosphereSync: $("#autoAtmosphereSync"),
   posterModalTitle: $("#posterModalTitle"),
   posterModalSubtitle: $("#posterModalSubtitle"),
 
@@ -1558,6 +1560,9 @@ function renderState(state) {
   if (elements.audioDuckingOnPause && document.activeElement !== elements.audioDuckingOnPause) {
     elements.audioDuckingOnPause.checked = Boolean(state.audioDuckingOnPause);
   }
+  if (elements.autoAtmosphereSync && document.activeElement !== elements.autoAtmosphereSync) {
+    elements.autoAtmosphereSync.checked = Boolean(state.autoAtmosphereSync);
+  }
   if (elements.flowAutopilot && document.activeElement !== elements.flowAutopilot) {
     elements.flowAutopilot.checked = Boolean(state.flowAutopilot);
   }
@@ -2067,6 +2072,7 @@ function bindTimer() {
       ambientSound.unduck(0.8);
       music.unduck(0.8);
     }
+    ambientSound.setAtmosphereMode(event.detail.mode);
     updateTimerModeUI(event.detail.mode, event.detail.cycleRound);
     broadcastTimerSyncIfHost();
     applyCabinMood();
@@ -2254,6 +2260,7 @@ function bindTimer() {
       ambientSound.unduck(0.8);
       music.unduck(0.8);
     }
+    ambientSound.setAtmosphereMode(timer.mode);
     viewer?.setTimerState("idle");
     notificationManager.updateTitle({ remaining: null, isRunning: false });
     broadcastTimerSyncIfHost();
@@ -2501,6 +2508,12 @@ function syncAcousticUI() {
   });
 }
 
+function updateOrbitBreezeUI(enabled) {
+  if (!elements.btnToggleOrbitBreeze) return;
+  elements.btnToggleOrbitBreeze.classList.toggle("active", Boolean(enabled));
+  elements.btnToggleOrbitBreeze.setAttribute("aria-pressed", String(Boolean(enabled)));
+}
+
 function bindAmbientSound() {
   elements.toggleAmbient.addEventListener("click", () => {
     const isHidden = elements.ambientBar.hidden;
@@ -2519,6 +2532,14 @@ function bindAmbientSound() {
     ambientSound.applySpatialScenario("centered");
     renderAmbientMixer();
     showToast("所有運行軌道立體聲道已居中 🎯");
+  });
+
+  elements.btnToggleOrbitBreeze?.addEventListener("click", () => {
+    const next = !ambientSound.isOrbitingBreeze();
+    ambientSound.setOrbitingBreeze(next);
+    store.update({ orbitingBreeze: next });
+    updateOrbitBreezeUI(next);
+    showToast(next ? "已啟動小木屋 3D 環繞微風 🌀（聲像緩慢自旋流轉）" : "已關閉 3D 環繞微風，聲像回歸靜態定位 🍃");
   });
 
   elements.btnToggleAcousticFX?.addEventListener("click", () => {
@@ -4317,6 +4338,17 @@ function bindSettings() {
     store.update({ audioDuckingOnPause });
     showToast(audioDuckingOnPause ? "已開啟「暫停時音效舒緩微降」" : "已關閉暫停音效衰減");
   });
+  elements.autoAtmosphereSync?.addEventListener("change", () => {
+    const autoAtmosphereSync = elements.autoAtmosphereSync.checked;
+    store.update({ autoAtmosphereSync });
+    ambientSound.setAutoAtmosphereSync(autoAtmosphereSync);
+    if (autoAtmosphereSync) {
+      ambientSound.setAtmosphereMode(timer.mode);
+    } else {
+      ambientSound.setAtmosphereMode("focus");
+    }
+    showToast(autoAtmosphereSync ? "已開啟「番茄鐘情境適配」：休息時自動舒緩放鬆音景 🌿" : "已關閉番茄鐘情境適配");
+  });
   elements.clockworkTickSound?.addEventListener("change", () => {
     const val = elements.clockworkTickSound.value;
     store.update({ clockworkTickSound: val });
@@ -4517,6 +4549,21 @@ async function startP2P() {
     if (elements.herbariumModal?.open) {
       renderHerbarium();
     }
+  });
+  p2p.addEventListener("bookmark-gratitude", (event) => {
+    const gratitude = event.detail;
+    if (!gratitude) return;
+    companionSound.playDeliveryChime();
+    const sender = gratitude.senderNickname || "同房書伴";
+    const plantMeta = PLANT_BOTANICAL_SPECIES[gratitude.plantKey];
+    const plantName = plantMeta?.name || "草木書籤";
+    const replyMsg = gratitude.replyMessage || "願我們共同在心流中綻放！";
+
+    spawnFloatingReaction("🕊️", sender);
+    spawnZenSpark("💌 收到空中銘謝！");
+    showCompanionBubble(`💌 收到「${sender}」的回謝：「${replyMsg}」🌸`, 7000);
+    showToast(`💌 收到「${sender}」對【${plantName}】的空中銘謝：${replyMsg} 🕊️`, 7000);
+    addAffinityExp(15, "收到書伴的空中銘謝");
   });
   p2p.addEventListener("migration-data", (event) => {
     const detail = event.detail;
@@ -5305,15 +5352,31 @@ function renderHerbarium() {
                   </div>
                 </div>
                 ${note ? `<p class="gift-inscription">${note}</p>` : ""}
-                <button
-                  type="button"
-                  class="btn-view-gift-bookmark"
-                  data-gift-id="${g.id || ""}"
-                  data-plant-key="${g.plantKey || ""}"
-                  title="展開檢視草木書籤拍立得卡片"
-                >
-                  🔖 展閱書籤
-                </button>
+                <div class="gift-card-actions">
+                  <button
+                    type="button"
+                    class="btn-view-gift-bookmark"
+                    data-gift-id="${g.id || ""}"
+                    data-plant-key="${g.plantKey || ""}"
+                    title="展開檢視草木書籤拍立得卡片"
+                  >
+                    🔖 展閱書籤
+                  </button>
+                  ${
+                    g.gratitudeSent
+                      ? `<span class="gift-gratitude-sent-badge" title="已於空中向書伴致謝">已回謝 🕊️</span>`
+                      : `<button
+                          type="button"
+                          class="btn-gift-gratitude"
+                          data-gift-id="${g.id || ""}"
+                          data-sender-nickname="${sender}"
+                          data-plant-key="${g.plantKey || ""}"
+                          title="向贈禮書伴傳送空中銘謝訊息"
+                        >
+                          💌 空中回謝
+                        </button>`
+                  }
+                </div>
               </div>
             `;
             })
@@ -5375,6 +5438,31 @@ function bindHerbarium() {
   });
 
   elements.giftsView?.addEventListener("click", (e) => {
+    const gratitudeBtn = e.target.closest(".btn-gift-gratitude");
+    if (gratitudeBtn) {
+      const giftId = gratitudeBtn.dataset.giftId;
+      const plantKey = gratitudeBtn.dataset.plantKey;
+      const sender = gratitudeBtn.dataset.senderNickname || "書伴";
+      const peers = p2p?.getPeers?.() || [];
+      if (peers.length === 0) {
+        showToast("目前房間內尚無其他書伴連線，但已為您記錄回謝心意 🕊️");
+      } else {
+        p2p?.sendBookmarkGratitude?.({
+          giftId,
+          plantKey,
+          senderNickname: store.get().nickname || "書伴",
+          replyMessage: "感謝你的贈禮！願我們一同在心流中豐盈生長 🌿",
+        });
+        showToast(`🕊️ 已向「${sender}」送出空中銘謝！`);
+      }
+      if (giftId) {
+        store.markBookmarkGratitudeSent(giftId);
+      }
+      addAffinityExp(10, "回謝書伴的草木書籤");
+      renderHerbarium();
+      return;
+    }
+
     const btn = e.target.closest(".btn-view-gift-bookmark");
     if (!btn) return;
     const giftId = btn.dataset.giftId;
@@ -5526,6 +5614,13 @@ function init() {
   bindCategoryPicker();
   bindShortcuts();
   bindAmbientSound();
+  const initialOrbit = Boolean(store.get().orbitingBreeze);
+  ambientSound.setOrbitingBreeze(initialOrbit);
+  updateOrbitBreezeUI(initialOrbit);
+
+  const autoAtm = store.get().autoAtmosphereSync !== false;
+  ambientSound.setAutoAtmosphereSync(autoAtm);
+  ambientSound.setAtmosphereMode(timer.mode);
   renderAmbientMixer();
   bindPresets();
   bindCustomPresets();

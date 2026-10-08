@@ -73,6 +73,8 @@ const profileDefaults = {
   dailyGoalMinutes: 100,
   receivedBookmarks: [],
   celebratedBadgeIds: [],
+  orbitingBreeze: false,
+  autoAtmosphereSync: true,
 };
 
 export const AFFINITY_RANKS = [
@@ -327,8 +329,14 @@ function sanitizeProfile(value = {}) {
             personalInscription: String(b.personalInscription || "")
               .trim()
               .slice(0, 80),
-            receivedAt: Number.isFinite(Number(b.receivedAt)) ? Number(b.receivedAt) : Date.now(),
+            receivedAt: Number.isFinite(Number(b.receivedAt))
+              ? Number(b.receivedAt)
+              : typeof b.receivedAt === "string"
+                ? b.receivedAt
+                : Date.now(),
             theme: ["midnight", "aurora", "sunset", "forest", "cyber"].includes(b.theme) ? b.theme : "forest",
+            gratitudeSent: Boolean(b.gratitudeSent),
+            gratitudeSentAt: typeof b.gratitudeSentAt === "string" ? b.gratitudeSentAt.slice(0, 36) : null,
           }))
       : [],
     celebratedBadgeIds: Array.isArray(value.celebratedBadgeIds)
@@ -337,6 +345,9 @@ function sanitizeProfile(value = {}) {
           .slice(0, 30)
           .map((id) => String(id).slice(0, 32))
       : [],
+    orbitingBreeze: Boolean(value.orbitingBreeze),
+    autoAtmosphereSync:
+      value.autoAtmosphereSync !== undefined ? Boolean(value.autoAtmosphereSync) : profileDefaults.autoAtmosphereSync,
   };
 }
 
@@ -568,6 +579,17 @@ export function createStore({ roomId = "local-draft", includeStarterTips = true,
       if (celebrated.has(badgeId)) return false;
       celebrated.add(badgeId);
       profile = sanitizeProfile({ ...profile, celebratedBadgeIds: Array.from(celebrated).slice(0, 30) });
+      emit({ saveProfile: true, saveRoom: false });
+      return true;
+    },
+    markBookmarkGratitudeSent(giftId) {
+      if (!giftId || typeof giftId !== "string") return false;
+      const list = [...(profile.receivedBookmarks || [])];
+      const target = list.find((b) => b.id === giftId);
+      if (!target) return false;
+      target.gratitudeSent = true;
+      target.gratitudeSentAt = new Date().toISOString();
+      profile = sanitizeProfile({ ...profile, receivedBookmarks: list });
       emit({ saveProfile: true, saveRoom: false });
       return true;
     },

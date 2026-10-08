@@ -1594,6 +1594,13 @@ h1 {
   color: #fff;
 }
 
+.spatial-preset-btn.active {
+  background: rgba(105, 200, 189, 0.28);
+  border-color: var(--teal);
+  color: #fff;
+  box-shadow: 0 0 8px rgba(105, 200, 189, 0.35);
+}
+
 .ambient-mixer-sub {
   font-size: 10px;
   color: var(--muted);
@@ -3887,10 +3894,17 @@ body.zen-mode.zen-inactive .zen-focus-intention {
   margin: 0;
 }
 
+.gift-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 2px;
+}
+
 .btn-view-gift-bookmark {
-  align-self: flex-end;
   font-size: 11px;
-  padding: 5px 12px;
+  padding: 5px 10px;
   border-radius: 6px;
   background: rgba(246, 200, 81, 0.15);
   border: 1px solid rgba(246, 200, 81, 0.3);
@@ -3905,6 +3919,39 @@ body.zen-mode.zen-inactive .zen-focus-intention {
 .btn-view-gift-bookmark:hover {
   background: rgba(246, 200, 81, 0.25);
   border-color: var(--gold);
+}
+
+.btn-gift-gratitude {
+  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: rgba(105, 200, 189, 0.15);
+  border: 1px solid rgba(105, 200, 189, 0.35);
+  color: var(--teal);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-gift-gratitude:hover {
+  background: rgba(105, 200, 189, 0.28);
+  border-color: var(--teal);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.gift-gratitude-sent-badge {
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 }
 
 /* Universal Shortcuts HUD Modal */

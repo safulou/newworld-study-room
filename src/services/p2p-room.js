@@ -91,6 +91,16 @@ function isBookmarkGift(msg) {
   );
 }
 
+function isBookmarkGratitude(msg) {
+  return Boolean(
+    msg &&
+    msg.type === "bookmark-gratitude" &&
+    msg.gratitude &&
+    typeof msg.gratitude === "object" &&
+    typeof msg.gratitude.senderNickname === "string",
+  );
+}
+
 function safeHostId(value) {
   return typeof value === "string" && /^[a-zA-Z0-9_-]{1,80}$/.test(value) ? value : "";
 }
@@ -358,6 +368,13 @@ export class P2PRoom extends EventTarget {
       }
       return;
     }
+    if (message.type === "bookmark-gratitude" && isBookmarkGratitude(message)) {
+      this.dispatchEvent(new CustomEvent("bookmark-gratitude", { detail: message.gratitude }));
+      if (this.role === "host") {
+        this.broadcast(message, source.peer);
+      }
+      return;
+    }
     if (message.type !== "tip" || !isTip(message.tip)) return;
 
     const tip = publicTip(message.tip);
@@ -581,6 +598,27 @@ export class P2PRoom extends EventTarget {
     return msg;
   }
 
+  sendBookmarkGratitude(gratitudePayload) {
+    const msg = {
+      type: "bookmark-gratitude",
+      version: MESSAGE_VERSION,
+      gratitude: {
+        giftId: String(gratitudePayload?.giftId || "").slice(0, 64),
+        plantKey: String(gratitudePayload?.plantKey || "rose").slice(0, 24),
+        senderNickname: String(gratitudePayload?.senderNickname || "書伴").slice(0, 24),
+        replyMessage: String(gratitudePayload?.replyMessage || "願我們共同在心流中綻放！").slice(0, 80),
+        timestamp: Date.now(),
+      },
+    };
+    if (this.role === "host") {
+      this.broadcast(msg);
+    } else {
+      const host = this.connections.get(this.hostId);
+      if (host) this.send(host, msg);
+    }
+    return msg;
+  }
+
   broadcast(message, exceptPeer = "") {
     this.connections.forEach((connection, peerId) => {
       if (peerId !== exceptPeer) this.send(connection, message);
@@ -671,6 +709,7 @@ export const p2pInternals = {
   isInteraction,
   isPeerStatus,
   isBookmarkGift,
+  isBookmarkGratitude,
   safeHostId,
   safeRoomToken,
   roomParams,
