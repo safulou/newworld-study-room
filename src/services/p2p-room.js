@@ -181,6 +181,7 @@ export class P2PRoom extends EventTarget {
     this.seen = new Set();
     this.pendingTips = new Map();
     this.rateWindows = new Map();
+    this.peerStatuses = new Map();
     this.retryTimer = null;
     this.reconnectTimer = null;
     this.destroyed = false;
@@ -301,10 +302,11 @@ export class P2PRoom extends EventTarget {
       return;
     }
     if (message.type === "peer-status" && isPeerStatus(message)) {
+      const effectivePeerId = String(message.peerId || source?.peer || "").slice(0, 80);
       const sanitized = {
         type: "peer-status",
         version: MESSAGE_VERSION,
-        peerId: String(message.peerId || "").slice(0, 80),
+        peerId: effectivePeerId,
         by: String(message.by || "夥伴").slice(0, 18),
         status: String(message.status || "idle").slice(0, 20),
         plant: String(message.plant || "rose").slice(0, 20),
@@ -315,6 +317,9 @@ export class P2PRoom extends EventTarget {
           : "classic",
         timestamp: Number(message.timestamp) || Date.now(),
       };
+      if (effectivePeerId) {
+        this.peerStatuses.set(effectivePeerId, sanitized);
+      }
       this.dispatchEvent(new CustomEvent("peer-status", { detail: sanitized }));
       if (this.role === "host") {
         this.broadcast(sanitized, source.peer);
@@ -631,6 +636,22 @@ export class P2PRoom extends EventTarget {
     this.broadcast({ type: "presence", version: MESSAGE_VERSION, count });
   }
 
+  getFocusingPeerCount() {
+    let count = 0;
+    for (const s of this.peerStatuses.values()) {
+      if (s && s.status === "focusing") count++;
+    }
+    return count;
+  }
+
+  getFocusingPeers() {
+    const list = [];
+    for (const s of this.peerStatuses.values()) {
+      if (s && s.status === "focusing") list.push(s);
+    }
+    return list;
+  }
+
   send(connection, message) {
     if (!connection?.open) return false;
     try {
@@ -642,9 +663,13 @@ export class P2PRoom extends EventTarget {
   }
 
   removeConnection(connection) {
-    if (this.connections.get(connection.peer) !== connection) return;
-    this.connections.delete(connection.peer);
-    this.rateWindows.delete(connection.peer);
+    if (this.connections.has(connection?.peer) && this.connections.get(connection.peer) !== connection) return;
+    const peerId = connection?.peer;
+    if (peerId) {
+      this.connections.delete(peerId);
+      this.rateWindows.delete(peerId);
+      this.peerStatuses.delete(peerId);
+    }
     if (this.role === "host") {
       this.broadcastPresence();
       this.emitStatus(

@@ -1421,6 +1421,72 @@ h1 {
   letter-spacing: 0.5px;
 }
 
+/* Dual Co-Focus Resonance Banner */
+.co-focus-banner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 14px;
+  margin: 0 auto;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(236, 72, 153, 0.18));
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  box-shadow:
+    0 4px 16px rgba(245, 158, 11, 0.2),
+    0 0 12px rgba(236, 72, 153, 0.15);
+  backdrop-filter: blur(8px);
+  animation: coFocusPulse 3s ease-in-out infinite;
+  transition: all 0.3s ease;
+}
+
+@keyframes coFocusPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 4px 16px rgba(245, 158, 11, 0.2),
+      0 0 10px rgba(236, 72, 153, 0.15);
+    border-color: rgba(245, 158, 11, 0.45);
+  }
+  50% {
+    box-shadow:
+      0 6px 22px rgba(245, 158, 11, 0.35),
+      0 0 18px rgba(236, 72, 153, 0.3);
+    border-color: rgba(245, 158, 11, 0.7);
+  }
+}
+
+.co-focus-icon {
+  font-size: 14px;
+  animation: coFocusSpin 6s linear infinite;
+}
+
+@keyframes coFocusSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.co-focus-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fef3c7;
+  letter-spacing: 0.3px;
+}
+
+.co-focus-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.3);
+  color: #fff;
+  border: 1px solid rgba(245, 158, 11, 0.5);
+}
+
 .ambient-bar {
   position: absolute;
   bottom: 156px;

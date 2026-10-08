@@ -317,6 +317,7 @@ export class FocusPosterGenerator {
     pans = {},
     eq = null,
     reverb = null,
+    orbitingBreeze = false,
     nickname = "旅人",
     theme = "midnight",
     qrCanvas = null,
@@ -521,7 +522,8 @@ export class FocusPosterGenerator {
     ctx.fillStyle = "#cbd5e1";
     ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
     ctx.fillText(`EQ：${eqStr}`, cardX + 16, infoY + 112);
-    ctx.fillText(`殘響：${rvStr}`, cardX + 16, infoY + 132);
+    const breezeTag = orbitingBreeze ? " · 🌀 3D環繞微風" : "";
+    ctx.fillText(`殘響：${rvStr}${breezeTag}`, cardX + 16, infoY + 132);
 
     // Bottom Area: QR Code + Scan Instruction
     const qrY = 466;

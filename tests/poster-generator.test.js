@@ -148,6 +148,7 @@ describe("FocusPosterGenerator", () => {
       pans: { rain: 0 },
       eq: { bass: 0, mid: 1, treble: 2 },
       reverb: { preset: "cathedral", wet: 0.4 },
+      orbitingBreeze: true,
       nickname: "Momo",
       theme: "midnight",
       qrCanvas: mockQr,

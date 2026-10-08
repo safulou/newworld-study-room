@@ -217,6 +217,8 @@ const elements = {
   btnSyncActiveTask: $("#btnSyncActiveTask"),
   zenFocusIntention: $("#zenFocusIntention"),
   zenIntentionText: $("#zenIntentionText"),
+  coFocusBanner: $("#coFocusBanner"),
+  coFocusText: $("#coFocusText"),
   ambientBar: $("#ambientBar"),
   ambientVolume: $("#ambientVolume"),
   ambientVolumeValue: $("#ambientVolumeValue"),
@@ -1829,7 +1831,13 @@ function updateAffinityUI() {
   if (elements.affinityCurrentQuote) elements.affinityCurrentQuote.textContent = `「${rank.quote}」`;
 }
 
+let isCoFocusActive = false;
+
 function applyCurrentAura() {
+  if (isCoFocusActive) {
+    viewer?.setAffinityAura?.("co_focus");
+    return;
+  }
   const exp = store.get().companionAffinityExp || 0;
   const rank = getAffinityRank(exp);
   const userPref = store.get().companionAura || "auto";
@@ -1849,6 +1857,28 @@ function applyCurrentAura() {
   }
 
   viewer?.setAffinityAura?.(auraToApply);
+}
+
+function updateCoFocusResonanceState() {
+  const isFocusing = timer.mode === "focus" && timer.isRunning;
+  const focusingCount = p2p?.getFocusingPeerCount?.() || 0;
+  const shouldBeActive = Boolean(isFocusing && focusingCount > 0);
+
+  if (shouldBeActive !== isCoFocusActive) {
+    isCoFocusActive = shouldBeActive;
+    applyCurrentAura();
+  }
+
+  if (elements.coFocusBanner) {
+    elements.coFocusBanner.hidden = !shouldBeActive;
+    if (shouldBeActive && elements.coFocusText) {
+      const focusingPeers = p2p?.getFocusingPeers?.() || [];
+      const peerName = focusingPeers[0]?.by || "夥伴";
+      const extraCount = focusingPeers.length - 1;
+      const countSnippet = extraCount > 0 ? `與「${peerName}」等 ${focusingPeers.length} 位書伴` : `與「${peerName}」`;
+      elements.coFocusText.textContent = `同心專注共鳴中（${countSnippet}心流共振）`;
+    }
+  }
 }
 
 function renderAffinityAuraChips() {
@@ -2076,6 +2106,7 @@ function bindTimer() {
     updateTimerModeUI(event.detail.mode, event.detail.cycleRound);
     broadcastTimerSyncIfHost();
     applyCabinMood();
+    updateCoFocusResonanceState();
   });
 
   timer.addEventListener("running", (event) => {
@@ -2085,6 +2116,7 @@ function bindTimer() {
     replaceButtonIcon(elements.toggleTimer, event.detail ? "pause" : "play", event.detail ? pauseTitle : playTitle);
     broadcastTimerSyncIfHost();
     applyCabinMood();
+    updateCoFocusResonanceState();
 
     elements.timer.classList.toggle("paused", !event.detail && timer.remaining > 0);
     if (!event.detail) {
@@ -2196,6 +2228,11 @@ function bindTimer() {
         showToast(`🎯 恭喜！今日自習目標已達成 (${newGoal.todayMinutes}/${newGoal.goalMinutes} 分鐘)！🎉`, 6000);
         showCompanionBubble(`🎯 太厲害了！你完成了今天的 ${newGoal.goalMinutes} 分鐘自習目標！一起繼續發光吧 ✨`, 7000);
       }
+      if (isCoFocusActive) {
+        addAffinityExp(30, "達成雙人同心專注");
+        showToast("✨ 恭喜！你與同房書伴完成了「雙人同心專注」心流共振！(+30 EXP)", 6000);
+        showCompanionBubble("✨ 我們與同伴一同完成了這輪專注！同心星芒心流共鳴～默契滿載！💫", 6000);
+      }
       checkNewBadges(false);
 
       if (store.get().desktopNotifications) {
@@ -2233,6 +2270,7 @@ function bindTimer() {
       }, 1200);
     }
     applyCabinMood();
+    updateCoFocusResonanceState();
   });
 
   elements.timerModePills?.forEach((pill) => {
@@ -2265,6 +2303,7 @@ function bindTimer() {
     notificationManager.updateTitle({ remaining: null, isRunning: false });
     broadcastTimerSyncIfHost();
     applyCabinMood();
+    updateCoFocusResonanceState();
   });
 }
 
@@ -3716,6 +3755,7 @@ function renderPosterCard(theme = store.get().posterTheme || "midnight") {
       pans: preset.pans || {},
       eq: preset.eq || null,
       reverb: preset.reverb || null,
+      orbitingBreeze: Boolean(preset.orbitingBreeze),
       nickname,
       theme,
       qrCanvas,
@@ -3761,6 +3801,7 @@ function openSoundscapePosterModal(preset = null) {
     pans: ambientSound.getCurrentTrackPans(),
     eq: ambientSound.getMasterEQ(),
     reverb: ambientSound.getMasterReverb(),
+    orbitingBreeze: ambientSound.isOrbitingBreeze(),
   };
   const activeTheme = store.get().posterTheme || "midnight";
   elements.posterThemeChips?.forEach((c) => c.classList.toggle("active", c.dataset.posterTheme === activeTheme));
@@ -4606,6 +4647,7 @@ async function startP2P() {
         if (elements.peerStatusBar) elements.peerStatusBar.hidden = true;
       }, 7000);
     }
+    updateCoFocusResonanceState();
   });
   p2p.addEventListener("security-event", (event) => showToast(event.detail));
   p2p.addEventListener("network-error", (event) => showToast(event.detail));
@@ -5578,6 +5620,7 @@ function checkSoundscapeUrlHash() {
     pans: decoded.pans || {},
     eq: decoded.eq || null,
     reverb: decoded.reverb || null,
+    orbitingBreeze: Boolean(decoded.orbitingBreeze),
   };
 
   const currentPresets = store.get().customPresets || [];
@@ -5587,6 +5630,11 @@ function checkSoundscapeUrlHash() {
   ambientSound.applyTrackMix(newPreset.tracks, newPreset.pans);
   if (newPreset.eq) ambientSound.setMasterEQ(newPreset.eq);
   if (newPreset.reverb) ambientSound.setMasterReverb(newPreset.reverb);
+  if (newPreset.orbitingBreeze) {
+    ambientSound.setOrbitingBreeze(true);
+    store.update({ orbitingBreeze: true });
+    updateOrbitBreezeUI(true);
+  }
   syncAcousticUI();
   elements.ambientChips.forEach((chipEl) => {
     const sound = chipEl.dataset.sound;

@@ -229,6 +229,7 @@ describe("AmbientSoundscapeManager", () => {
       pans: { pencil: 0.35, rain: -0.5 },
       eq: { bass: 2, mid: 1, treble: 3 },
       reverb: { preset: "cathedral", wet: 0.28 },
+      orbitingBreeze: true,
     };
     const code = encodeSoundscapeCode(preset);
     expect(code.startsWith("sc_")).toBe(true);
@@ -241,8 +242,9 @@ describe("AmbientSoundscapeManager", () => {
     expect(decoded.pans.rain).toBe(-0.5);
     expect(decoded.eq).toEqual({ bass: 2, mid: 1, treble: 3 });
     expect(decoded.reverb).toEqual({ preset: "cathedral", wet: 0.28 });
+    expect(decoded.orbitingBreeze).toBe(true);
 
-    // 2. Legacy code without EQ/Reverb
+    // 2. Legacy code without EQ/Reverb/Breeze
     const legacyPreset = {
       name: "傳統音景",
       tracks: { wind: 0.4 },
@@ -254,6 +256,7 @@ describe("AmbientSoundscapeManager", () => {
     expect(legacyDecoded.tracks.wind).toBe(40);
     expect(legacyDecoded.eq).toBeNull();
     expect(legacyDecoded.reverb).toBeNull();
+    expect(legacyDecoded.orbitingBreeze).toBe(false);
   });
 
   it("supports ducking and unducking master volume safely", () => {
@@ -448,5 +451,16 @@ describe("AmbientSoundscapeManager", () => {
     // In focus mode: restores full immersion
     manager.setAtmosphereMode("focus");
     expect(trackGain.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.4, 16.2);
+  });
+
+  it("controls tidal surge state for ocean waves", () => {
+    const manager = new AmbientSoundscapeManager();
+    expect(manager.isTidalSurge()).toBe(true);
+
+    manager.setTidalSurge(false);
+    expect(manager.isTidalSurge()).toBe(false);
+
+    manager.setTidalSurge(true);
+    expect(manager.isTidalSurge()).toBe(true);
   });
 });

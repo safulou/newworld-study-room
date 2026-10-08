@@ -1010,6 +1010,35 @@ export class DollViewer {
         ray.position.set(Math.cos(angle) * 0.58, 2.28, Math.sin(angle) * 0.58);
         this.auraGroup.add(ray);
       }
+    } else if (auraType === "co_focus") {
+      const geo1 = new THREE.TorusGeometry(0.58, 0.028, 12, 48);
+      const mat1 = new THREE.MeshBasicMaterial({ color: config.color, transparent: true, opacity: 0.9 });
+      const ring1 = new THREE.Mesh(geo1, mat1);
+      ring1.rotation.x = Math.PI / 2.2;
+      ring1.rotation.z = 0.3;
+      ring1.position.set(0, 2.18, 0);
+
+      const geo2 = new THREE.TorusGeometry(0.52, 0.024, 12, 48);
+      const mat2 = new THREE.MeshBasicMaterial({
+        color: config.secondaryColor || 0xec4899,
+        transparent: true,
+        opacity: 0.85,
+      });
+      const ring2 = new THREE.Mesh(geo2, mat2);
+      ring2.rotation.x = Math.PI / 1.8;
+      ring2.rotation.z = -0.3;
+      ring2.position.set(0, 2.22, 0);
+
+      this.auraGroup.add(ring1, ring2);
+
+      const starGeo = new THREE.OctahedronGeometry(0.065, 0);
+      const starMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95 });
+      for (let i = 0; i < 6; i++) {
+        const star = new THREE.Mesh(starGeo, starMat);
+        const angle = (i * Math.PI) / 3;
+        star.position.set(Math.cos(angle) * 0.58, 2.2, Math.sin(angle) * 0.58);
+        this.auraGroup.add(star);
+      }
     }
   }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { p2pInternals } from "../src/services/p2p-room.js";
+import { P2PRoom, p2pInternals } from "../src/services/p2p-room.js";
 
 describe("P2P protocol validation", () => {
   it("requires bounded Tip fields", () => {
@@ -219,5 +219,26 @@ describe("P2P protocol validation", () => {
         gratitude: { senderNickname: "Alice" },
       }),
     ).toBe(false);
+  });
+
+  it("tracks peerStatuses and computes focusing peer counts accurately", () => {
+    const room = new P2PRoom({ getSnapshot: () => ({ tips: [] }) });
+    expect(room.getFocusingPeerCount()).toBe(0);
+    expect(room.getFocusingPeers()).toEqual([]);
+
+    // Simulate incoming peer statuses
+    room.peerStatuses.set("peer-1", { peerId: "peer-1", by: "Alice", status: "focusing" });
+    room.peerStatuses.set("peer-2", { peerId: "peer-2", by: "Bob", status: "resting" });
+
+    expect(room.getFocusingPeerCount()).toBe(1);
+    expect(room.getFocusingPeers()).toEqual([{ peerId: "peer-1", by: "Alice", status: "focusing" }]);
+
+    room.peerStatuses.set("peer-2", { peerId: "peer-2", by: "Bob", status: "focusing" });
+    expect(room.getFocusingPeerCount()).toBe(2);
+
+    // Simulate remove connection
+    room.removeConnection({ peer: "peer-1" });
+    expect(room.getFocusingPeerCount()).toBe(1);
+    expect(room.getFocusingPeers()).toEqual([{ peerId: "peer-2", by: "Bob", status: "focusing" }]);
   });
 });

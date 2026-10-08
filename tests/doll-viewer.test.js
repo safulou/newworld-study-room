@@ -156,6 +156,11 @@ describe("drawDollFace", () => {
     expect(fakeAuraGroup.visible).toBe(true);
     expect(fakeAuraGroup.add).toHaveBeenCalled();
 
+    // Test co_focus
+    fakeViewer.setAffinityAura("co_focus");
+    expect(fakeViewer.currentAura).toBe("co_focus");
+    expect(fakeAuraGroup.visible).toBe(true);
+
     // Reset back to none
     fakeViewer.setAffinityAura("none");
     expect(fakeAuraGroup.visible).toBe(false);

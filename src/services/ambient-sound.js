@@ -208,6 +208,7 @@ export class AmbientSoundscapeManager {
     this.orbitLfoMap = new Map();
     this.autoAtmosphereSync = false;
     this.atmosphereMode = "neutral";
+    this.tidalSurge = true;
     this.sleepTimerRemainingSec = 0;
     this.sleepTimerDurationSec = 0;
     this.sleepTimerInterval = null;
@@ -692,7 +693,7 @@ export class AmbientSoundscapeManager {
       return true;
     }
 
-    // Procedural Ocean Waves with Ultra-Low Frequency Tidal LFO Modulation
+    // Procedural Ocean Waves with Dual-Harmonic Tidal Swell & Stereo Migration
     if (name === "ocean_waves") {
       const waveBuffer = this.createPinkNoiseBuffer(4);
       if (!waveBuffer) return false;
@@ -700,14 +701,16 @@ export class AmbientSoundscapeManager {
       waveSource.buffer = waveBuffer;
       waveSource.loop = true;
 
+      // 1. Deep Oceanic Body (lowpass filter)
       const waveFilter = ctx.createBiquadFilter();
       waveFilter.type = "lowpass";
       waveFilter.frequency.setValueAtTime(360, ctx.currentTime);
       waveFilter.Q.setValueAtTime(2.2, ctx.currentTime);
 
+      // Primary Tidal Swell LFO (0.05 Hz deep rhythmic breathing surge)
       const lfo = ctx.createOscillator();
       lfo.type = "sine";
-      lfo.frequency.setValueAtTime(0.08, ctx.currentTime);
+      lfo.frequency.setValueAtTime(0.05, ctx.currentTime);
 
       const lfoFilterGain = ctx.createGain();
       lfoFilterGain.gain.setValueAtTime(300, ctx.currentTime);
@@ -725,12 +728,55 @@ export class AmbientSoundscapeManager {
       waveFilter.connect(waveGain);
       waveGain.connect(trackGain);
 
+      // 2. Surf Spray & Whitecap Foam (bandpass froth layer)
+      const foamFilter = ctx.createBiquadFilter();
+      foamFilter.type = "bandpass";
+      foamFilter.frequency.setValueAtTime(1600, ctx.currentTime);
+      foamFilter.Q.setValueAtTime(1.8, ctx.currentTime);
+
+      const foamGain = ctx.createGain();
+      foamGain.gain.setValueAtTime(0.12, ctx.currentTime);
+
+      // Secondary Crest Froth LFO (0.11 Hz staggered wave crest breaker)
+      const foamLfo = ctx.createOscillator();
+      foamLfo.type = "triangle";
+      foamLfo.frequency.setValueAtTime(0.11, ctx.currentTime);
+
+      const foamLfoGain = ctx.createGain();
+      foamLfoGain.gain.setValueAtTime(0.09, ctx.currentTime);
+      foamLfo.connect(foamLfoGain);
+      foamLfoGain.connect(foamGain.gain);
+
+      waveSource.connect(foamFilter);
+      foamFilter.connect(foamGain);
+      foamGain.connect(trackGain);
+
+      // 3. Binaural Tidal Swell Stereo Pan Migration
+      let panLfo = null;
+      if (this.tidalSurge && panner?.pan) {
+        panLfo = ctx.createOscillator();
+        panLfo.type = "sine";
+        panLfo.frequency.setValueAtTime(0.05, ctx.currentTime);
+
+        const panLfoGain = ctx.createGain();
+        panLfoGain.gain.setValueAtTime(0.28, ctx.currentTime);
+
+        panLfo.connect(panLfoGain);
+        panLfoGain.connect(panner.pan);
+        panLfo.start();
+      }
+
       waveSource.start();
       lfo.start();
+      foamLfo.start();
+
+      const allLfos = [lfo, foamLfo];
+      if (panLfo) allLfos.push(panLfo);
 
       this._registerTrack(name, {
         source: waveSource,
         lfo,
+        lfos: allLfos,
         filter: waveFilter,
         gain: trackGain,
         panner,
@@ -857,8 +903,18 @@ export class AmbientSoundscapeManager {
     try {
       if (track.stopTimer) track.stopTimer();
       if (track.lfo) {
-        track.lfo.stop();
-        track.lfo.disconnect();
+        try {
+          track.lfo.stop();
+          track.lfo.disconnect();
+        } catch {}
+      }
+      if (track.lfos) {
+        track.lfos.forEach((l) => {
+          try {
+            l.stop();
+            l.disconnect();
+          } catch {}
+        });
       }
       if (track.source) {
         track.source.stop();
@@ -1260,6 +1316,15 @@ export class AmbientSoundscapeManager {
   isAutoAtmosphereSync() {
     return this.autoAtmosphereSync;
   }
+
+  setTidalSurge(enabled) {
+    this.tidalSurge = Boolean(enabled);
+    return this.tidalSurge;
+  }
+
+  isTidalSurge() {
+    return this.tidalSurge;
+  }
 }
 
 /**
@@ -1294,6 +1359,9 @@ export function encodeSoundscapeCode(preset) {
   if (Object.keys(cleanTracks).length === 0) return "";
 
   const payload = { n: name, t: cleanTracks, p: cleanPans };
+  if (preset.orbitingBreeze) {
+    payload.ob = 1;
+  }
   if (preset.eq && typeof preset.eq === "object") {
     payload.eq = {
       b: Math.max(-12, Math.min(12, Math.round(Number(preset.eq.bass) || 0))),
@@ -1322,7 +1390,7 @@ export function encodeSoundscapeCode(preset) {
 /**
  * Decode and validate a soundscape code into a clean preset object
  * @param {string} code
- * @returns {{ name: string, tracks: Object, pans: Object, eq?: Object, reverb?: Object } | null}
+ * @returns {{ name: string, tracks: Object, pans: Object, eq?: Object, reverb?: Object, orbitingBreeze?: boolean } | null}
  */
 export function decodeSoundscapeCode(code) {
   if (!code || typeof code !== "string") return null;
@@ -1384,8 +1452,10 @@ export function decodeSoundscapeCode(code) {
       };
     }
 
+    const orbitingBreeze = Boolean(parsed.ob || parsed.orbitingBreeze);
+
     if (Object.keys(tracks).length === 0) return null;
-    return { name, tracks, pans, eq, reverb };
+    return { name, tracks, pans, eq, reverb, orbitingBreeze };
   } catch {
     return null;
   }
