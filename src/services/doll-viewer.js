@@ -471,7 +471,67 @@ export class DollViewer {
     this.catGroup.add(catBody, catHead, earL, earR, tail);
     this.catGroup.visible = false;
 
-    this.customAccessories.add(this.glassesGroup, this.crownGroup, this.coffeeGroup, this.catGroup);
+    // 5. Stargazing Brass Telescope on Tripod
+    this.telescopeGroup = new THREE.Group();
+    const brassMat = new THREE.MeshStandardMaterial({
+      color: 0xcca04e,
+      metalness: 0.85,
+      roughness: 0.25,
+    });
+    const darkWoodMat = new THREE.MeshStandardMaterial({
+      color: 0x4a2e18,
+      roughness: 0.7,
+    });
+    const glassLensMat = new THREE.MeshStandardMaterial({
+      color: 0x90caf9,
+      roughness: 0.1,
+      metalness: 0.9,
+    });
+
+    const tubeAssembly = new THREE.Group();
+    tubeAssembly.position.set(0.85, -0.25, 0.45);
+    tubeAssembly.rotation.x = -0.38;
+    tubeAssembly.rotation.y = 0.25;
+
+    const mainTube = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.65, 18), brassMat);
+    mainTube.rotation.x = Math.PI / 2;
+    const lensRing = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.015, 8, 20), brassMat);
+    lensRing.position.set(0, 0, 0.32);
+    const lensGlass = new THREE.Mesh(new THREE.CircleGeometry(0.08, 18), glassLensMat);
+    lensGlass.position.set(0, 0, 0.325);
+    const eyepiece = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.12, 12), brassMat);
+    eyepiece.position.set(0, 0, -0.36);
+    eyepiece.rotation.x = Math.PI / 2;
+
+    tubeAssembly.add(mainTube, lensRing, lensGlass, eyepiece);
+
+    const tripodHub = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.05, 12), brassMat);
+    tripodHub.position.set(0.85, -0.35, 0.45);
+
+    const leg1 = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.014, 0.85, 8), darkWoodMat);
+    leg1.position.set(0.85 - 0.16, -0.75, 0.45 - 0.1);
+    leg1.rotation.z = 0.22;
+    leg1.rotation.x = -0.15;
+
+    const leg2 = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.014, 0.85, 8), darkWoodMat);
+    leg2.position.set(0.85 + 0.16, -0.75, 0.45 - 0.1);
+    leg2.rotation.z = -0.22;
+    leg2.rotation.x = -0.15;
+
+    const leg3 = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.014, 0.85, 8), darkWoodMat);
+    leg3.position.set(0.85, -0.75, 0.45 + 0.18);
+    leg3.rotation.x = 0.24;
+
+    this.telescopeGroup.add(tubeAssembly, tripodHub, leg1, leg2, leg3);
+    this.telescopeGroup.visible = false;
+
+    this.customAccessories.add(
+      this.glassesGroup,
+      this.crownGroup,
+      this.coffeeGroup,
+      this.catGroup,
+      this.telescopeGroup,
+    );
     this.doll.add(this.customAccessories);
 
     // Procedural Study Book in doll's hands (visible during focus)
@@ -670,13 +730,16 @@ export class DollViewer {
             this.triggerJoySpin();
             this.onJoySpin?.();
           } else if (this.consecutiveTaps === 2) {
-            const emoteType = Math.random() < 0.4 ? "wave" : Math.random() < 0.7 ? "nod" : "wish";
+            const emoteChoices = ["wave", "nod", "wish", "stargaze"];
+            const emoteType = emoteChoices[Math.floor(Math.random() * emoteChoices.length)];
             if (emoteType === "wave") {
               this.triggerWave();
             } else if (emoteType === "nod") {
               this.triggerNod();
-            } else {
+            } else if (emoteType === "wish") {
               this.triggerWish();
+            } else {
+              this.triggerStargaze();
             }
             this.onMicroEmote?.(emoteType);
           } else {
@@ -783,6 +846,16 @@ export class DollViewer {
       startTime: performance.now(),
       duration,
       direction: Math.max(-1, Math.min(1, Number(direction) || 0)),
+    };
+    this.lastFaceMode = null;
+    this.triggerBounce();
+  }
+
+  triggerStargaze({ duration = 3000 } = {}) {
+    this.currentEmote = {
+      type: "stargaze",
+      startTime: performance.now(),
+      duration,
     };
     this.lastFaceMode = null;
     this.triggerBounce();
@@ -992,11 +1065,12 @@ export class DollViewer {
     this.camera.updateProjectionMatrix();
   }
 
-  setAccessories({ glasses = false, crown = false, coffee = false, cat = false } = {}) {
+  setAccessories({ glasses = false, crown = false, coffee = false, cat = false, telescope = false } = {}) {
     if (this.glassesGroup) this.glassesGroup.visible = Boolean(glasses);
     if (this.crownGroup) this.crownGroup.visible = Boolean(crown);
     if (this.coffeeGroup) this.coffeeGroup.visible = Boolean(coffee);
     if (this.catGroup) this.catGroup.visible = Boolean(cat);
+    if (this.telescopeGroup) this.telescopeGroup.visible = Boolean(telescope);
   }
 
   setAffinityAura(auraType = "none") {
@@ -1354,6 +1428,17 @@ export class DollViewer {
         if (this.head) {
           this.head.rotation.z = targetDir * 0.35 + listenSway;
           this.head.rotation.x = -0.06;
+        }
+      } else if (emote.type === "stargaze") {
+        const starSway = Math.sin(elapsedEmote * 3) * 0.03;
+        if (this.arms && this.arms.length === 2) {
+          // Dreamy stargazing posture: one hand gesturing toward the stars, one hand near chest
+          this.arms[0].rotation.set(0.55 + starSway, 0.2, -0.6);
+          this.arms[1].rotation.set(0.85, -0.35, 0.45 + starSway);
+        }
+        if (this.head) {
+          this.head.rotation.x = -0.28 + starSway;
+          this.head.rotation.z = Math.sin(elapsedEmote * 2.5) * 0.03;
         }
       }
     } else if (this.celebrationStartTime && performance.now() - this.celebrationStartTime < 6000) {

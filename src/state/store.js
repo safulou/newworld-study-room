@@ -46,6 +46,7 @@ const profileDefaults = {
     crown: false,
     coffee: false,
     cat: false,
+    telescope: false,
   },
   ambientMode: "auto",
   desktopNotifications: false,

@@ -23,6 +23,7 @@ describe("AmbientSoundscapeManager", () => {
     expect(AMBIENT_SOUND_TYPES).toContain("keyboard");
     expect(AMBIENT_SOUND_TYPES).toContain("pencil");
     expect(AMBIENT_SOUND_TYPES).toContain("vinyl");
+    expect(AMBIENT_SOUND_TYPES).toContain("crickets");
   });
 
   it("exposes soundscape presets", () => {
@@ -33,6 +34,7 @@ describe("AmbientSoundscapeManager", () => {
     expect(SOUNDSCAPE_PRESETS.ocean_tide).toBeDefined();
     expect(SOUNDSCAPE_PRESETS.zen_meditation).toBeDefined();
     expect(SOUNDSCAPE_PRESETS.study_library).toBeDefined();
+    expect(SOUNDSCAPE_PRESETS.summer_night).toBeDefined();
   });
 
   it("initializes with default settings", () => {
@@ -567,5 +569,48 @@ describe("AmbientSoundscapeManager", () => {
     manager.setTrackCoordinates("campfire", { x: 0.5, y: 0.2 });
     // y = 0.2 -> 2600 + 0.2 * 17400 = 6080 Hz
     expect(mockFilter.frequency.setValueAtTime).toHaveBeenCalledWith(6080, 25);
+  });
+
+  it("synthesizes night crickets ASMR stridulation pulse bursts safely", () => {
+    const manager = new AmbientSoundscapeManager();
+    // Safe execution before audioCtx is active
+    expect(() => manager.playCricketChirpBurst()).not.toThrow();
+
+    const createdOscillators = [];
+    const mockCtx = {
+      currentTime: 30,
+      createOscillator: vi.fn(() => {
+        const osc = {
+          type: "sine",
+          frequency: { setValueAtTime: vi.fn() },
+          connect: vi.fn(),
+          start: vi.fn(),
+          stop: vi.fn(),
+        };
+        createdOscillators.push(osc);
+        return osc;
+      }),
+      createGain: vi.fn(() => ({
+        gain: {
+          setValueAtTime: vi.fn(),
+          linearRampToValueAtTime: vi.fn(),
+          exponentialRampToValueAtTime: vi.fn(),
+        },
+        connect: vi.fn(),
+      })),
+      createBiquadFilter: vi.fn(() => ({
+        type: "bandpass",
+        frequency: { setValueAtTime: vi.fn() },
+        Q: { setValueAtTime: vi.fn() },
+        connect: vi.fn(),
+      })),
+    };
+    manager.ensureContext = () => mockCtx;
+
+    const mockGain = { connect: vi.fn() };
+    manager.playCricketChirpBurst(mockGain);
+    expect(createdOscillators.length).toBeGreaterThanOrEqual(3);
+    expect(createdOscillators[0].type).toBe("sine");
+    expect(mockCtx.createBiquadFilter).toHaveBeenCalled();
   });
 });

@@ -328,4 +328,39 @@ describe("drawDollFace", () => {
     fakeViewer.triggerListen({ direction: 4.2 });
     expect(fakeViewer.currentEmote.direction).toBe(1.0);
   });
+
+  it("manages accessories visibility including telescope", () => {
+    const fakeViewer = {
+      glassesGroup: { visible: false },
+      crownGroup: { visible: false },
+      coffeeGroup: { visible: false },
+      catGroup: { visible: false },
+      telescopeGroup: { visible: false },
+    };
+    fakeViewer.setAccessories = DollViewer.prototype.setAccessories.bind(fakeViewer);
+
+    fakeViewer.setAccessories({ glasses: true, telescope: true });
+    expect(fakeViewer.glassesGroup.visible).toBe(true);
+    expect(fakeViewer.crownGroup.visible).toBe(false);
+    expect(fakeViewer.telescopeGroup.visible).toBe(true);
+
+    fakeViewer.setAccessories({ telescope: false });
+    expect(fakeViewer.telescopeGroup.visible).toBe(false);
+  });
+
+  it("triggers stargaze micro-emote with duration and bounce", () => {
+    const fakeViewer = {
+      currentEmote: null,
+      lastFaceMode: "open",
+      triggerBounce: vi.fn(),
+    };
+    fakeViewer.triggerStargaze = DollViewer.prototype.triggerStargaze.bind(fakeViewer);
+
+    fakeViewer.triggerStargaze({ duration: 3200 });
+    expect(fakeViewer.currentEmote).toBeDefined();
+    expect(fakeViewer.currentEmote.type).toBe("stargaze");
+    expect(fakeViewer.currentEmote.duration).toBe(3200);
+    expect(fakeViewer.lastFaceMode).toBeNull();
+    expect(fakeViewer.triggerBounce).toHaveBeenCalled();
+  });
 });

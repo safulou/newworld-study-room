@@ -7,6 +7,7 @@ import {
   BellRing,
   BookmarkPlus,
   BookOpen,
+  Bug,
   Cat,
   Check,
   CheckCheck,
@@ -60,6 +61,7 @@ import {
   Sparkles,
   SunMoon,
   Target,
+  Telescope,
   Trash2,
   Volume2,
   Wand2,
@@ -97,6 +99,7 @@ const icons = {
   BellRing,
   BookmarkPlus,
   BookOpen,
+  Bug,
   Camera,
   Cat,
   Check,
@@ -150,6 +153,7 @@ const icons = {
   Sparkles,
   SunMoon,
   Target,
+  Telescope,
   Trash2,
   Volume2,
   Wand2,
@@ -2933,6 +2937,7 @@ function bindSoundstageModal() {
     binaural_theta: { icon: "🧠", label: "θ 腦波" },
     binaural_alpha: { icon: "✨", label: "α 腦波" },
     binaural_gamma: { icon: "⚡", label: "γ 腦波" },
+    crickets: { icon: "🦗", label: "夜蟬" },
   };
 
   let draggingTrack = null;
@@ -3722,6 +3727,7 @@ function bindAccessories() {
         crown: "學霸金冠",
         coffee: "暖心熱咖啡",
         cat: "伴讀小貓",
+        telescope: "觀星黃銅望遠鏡",
       };
       showToast(`${next[acc] ? "已為玩偶佩戴" : "已卸下"}${labels[acc] || acc}。`);
     });
@@ -6041,6 +6047,16 @@ async function startViewer() {
           "流星劃過了！我們許下心願，一定能堅持到最後！🌟🕊️",
         ];
         const quote = wishQuotes[Math.floor(Math.random() * wishQuotes.length)];
+        showCompanionBubble(quote, 3400);
+      } else if (emoteType === "stargaze") {
+        companionSound.playStargazeChime();
+        spawnStarlightParticles();
+        const stargazeQuotes = [
+          "仰望星空～浩瀚的星河正靜靜照亮你的專注之路！🔭✨",
+          "凝望繁星... 宇宙的奧秘，就像知識的海洋一樣深遠！🌌🪐",
+          "你看，夜空中的星斗正在閃爍，願今夜的思考澄澈如星！🌟🕊️",
+        ];
+        const quote = stargazeQuotes[Math.floor(Math.random() * stargazeQuotes.length)];
         showCompanionBubble(quote, 3400);
       } else {
         companionSound.playAffirmativeNod();

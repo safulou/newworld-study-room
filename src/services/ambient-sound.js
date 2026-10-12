@@ -18,6 +18,7 @@ export const AMBIENT_SOUND_TYPES = [
   "binaural_gamma",
   "keyboard",
   "pencil",
+  "crickets",
 ];
 
 export const SOUNDSCAPE_PRESETS = {
@@ -93,6 +94,16 @@ export const SOUNDSCAPE_PRESETS = {
     eq: { bass: 2, mid: 1, treble: -1 },
     reverb: { preset: "cabin", wet: 0.22 },
   },
+  summer_night: {
+    id: "summer_night",
+    name: "夏夜鳴蟬",
+    icon: "bug",
+    tracks: { crickets: 0.35, wind: 0.22, binaural_alpha: 0.18 },
+    pans: { crickets: 0.45, wind: -0.4, binaural_alpha: 0 },
+    acoustic: "cathedral",
+    eq: { bass: 0.5, mid: 1.0, treble: 2.0 },
+    reverb: { preset: "cathedral", wet: 0.25 },
+  },
 };
 
 export const SPATIAL_SCENARIOS = {
@@ -109,6 +120,7 @@ export const SPATIAL_SCENARIOS = {
       pink_noise: -0.25,
       ocean_waves: 0.25,
       vinyl: -0.25,
+      crickets: 0.7,
       binaural_theta: 0,
       binaural_alpha: 0,
       binaural_gamma: 0,
@@ -127,6 +139,7 @@ export const SPATIAL_SCENARIOS = {
       pink_noise: -0.5,
       ocean_waves: -0.3,
       vinyl: 0.2,
+      crickets: 0.5,
       binaural_theta: 0,
       binaural_alpha: 0,
       binaural_gamma: 0,
@@ -145,6 +158,7 @@ export const SPATIAL_SCENARIOS = {
       brown_noise: -0.4,
       pink_noise: 0.4,
       vinyl: 0.5,
+      crickets: 0.4,
       binaural_theta: 0,
       binaural_alpha: 0,
       binaural_gamma: 0,
@@ -163,6 +177,7 @@ export const SPATIAL_SCENARIOS = {
       brown_noise: 0.3,
       pink_noise: -0.2,
       ocean_waves: 0.1,
+      crickets: -0.45,
       binaural_theta: 0,
       binaural_alpha: 0,
       binaural_gamma: 0,
@@ -181,6 +196,7 @@ export const SPATIAL_SCENARIOS = {
       pink_noise: 0,
       ocean_waves: 0,
       vinyl: 0,
+      crickets: 0,
       binaural_theta: 0,
       binaural_alpha: 0,
       binaural_gamma: 0,
@@ -757,6 +773,37 @@ export class AmbientSoundscapeManager {
       return true;
     }
 
+    // Procedural ASMR Night Crickets Stridulation Track
+    if (name === "crickets") {
+      let active = true;
+      let timerId = null;
+      const playChirp = () => {
+        if (!active) return;
+        this.playCricketChirpBurst(trackGain);
+        const isDouble = Math.random() < 0.28;
+        const delay = isDouble ? 240 + Math.random() * 90 : 850 + Math.random() * 950;
+        timerId = window.setTimeout(playChirp, delay);
+      };
+      timerId = window.setTimeout(playChirp, 100);
+
+      this._registerTrack(
+        name,
+        {
+          timerId,
+          stopTimer: () => {
+            active = false;
+            window.clearTimeout(timerId);
+          },
+          gain: trackGain,
+          panner,
+          volume,
+          pan: initialPan,
+        },
+        distanceFilter,
+      );
+      return true;
+    }
+
     // Procedural Pink Noise (1/f Power Spectrum)
     if (name === "pink_noise") {
       const pinkBuffer = this.createPinkNoiseBuffer(4);
@@ -1094,6 +1141,44 @@ export class AmbientSoundscapeManager {
 
       osc.start(now);
       osc.stop(now + 0.045);
+    } catch {}
+  }
+
+  playCricketChirpBurst(targetGain = null) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    try {
+      const now = ctx.currentTime;
+      const pulses = 3 + Math.floor(Math.random() * 2);
+      const pulseLen = 0.016;
+      const pulseGap = 0.014;
+      const baseFreq = 4700 + (Math.random() - 0.5) * 200;
+
+      for (let i = 0; i < pulses; i++) {
+        const pulseStart = now + i * (pulseLen + pulseGap);
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+
+        filter.type = "bandpass";
+        filter.frequency.setValueAtTime(baseFreq, pulseStart);
+        filter.Q.setValueAtTime(5.5, pulseStart);
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(baseFreq, pulseStart);
+
+        const peakGain = 0.22 + Math.random() * 0.12;
+        gain.gain.setValueAtTime(0.0001, pulseStart);
+        gain.gain.linearRampToValueAtTime(peakGain, pulseStart + 0.003);
+        gain.gain.exponentialRampToValueAtTime(0.0001, pulseStart + pulseLen);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(targetGain || this.masterGain);
+
+        osc.start(pulseStart);
+        osc.stop(pulseStart + pulseLen + 0.01);
+      }
     } catch {}
   }
 

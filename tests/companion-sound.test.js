@@ -53,6 +53,7 @@ describe("CompanionSoundManager", () => {
     expect(() => manager.playStarWishChime()).not.toThrow();
     expect(() => manager.playDeliveryChime()).not.toThrow();
     expect(() => manager.playAcousticListenChime()).not.toThrow();
+    expect(() => manager.playStargazeChime()).not.toThrow();
     expect(() => manager.playClockworkTick({ isTock: false, mode: "wood", volume: 0.5 })).not.toThrow();
     expect(() => manager.playClockworkTick({ isTock: true, mode: "crisp", volume: 0.3 })).not.toThrow();
     expect(() => manager.playClockworkTick({ isTock: false, mode: "wood", volume: 0 })).not.toThrow();
@@ -125,5 +126,42 @@ describe("CompanionSoundManager", () => {
     expect(createdOscillators).toHaveLength(2);
     expect(createdOscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(1318.51, 25);
     expect(createdOscillators[1].frequency.setValueAtTime).toHaveBeenCalledWith(1975.53, 25.09);
+  });
+
+  it("synthesizes celestial pentatonic harp cascade in playStargazeChime", () => {
+    const createdOscillators = [];
+    const mockCtx = {
+      currentTime: 40,
+      createOscillator: vi.fn(() => {
+        const osc = {
+          type: "sine",
+          frequency: { setValueAtTime: vi.fn() },
+          connect: vi.fn(),
+          start: vi.fn(),
+          stop: vi.fn(),
+        };
+        createdOscillators.push(osc);
+        return osc;
+      }),
+      createGain: vi.fn(() => ({
+        gain: {
+          setValueAtTime: vi.fn(),
+          linearRampToValueAtTime: vi.fn(),
+          exponentialRampToValueAtTime: vi.fn(),
+        },
+        connect: vi.fn(),
+      })),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playStargazeChime();
+    // 5 notes: F#5, G#5, A#5, C#6, D#6
+    expect(createdOscillators).toHaveLength(5);
+    expect(createdOscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(739.99, 40);
+    expect(createdOscillators[1].frequency.setValueAtTime).toHaveBeenCalledWith(830.61, 40.07);
+    expect(createdOscillators[2].frequency.setValueAtTime).toHaveBeenCalledWith(932.33, 40.14);
+    expect(createdOscillators[3].frequency.setValueAtTime).toHaveBeenCalledWith(1108.73, 40.21);
+    expect(createdOscillators[4].frequency.setValueAtTime).toHaveBeenCalledWith(1244.51, 40.28);
   });
 });

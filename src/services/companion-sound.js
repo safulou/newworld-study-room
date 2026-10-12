@@ -657,4 +657,38 @@ export class CompanionSoundManager {
       osc.stop(now + delay + dur + 0.05);
     });
   }
+
+  /**
+   * Play a dreamy celestial harp arpeggio when stargazing at the night sky
+   * Upward pentatonic harp cascade (F#5, G#5, A#5, C#6, D#6)
+   */
+  playStargazeChime() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const notes = [
+      { freq: 739.99, delay: 0.0, dur: 0.35 }, // F#5
+      { freq: 830.61, delay: 0.07, dur: 0.38 }, // G#5
+      { freq: 932.33, delay: 0.14, dur: 0.42 }, // A#5
+      { freq: 1108.73, delay: 0.21, dur: 0.48 }, // C#6
+      { freq: 1244.51, delay: 0.28, dur: 0.75 }, // D#6
+    ];
+
+    notes.forEach(({ freq, delay, dur }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + delay);
+
+      const peak = 0.15 * this.volume;
+      gain.gain.setValueAtTime(0.0001, now + delay);
+      gain.gain.linearRampToValueAtTime(peak, now + delay + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + delay);
+      osc.stop(now + delay + dur + 0.05);
+    });
+  }
 }
