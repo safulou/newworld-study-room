@@ -114,6 +114,60 @@ export const SPATIAL_SCENARIOS = {
       binaural_gamma: 0,
     },
   },
+  forest_walk: {
+    id: "forest_walk",
+    name: "林間漫步",
+    pans: {
+      wind: -0.6,
+      rain: 0.4,
+      campfire: 0.7,
+      keyboard: 0,
+      pencil: -0.2,
+      brown_noise: 0.3,
+      pink_noise: -0.5,
+      ocean_waves: -0.3,
+      vinyl: 0.2,
+      binaural_theta: 0,
+      binaural_alpha: 0,
+      binaural_gamma: 0,
+    },
+  },
+  ocean_breeze: {
+    id: "ocean_breeze",
+    name: "潮間凝神",
+    pans: {
+      ocean_waves: 0,
+      wind: 0.75,
+      rain: -0.6,
+      campfire: -0.5,
+      keyboard: 0.2,
+      pencil: -0.3,
+      brown_noise: -0.4,
+      pink_noise: 0.4,
+      vinyl: 0.5,
+      binaural_theta: 0,
+      binaural_alpha: 0,
+      binaural_gamma: 0,
+    },
+  },
+  campfire_night: {
+    id: "campfire_night",
+    name: "圍爐夜讀",
+    pans: {
+      campfire: 0.6,
+      rain: -0.7,
+      wind: -0.5,
+      vinyl: -0.35,
+      keyboard: 0.2,
+      pencil: 0.4,
+      brown_noise: 0.3,
+      pink_noise: -0.2,
+      ocean_waves: 0.1,
+      binaural_theta: 0,
+      binaural_alpha: 0,
+      binaural_gamma: 0,
+    },
+  },
   centered: {
     id: "centered",
     name: "全軌道居中平衡",
@@ -209,6 +263,8 @@ export class AmbientSoundscapeManager {
     this.autoAtmosphereSync = false;
     this.atmosphereMode = "neutral";
     this.tidalSurge = true;
+    this.trackCoordinates = {};
+    this.currentSpatialScenario = "cabin_realism";
     this.sleepTimerRemainingSec = 0;
     this.sleepTimerDurationSec = 0;
     this.sleepTimerInterval = null;
@@ -1046,10 +1102,33 @@ export class AmbientSoundscapeManager {
 
   applySpatialScenario(scenarioKey = "cabin_realism") {
     const scenario = SPATIAL_SCENARIOS[scenarioKey];
-    if (!scenario) return;
+    if (!scenario) return false;
+    this.currentSpatialScenario = scenarioKey;
     for (const [name, panVal] of Object.entries(scenario.pans)) {
       this.setTrackPan(name, panVal);
+      this.trackCoordinates[name] = { x: panVal, y: 0.4 };
     }
+    return true;
+  }
+
+  getSpatialScenarios() {
+    return Object.values(SPATIAL_SCENARIOS);
+  }
+
+  setTrackCoordinates(name, { x = 0, y = 0.5 } = {}) {
+    const clampedX = Math.max(-1, Math.min(1, Number(x) || 0));
+    const clampedY = Math.max(0, Math.min(1, Number(y) || 0.5));
+    this.trackCoordinates[name] = { x: clampedX, y: clampedY };
+    this.setTrackPan(name, clampedX);
+    return { ...this.trackCoordinates[name] };
+  }
+
+  getTrackCoordinates(name) {
+    if (this.trackCoordinates[name]) {
+      return { ...this.trackCoordinates[name] };
+    }
+    const currentPan = this.getTrackPan(name);
+    return { x: currentPan, y: 0.4 };
   }
 
   setMasterVolume(volume) {

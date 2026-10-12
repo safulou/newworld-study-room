@@ -193,4 +193,34 @@ describe("drawDollFace", () => {
     expect(fakeViewer.currentEmote.duration).toBe(1200);
     expect(fakeViewer.triggerBounce).toHaveBeenCalled();
   });
+
+  it("transitions atmosphere lighting for focus, shortBreak, and longBreak", () => {
+    const fakeViewer = {
+      keyLight: { color: { setHex: vi.fn() } },
+      hemiLight: { color: { setHex: vi.fn() }, groundColor: { setHex: vi.fn() } },
+      rimLight: { color: { setHex: vi.fn() } },
+    };
+    fakeViewer.setAtmosphereLighting = DollViewer.prototype.setAtmosphereLighting.bind(fakeViewer);
+
+    // Focus mode
+    fakeViewer.setAtmosphereLighting("focus");
+    expect(fakeViewer.keyLight.color.setHex).toHaveBeenCalledWith(0xffd79a);
+    expect(fakeViewer.hemiLight.color.setHex).toHaveBeenCalledWith(0xffe0a3);
+    expect(fakeViewer.hemiLight.groundColor.setHex).toHaveBeenCalledWith(0x172437);
+    expect(fakeViewer.rimLight.color.setHex).toHaveBeenCalledWith(0x69c8bd);
+
+    // Short break mode
+    fakeViewer.setAtmosphereLighting("shortBreak");
+    expect(fakeViewer.keyLight.color.setHex).toHaveBeenCalledWith(0xa7f3d0);
+    expect(fakeViewer.hemiLight.color.setHex).toHaveBeenCalledWith(0x6ee7b7);
+    expect(fakeViewer.hemiLight.groundColor.setHex).toHaveBeenCalledWith(0x064e3b);
+    expect(fakeViewer.rimLight.color.setHex).toHaveBeenCalledWith(0x34d399);
+
+    // Long break mode
+    fakeViewer.setAtmosphereLighting("longBreak");
+    expect(fakeViewer.keyLight.color.setHex).toHaveBeenCalledWith(0xfbcfe8);
+    expect(fakeViewer.hemiLight.color.setHex).toHaveBeenCalledWith(0xf472b6);
+    expect(fakeViewer.hemiLight.groundColor.setHex).toHaveBeenCalledWith(0x3b0764);
+    expect(fakeViewer.rimLight.color.setHex).toHaveBeenCalledWith(0xfbbf24);
+  });
 });

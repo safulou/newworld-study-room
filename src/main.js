@@ -289,6 +289,12 @@ const elements = {
   posterThemeChips: document.querySelectorAll(".poster-theme-chip"),
   btnDownloadPoster: $("#btnDownloadPoster"),
   btnCopyPoster: $("#btnCopyPoster"),
+  btnDownloadSvgPoster: $("#btnDownloadSvgPoster"),
+  btnOpenSoundstage: $("#btnOpenSoundstage"),
+  soundstageModal: $("#soundstageModal"),
+  btnCloseSoundstage: $("#btnCloseSoundstage"),
+  soundstageCanvas: $("#soundstageCanvas"),
+  soundstagePresetPills: [...document.querySelectorAll(".soundstage-preset-pill")],
   btnGiftBookmarkToPeers: $("#btnGiftBookmarkToPeers"),
   photoInput: $("#photoInput"),
   photoDrop: $("#photoDrop"),
@@ -1509,6 +1515,9 @@ function applyCabinMood() {
     }
   }
   document.body.dataset.cabinMood = resolvedMood;
+  const currentMode = timer?.mode || "focus";
+  document.body.dataset.timerMode = currentMode;
+  viewer?.setAtmosphereLighting?.(currentMode);
 }
 
 function clampProgress(value) {
@@ -2881,6 +2890,205 @@ function startAcousticVisualizer() {
   renderVisualizer();
 }
 
+function bindSoundstageModal() {
+  const canvas = elements.soundstageCanvas;
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+
+  const TRACK_ICONS = {
+    rain: { icon: "🌧️", label: "雨聲" },
+    wind: { icon: "💨", label: "微風" },
+    campfire: { icon: "🔥", label: "柴火" },
+    keyboard: { icon: "⌨️", label: "鍵盤" },
+    pencil: { icon: "✏️", label: "鉛筆" },
+    brown_noise: { icon: "☕", label: "棕噪" },
+    pink_noise: { icon: "🌸", label: "粉噪" },
+    ocean_waves: { icon: "🌊", label: "海浪" },
+    vinyl: { icon: "📻", label: "黑膠" },
+    binaural_theta: { icon: "🧠", label: "θ 腦波" },
+    binaural_alpha: { icon: "✨", label: "α 腦波" },
+    binaural_gamma: { icon: "⚡", label: "γ 腦波" },
+  };
+
+  let draggingTrack = null;
+
+  function renderSoundstage() {
+    const width = canvas.width;
+    const height = canvas.height;
+    ctx.clearRect(0, 0, width, height);
+
+    const centerX = width / 2;
+    const listenerY = height - 55;
+
+    // 1. Acoustic Stage Range Arcs
+    ctx.strokeStyle = "rgba(105, 200, 189, 0.15)";
+    ctx.lineWidth = 1;
+
+    for (let r = 70; r <= 320; r += 70) {
+      ctx.beginPath();
+      ctx.arc(centerX, listenerY, r, Math.PI, 0, false);
+      ctx.stroke();
+    }
+
+    // Radial guide lines
+    [-0.8, -0.4, 0, 0.4, 0.8].forEach((pan) => {
+      ctx.strokeStyle = pan === 0 ? "rgba(105, 200, 189, 0.3)" : "rgba(255, 255, 255, 0.08)";
+      ctx.beginPath();
+      ctx.moveTo(centerX, listenerY);
+      const angle = (pan * Math.PI) / 2.5;
+      const x = centerX + Math.sin(angle) * 310;
+      const y = listenerY - Math.cos(angle) * 310;
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    });
+
+    // L / R labels
+    ctx.font = "bold 12px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+    ctx.textAlign = "left";
+    ctx.fillText("左聲道 (L)", 24, listenerY + 4);
+    ctx.textAlign = "right";
+    ctx.fillText("右聲道 (R)", width - 24, listenerY + 4);
+
+    // 2. Listener (Center Bottom)
+    ctx.textAlign = "center";
+    ctx.font = "28px sans-serif";
+    ctx.fillText("🎧", centerX, listenerY + 6);
+    ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillStyle = "#69c8bd";
+    ctx.fillText("聆聽者 (You)", centerX, listenerY + 28);
+
+    // 3. Track Emitters
+    const activeTracks = ambientSound.getActiveTracks();
+    const tracksToDraw = activeTracks.length ? activeTracks : ["rain", "campfire", "wind", "ocean_waves"];
+
+    tracksToDraw.forEach((trackKey) => {
+      const coords = ambientSound.getTrackCoordinates(trackKey);
+      const angle = (coords.x * Math.PI) / 2.5;
+      const radius = 80 + (1 - coords.y) * 220;
+      const emitterX = centerX + Math.sin(angle) * radius;
+      const emitterY = listenerY - Math.cos(angle) * radius;
+
+      const isDragged = draggingTrack === trackKey;
+      const meta = TRACK_ICONS[trackKey] || { icon: "🎵", label: trackKey };
+
+      // Glow halo
+      ctx.fillStyle = isDragged ? "rgba(241, 182, 95, 0.3)" : "rgba(105, 200, 189, 0.18)";
+      ctx.beginPath();
+      ctx.arc(emitterX, emitterY, 22, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Border circle
+      ctx.strokeStyle = isDragged ? "#f1b65f" : "#69c8bd";
+      ctx.lineWidth = isDragged ? 2.5 : 1.5;
+      ctx.beginPath();
+      ctx.arc(emitterX, emitterY, 18, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Icon & label
+      ctx.font = "18px sans-serif";
+      ctx.fillText(meta.icon, emitterX, emitterY + 6);
+
+      ctx.fillStyle = isDragged ? "#ffe0a3" : "#edf3f6";
+      ctx.font = "bold 10px ui-sans-serif, system-ui, sans-serif";
+      ctx.fillText(meta.label, emitterX, emitterY + 28);
+    });
+  }
+
+  function getTrackAtPosition(cx, cy) {
+    const centerX = canvas.width / 2;
+    const listenerY = canvas.height - 55;
+    const activeTracks = ambientSound.getActiveTracks();
+    const tracksToCheck = activeTracks.length ? activeTracks : ["rain", "campfire", "wind", "ocean_waves"];
+
+    for (const trackKey of tracksToCheck) {
+      const coords = ambientSound.getTrackCoordinates(trackKey);
+      const angle = (coords.x * Math.PI) / 2.5;
+      const radius = 80 + (1 - coords.y) * 220;
+      const emitterX = centerX + Math.sin(angle) * radius;
+      const emitterY = listenerY - Math.cos(angle) * radius;
+      const dist = Math.hypot(cx - emitterX, cy - emitterY);
+      if (dist <= 26) return trackKey;
+    }
+    return null;
+  }
+
+  function updateTrackFromCanvas(trackKey, cx, cy) {
+    const centerX = canvas.width / 2;
+    const listenerY = canvas.height - 55;
+    const dx = cx - centerX;
+    const dy = listenerY - cy;
+
+    const angle = Math.atan2(dx, dy);
+    const pan = Math.max(-1, Math.min(1, angle / (Math.PI / 2.5)));
+    const radius = Math.hypot(dx, dy);
+    const dist = Math.max(0, Math.min(1, 1 - (radius - 80) / 220));
+
+    ambientSound.setTrackCoordinates(trackKey, { x: pan, y: dist });
+    renderSoundstage();
+  }
+
+  canvas.addEventListener("pointerdown", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const cx = (e.clientX - rect.left) * scaleX;
+    const cy = (e.clientY - rect.top) * scaleY;
+
+    const hitTrack = getTrackAtPosition(cx, cy);
+    if (hitTrack) {
+      draggingTrack = hitTrack;
+      canvas.setPointerCapture(e.pointerId);
+      renderSoundstage();
+    }
+  });
+
+  canvas.addEventListener("pointermove", (e) => {
+    if (!draggingTrack) return;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const cx = (e.clientX - rect.left) * scaleX;
+    const cy = (e.clientY - rect.top) * scaleY;
+    updateTrackFromCanvas(draggingTrack, cx, cy);
+  });
+
+  const onPointerUp = () => {
+    if (draggingTrack) {
+      draggingTrack = null;
+      renderSoundstage();
+    }
+  };
+  canvas.addEventListener("pointerup", onPointerUp);
+  canvas.addEventListener("pointercancel", onPointerUp);
+
+  elements.btnOpenSoundstage?.addEventListener("click", () => {
+    renderSoundstage();
+    elements.soundstageModal?.showModal();
+  });
+
+  elements.btnCloseSoundstage?.addEventListener("click", () => {
+    elements.soundstageModal?.close();
+  });
+
+  elements.soundstageModal?.addEventListener("click", (e) => {
+    if (e.target === elements.soundstageModal) {
+      elements.soundstageModal.close();
+    }
+  });
+
+  elements.soundstagePresetPills?.forEach((pill) => {
+    pill.addEventListener("click", () => {
+      const scenario = pill.dataset.scenario;
+      if (!scenario) return;
+      ambientSound.applySpatialScenario(scenario);
+      elements.soundstagePresetPills.forEach((p) => p.classList.toggle("active", p === pill));
+      renderSoundstage();
+      showToast(`🧭 已切換為「${pill.textContent.trim()}」聲學空間方位`);
+    });
+  });
+}
+
 function bindPresets() {
   elements.presetButtons.forEach((button) => {
     button.addEventListener("click", () => {
@@ -3716,6 +3924,7 @@ function renderPosterCard(theme = store.get().posterTheme || "midnight") {
         : "純前端 Retina 2x 高解析度繪製 · 絲線孔扣與火漆封印 · 專屬花語典藏";
     }
 
+    if (elements.btnDownloadSvgPoster) elements.btnDownloadSvgPoster.hidden = false;
     currentPosterCanvas = FocusPosterGenerator.generateBotanicalBookmark({
       plantKey: currentBookmarkData.plantKey,
       harvestCount: currentBookmarkData.harvestCount,
@@ -3726,6 +3935,7 @@ function renderPosterCard(theme = store.get().posterTheme || "midnight") {
     });
   } else if (currentPosterMode === "soundscape") {
     if (elements.btnGiftBookmarkToPeers) elements.btnGiftBookmarkToPeers.hidden = true;
+    if (elements.btnDownloadSvgPoster) elements.btnDownloadSvgPoster.hidden = true;
     if (elements.posterModalTitle) elements.posterModalTitle.textContent = "🎴 音景調音拍立得分享卡";
     if (elements.posterModalSubtitle)
       elements.posterModalSubtitle.textContent = "純前端 Retina 2x 高解析度繪製 · 頻譜波形與調音參數 · 內嵌 QR Code";
@@ -3762,6 +3972,7 @@ function renderPosterCard(theme = store.get().posterTheme || "midnight") {
     });
   } else {
     if (elements.btnGiftBookmarkToPeers) elements.btnGiftBookmarkToPeers.hidden = true;
+    if (elements.btnDownloadSvgPoster) elements.btnDownloadSvgPoster.hidden = true;
     if (elements.posterModalTitle) elements.posterModalTitle.textContent = "📸 心流拍立得分享卡";
     if (elements.posterModalSubtitle)
       elements.posterModalSubtitle.textContent = "純前端 Retina 2x 高解析度繪製 · 免費下載或複製剪貼簿";
@@ -3925,6 +4136,19 @@ function bindPosterModal() {
       FocusPosterGenerator.download(currentPosterCanvas, filename);
       showToast("因瀏覽器安全限制，已自動為您下載 PNG 📸");
     }
+  });
+
+  elements.btnDownloadSvgPoster?.addEventListener("click", () => {
+    if (!currentBookmarkData) return;
+    const activeTheme = store.get().posterTheme || "midnight";
+    const svgString = FocusPosterGenerator.generateBotanicalSvg({
+      ...currentBookmarkData,
+      theme: activeTheme,
+    });
+    const today = new Date().toISOString().split("T")[0];
+    const filename = `botanical-ex-libris-${currentBookmarkData.plantKey || "specimen"}-${today}.svg`;
+    FocusPosterGenerator.downloadSvg(svgString, filename);
+    showToast("🏷️ 純向量 SVG 藏書票已開始下載！");
   });
 
   elements.btnGiftBookmarkToPeers?.addEventListener("click", () => {
@@ -5662,6 +5886,7 @@ function init() {
   bindCategoryPicker();
   bindShortcuts();
   bindAmbientSound();
+  bindSoundstageModal();
   const initialOrbit = Boolean(store.get().orbitingBreeze);
   ambientSound.setOrbitingBreeze(initialOrbit);
   updateOrbitBreezeUI(initialOrbit);

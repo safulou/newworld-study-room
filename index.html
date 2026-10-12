@@ -556,6 +556,14 @@
                   >
                     🎛️ 聲學空間
                   </button>
+                  <button
+                    type="button"
+                    class="spatial-preset-btn"
+                    id="btnOpenSoundstage"
+                    title="開啟 3D 聲學舞台：可視化拖曳白噪音方位與遠近"
+                  >
+                    🧭 聲學舞台
+                  </button>
                 </div>
                 <span class="ambient-mixer-sub" id="ambientMixerCount">0 軌運行中</span>
               </div>
@@ -1461,6 +1469,16 @@
             <i data-lucide="copy"></i>
             <span>複製到剪貼簿</span>
           </button>
+          <button
+            class="poster-action-btn secondary"
+            id="btnDownloadSvgPoster"
+            type="button"
+            hidden
+            title="匯出純向量 SVG 藏書票"
+          >
+            <i data-lucide="sparkles"></i>
+            <span>匯出向量藏書票 (SVG)</span>
+          </button>
           <button class="poster-action-btn accent" id="btnGiftBookmarkToPeers" type="button" hidden>
             <i data-lucide="gift"></i>
             <span>贈送給同房書伴</span>
@@ -1783,6 +1801,34 @@
         </div>
         <div class="qr-card-footer">
           <button class="action-btn secondary" id="btnCloseQrModalDialog" type="button">關閉</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="soundstage-modal" id="soundstageModal">
+      <div class="soundstage-dialog-card">
+        <div class="soundstage-header">
+          <div class="soundstage-title-group">
+            <h3 class="soundstage-title">🧭 互動式 3D 聲學舞台</h3>
+            <p class="soundstage-subtitle">自由拖曳各音軌至理想方位與遠近，塑造個人專屬沉浸音場</p>
+          </div>
+          <button class="modal-close-btn" id="btnCloseSoundstage" type="button" aria-label="關閉">✕</button>
+        </div>
+        <div class="soundstage-presets">
+          <span class="soundstage-preset-label">場景預設：</span>
+          <button type="button" class="soundstage-preset-pill active" data-scenario="cabin_realism">
+            🪵 小木屋真實
+          </button>
+          <button type="button" class="soundstage-preset-pill" data-scenario="forest_walk">🌲 林間漫步</button>
+          <button type="button" class="soundstage-preset-pill" data-scenario="ocean_breeze">🌊 潮間凝神</button>
+          <button type="button" class="soundstage-preset-pill" data-scenario="campfire_night">🔥 圍爐夜讀</button>
+          <button type="button" class="soundstage-preset-pill" data-scenario="centered">🎯 全軌居中</button>
+        </div>
+        <div class="soundstage-radar-wrap">
+          <canvas id="soundstageCanvas" width="560" height="420" class="soundstage-canvas"></canvas>
+          <div class="soundstage-hint">
+            💡 點擊或拖曳舞台中的音軌圖示，即可即時調整左右聲相（-1.0 ~ +1.0）與空間距離（衰減增益）
+          </div>
         </div>
       </div>
     </dialog>

@@ -563,13 +563,45 @@ export class DollViewer {
   }
 
   buildLighting() {
-    this.scene.add(new THREE.HemisphereLight(0xffe0a3, 0x172437, 2.15));
-    const key = new THREE.DirectionalLight(0xffd79a, 2.6);
-    key.position.set(2.5, 4, 4);
-    this.scene.add(key);
-    const rim = new THREE.PointLight(0x69c8bd, 2.2, 8);
-    rim.position.set(-2.4, 1.5, 2);
-    this.scene.add(rim);
+    this.hemiLight = new THREE.HemisphereLight(0xffe0a3, 0x172437, 2.15);
+    this.scene.add(this.hemiLight);
+
+    this.keyLight = new THREE.DirectionalLight(0xffd79a, 2.6);
+    this.keyLight.position.set(2.5, 4, 4);
+    this.scene.add(this.keyLight);
+
+    this.rimLight = new THREE.PointLight(0x69c8bd, 2.2, 8);
+    this.rimLight.position.set(-2.4, 1.5, 2);
+    this.scene.add(this.rimLight);
+  }
+
+  setAtmosphereLighting(mode = "focus") {
+    if (!this.keyLight || !this.hemiLight || !this.rimLight) return;
+    const isBreak = mode === "shortBreak" || mode === "break";
+    const isLongBreak = mode === "longBreak";
+
+    let targetKey = 0xffd79a; // Warm candlelight for focus
+    let targetSky = 0xffe0a3;
+    let targetGround = 0x172437;
+    let targetRim = 0x69c8bd;
+
+    if (isBreak) {
+      targetKey = 0xa7f3d0; // Fresh mint sage
+      targetSky = 0x6ee7b7;
+      targetGround = 0x064e3b;
+      targetRim = 0x34d399;
+    } else if (isLongBreak) {
+      targetKey = 0xfbcfe8; // Twilight lavender rose
+      targetSky = 0xf472b6;
+      targetGround = 0x3b0764;
+      targetRim = 0xfbbf24;
+    }
+
+    if (this.keyLight.color?.setHex) this.keyLight.color.setHex(targetKey);
+    if (this.hemiLight.color?.setHex) this.hemiLight.color.setHex(targetSky);
+    if (this.hemiLight.groundColor?.setHex) this.hemiLight.groundColor.setHex(targetGround);
+    if (this.rimLight.color?.setHex) this.rimLight.color.setHex(targetRim);
+    this.currentAtmosphereMode = mode;
   }
 
   bindControls() {

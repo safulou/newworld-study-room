@@ -861,4 +861,187 @@ export class FocusPosterGenerator {
     link.href = canvas.toDataURL("image/png");
     link.click();
   }
+
+  /**
+   * Generate an ultra high-res, crisp vector SVG Ex-Libris / Botanical Specimen Postcard
+   * @param {Object} options
+   * @param {string} [options.plantKey='rose']
+   * @param {number} [options.harvestCount=1]
+   * @param {string} [options.nickname='夥伴']
+   * @param {string} [options.firstHarvestDate=null]
+   * @param {string} [options.personalInscription='']
+   * @param {string} [options.theme='midnight']
+   * @param {boolean} [options.isGift=false]
+   * @returns {string} Standalone SVG XML string
+   */
+  static generateBotanicalSvg({
+    plantKey = "rose",
+    harvestCount = 1,
+    nickname = "夥伴",
+    firstHarvestDate = null,
+    personalInscription = "",
+    theme = "midnight",
+    isGift = false,
+  } = {}) {
+    const width = 400;
+    const height = 800;
+    const themeConfig = POSTER_THEMES[theme] || POSTER_THEMES.midnight;
+    const plant = PLANT_FLOWER_LANGUAGES[plantKey] || PLANT_FLOWER_LANGUAGES.rose;
+    const escapeXml = (unsafe) =>
+      String(unsafe || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+
+    const safeNickname = escapeXml(String(nickname || "夥伴").slice(0, 24));
+    const safeCount = Math.max(1, Number(harvestCount) || 1);
+    const dateStr = escapeXml(firstHarvestDate || new Date().toISOString().split("T")[0]);
+    const noteText = escapeXml(personalInscription?.trim() || "在寧靜專注的時光中，靜靜扎根，等待下一季綻放。");
+    const specimenCode = `#NW-${plantKey.toUpperCase()}-${String(safeCount).padStart(3, "0")}`;
+    const headerTitle = isGift ? "EX LIBRIS · COMPANION GIFT" : "EX LIBRIS · BOTANICAL ARCHIVE";
+    const subTitle = isGift ? "— 書 伴 贈 禮 草 木 藏 書 票 —" : "— 新 世 界 自 習 標 本 藏 書 票 —";
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="${themeConfig.bgGradient[0]}" />
+      <stop offset="50%" stop-color="${themeConfig.bgGradient[1]}" />
+      <stop offset="100%" stop-color="${themeConfig.bgGradient[2]}" />
+    </linearGradient>
+    <linearGradient id="sealGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fcd34d" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#b45309" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background Layer -->
+  <rect width="${width}" height="${height}" fill="url(#bgGrad)" />
+
+  <!-- Starlight Constellation Points -->
+  <g fill="${themeConfig.stars}">
+    <circle cx="45" cy="85" r="1.5" />
+    <circle cx="355" cy="75" r="1.2" />
+    <circle cx="65" cy="235" r="1.4" />
+    <circle cx="335" cy="215" r="1.5" />
+    <circle cx="35" cy="485" r="1.3" />
+    <circle cx="365" cy="465" r="1.4" />
+    <circle cx="55" cy="695" r="1.5" />
+    <circle cx="345" cy="715" r="1.2" />
+  </g>
+
+  <!-- Outer Ornate Bookmark Border -->
+  <rect x="16" y="16" width="${width - 32}" height="${height - 32}" rx="22" ry="22"
+        fill="none" stroke="${themeConfig.outerBorder}" stroke-width="2" />
+  <rect x="22" y="22" width="${width - 44}" height="${height - 44}" rx="18" ry="18"
+        fill="none" stroke="${themeConfig.innerBorder}" stroke-width="1" stroke-dasharray="6 3" />
+
+  <!-- Corner Filigree Accents -->
+  <path d="M 28 44 L 28 28 L 44 28" fill="none" stroke="${themeConfig.outerBorder}" stroke-width="1.8" />
+  <path d="M 372 44 L 372 28 L 356 28" fill="none" stroke="${themeConfig.outerBorder}" stroke-width="1.8" />
+  <path d="M 28 756 L 28 772 L 44 772" fill="none" stroke="${themeConfig.outerBorder}" stroke-width="1.8" />
+  <path d="M 372 756 L 372 772 L 356 772" fill="none" stroke="${themeConfig.outerBorder}" stroke-width="1.8" />
+
+  <!-- Top Silk Cord & Eyelet -->
+  <path d="M 196 46 Q 188 12 200 4 Q 212 12 204 46" fill="none" stroke="#e2b36f" stroke-width="2.5" />
+  <circle cx="200" cy="46" r="9" fill="${themeConfig.bgGradient[2]}" stroke="#f1b65f" stroke-width="2" />
+
+  <!-- Header Banner -->
+  <text x="200" y="80" text-anchor="middle" fill="${themeConfig.brandTitle}"
+        font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" font-weight="bold" letter-spacing="2">
+    ${headerTitle}
+  </text>
+  <text x="200" y="98" text-anchor="middle" fill="${themeConfig.accent}"
+        font-family="Georgia, Cambria, serif" font-size="12" letter-spacing="1">
+    ${subTitle}
+  </text>
+
+  <!-- Specimen Plaque -->
+  <rect x="36" y="116" width="${width - 72}" height="264" rx="16" ry="16"
+        fill="${themeConfig.cardBg}" stroke="${themeConfig.cardBorder}" stroke-width="1" />
+  <text x="200" y="196" text-anchor="middle" font-size="68" font-family="'Segoe UI Emoji', 'Noto Color Emoji', sans-serif">
+    ${plant.emoji}
+  </text>
+  <text x="200" y="242" text-anchor="middle" fill="${themeConfig.plantTitle}"
+        font-family="Georgia, Cambria, serif" font-size="20" font-weight="bold">
+    ${escapeXml(plant.name)}
+  </text>
+  <text x="200" y="264" text-anchor="middle" fill="#94a3b8"
+        font-family="Georgia, serif" font-size="11" font-style="italic">
+    ${escapeXml(plant.latin || "Flora")} · Herbarium Specimen
+  </text>
+  <line x1="72" y1="284" x2="328" y2="284" stroke="rgba(255, 255, 255, 0.15)" stroke-width="1" />
+  <text x="200" y="306" text-anchor="middle" fill="${themeConfig.accent}"
+        font-family="ui-sans-serif, system-ui, sans-serif" font-size="11">
+    🌿 花 語 典 藏 🌿
+  </text>
+  <text x="200" y="334" text-anchor="middle" fill="#f8fafc"
+        font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="bold">
+    「${escapeXml(plant.language)}」
+  </text>
+
+  <!-- Provenance Box -->
+  <rect x="36" y="398" width="${width - 72}" height="174" rx="14" ry="14"
+        fill="rgba(0, 0, 0, 0.25)" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" />
+  <text x="56" y="424" fill="${themeConfig.accent}" font-family="ui-sans-serif, system-ui, sans-serif"
+        font-size="11" font-weight="bold">
+    📜 標本銘牌 Provenance
+  </text>
+  <g font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">
+    <text x="56" y="452" fill="#94a3b8">${isGift ? "贈禮書伴：" : "培育書伴："}</text>
+    <text x="132" y="452" fill="#f1f5f9" font-weight="bold">${safeNickname}</text>
+
+    <text x="56" y="478" fill="#94a3b8">累計綻放：</text>
+    <text x="132" y="478" fill="#f1f5f9" font-weight="bold">共 ${safeCount} 次收穫</text>
+
+    <text x="56" y="504" fill="#94a3b8">紀錄時日：</text>
+    <text x="132" y="504" fill="#f1f5f9" font-weight="bold">${dateStr}</text>
+
+    <text x="56" y="530" fill="#94a3b8">標本編號：</text>
+    <text x="132" y="530" fill="${themeConfig.accent}" font-weight="bold">${specimenCode}</text>
+  </g>
+
+  <!-- Inscription Block -->
+  <rect x="36" y="588" width="${width - 72}" height="110" rx="14" ry="14"
+        fill="${themeConfig.cardBg}" stroke="${themeConfig.cardBorder}" stroke-width="1" />
+  <text x="56" y="614" fill="${themeConfig.brandTitle}" font-family="ui-sans-serif, system-ui, sans-serif"
+        font-size="11" font-weight="bold">
+    ✍️ 旅人題字 Inscription
+  </text>
+  <text x="56" y="646" fill="#fed7aa" font-family="Georgia, serif" font-size="12" font-style="italic">
+    “${noteText}”
+  </text>
+
+  <!-- Artisanal Seal Stamp -->
+  <g transform="translate(200, 736)">
+    <circle cx="0" cy="0" r="18" fill="none" stroke="url(#sealGrad)" stroke-width="1.8" />
+    <circle cx="0" cy="0" r="15" fill="none" stroke="url(#sealGrad)" stroke-width="0.8" stroke-dasharray="3 2" />
+    <text x="0" y="4" text-anchor="middle" fill="#f1b65f" font-family="Georgia, serif"
+          font-size="12" font-weight="bold" letter-spacing="1">
+      NW
+    </text>
+  </g>
+  <text x="200" y="774" text-anchor="middle" fill="${themeConfig.signature}"
+        font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" letter-spacing="1">
+    — 手作自習標本典藏 · 願專注常伴 —
+  </text>
+</svg>`;
+  }
+
+  /**
+   * Trigger download of SVG file
+   * @param {string} svgString
+   * @param {string} filename
+   */
+  static downloadSvg(svgString, filename = `botanical-ex-libris-${new Date().toISOString().split("T")[0]}.svg`) {
+    const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 }

@@ -175,4 +175,36 @@ describe("FocusPosterGenerator", () => {
       expect(canvas.height).toBe(1640);
     });
   });
+
+  it("generates crisp standalone SVG vector ex-libris bookmarks with valid XML", () => {
+    const plants = ["rose", "tulip", "cactus", "succulent", "pine", "sunflower", "lavender"];
+    plants.forEach((plantKey) => {
+      const svg = FocusPosterGenerator.generateBotanicalSvg({
+        plantKey,
+        harvestCount: 3,
+        nickname: "Arsen & Friends <3>",
+        firstHarvestDate: "2026-10-08",
+        personalInscription: "寧靜致遠 & 專注生長",
+        theme: "midnight",
+      });
+
+      expect(svg).toContain('<svg xmlns="http://www.w3.org/2000/svg"');
+      expect(svg).toContain('viewBox="0 0 400 800"');
+      expect(svg).toContain("EX LIBRIS · BOTANICAL ARCHIVE");
+      expect(svg).toContain(`NW-${plantKey.toUpperCase()}-003`);
+      expect(svg).toContain("Arsen &amp; Friends &lt;3&gt;");
+      expect(svg).toContain("寧靜致遠 &amp; 專注生長");
+      expect(svg).toContain("</svg>");
+    });
+
+    const giftSvg = FocusPosterGenerator.generateBotanicalSvg({
+      plantKey: "lavender",
+      harvestCount: 1,
+      nickname: "同心書伴",
+      firstHarvestDate: "2026-10-08",
+      isGift: true,
+    });
+    expect(giftSvg).toContain("EX LIBRIS · COMPANION GIFT");
+    expect(giftSvg).toContain("贈禮書伴：");
+  });
 });

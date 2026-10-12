@@ -463,4 +463,32 @@ describe("AmbientSoundscapeManager", () => {
     manager.setTidalSurge(true);
     expect(manager.isTidalSurge()).toBe(true);
   });
+
+  it("applies spatial soundstage scenarios and manages track coordinates", () => {
+    const manager = new AmbientSoundscapeManager();
+    const scenarios = manager.getSpatialScenarios();
+    expect(scenarios.length).toBeGreaterThanOrEqual(5);
+
+    const scenarioIds = scenarios.map((s) => s.id);
+    expect(scenarioIds).toContain("cabin_realism");
+    expect(scenarioIds).toContain("forest_walk");
+    expect(scenarioIds).toContain("ocean_breeze");
+    expect(scenarioIds).toContain("campfire_night");
+    expect(scenarioIds).toContain("centered");
+
+    expect(manager.applySpatialScenario("forest_walk")).toBe(true);
+    expect(manager.getTrackPan("wind")).toBe(-0.6);
+    expect(manager.getTrackPan("campfire")).toBe(0.7);
+
+    // Track coordinates
+    const coords = manager.setTrackCoordinates("rain", { x: -0.4, y: 0.8 });
+    expect(coords.x).toBe(-0.4);
+    expect(coords.y).toBe(0.8);
+    expect(manager.getTrackCoordinates("rain")).toEqual({ x: -0.4, y: 0.8 });
+    expect(manager.getTrackPan("rain")).toBe(-0.4);
+
+    // Clamps out of bounds coordinates
+    manager.setTrackCoordinates("ocean_waves", { x: 2.5, y: -0.5 });
+    expect(manager.getTrackCoordinates("ocean_waves")).toEqual({ x: 1, y: 0 });
+  });
 });
