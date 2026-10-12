@@ -1131,6 +1131,32 @@ export class AmbientSoundscapeManager {
     return { x: currentPan, y: 0.4 };
   }
 
+  getAllTrackCoordinates() {
+    const coords = {};
+    for (const name of AMBIENT_SOUND_TYPES) {
+      coords[name] = this.getTrackCoordinates(name);
+    }
+    return coords;
+  }
+
+  getDominantTrackPan() {
+    const activeTracks = this.getActiveTracks();
+    if (!activeTracks || activeTracks.length === 0) return 0;
+    let weightedPan = 0;
+    let totalVol = 0;
+    for (const name of activeTracks) {
+      const vol = this.getTrackVolume(name);
+      const pan = this.getTrackPan(name);
+      if (vol > 0.001) {
+        weightedPan += pan * vol;
+        totalVol += vol;
+      }
+    }
+    if (totalVol <= 0.001) return 0;
+    const dominant = weightedPan / totalVol;
+    return Math.max(-1, Math.min(1, Math.round(dominant * 100) / 100));
+  }
+
   setMasterVolume(volume) {
     this.masterVolume = Math.max(0, Math.min(1, volume));
     if (this.masterGain && this.audioCtx && !this.isMuted) {
@@ -1435,9 +1461,29 @@ export function encodeSoundscapeCode(preset) {
     });
   }
 
+  const cleanCoordinates = {};
+  if (preset.coordinates && typeof preset.coordinates === "object") {
+    AMBIENT_SOUND_TYPES.forEach((type) => {
+      const coord = preset.coordinates[type];
+      if (coord && typeof coord === "object") {
+        const x = Number(Array.isArray(coord) ? coord[0] : coord.x);
+        const y = Number(Array.isArray(coord) ? coord[1] : coord.y);
+        if (Number.isFinite(x) && Number.isFinite(y)) {
+          cleanCoordinates[type] = [
+            Math.max(-1, Math.min(1, Math.round(x * 100) / 100)),
+            Math.max(0, Math.min(1, Math.round(y * 100) / 100)),
+          ];
+        }
+      }
+    });
+  }
+
   if (Object.keys(cleanTracks).length === 0) return "";
 
   const payload = { n: name, t: cleanTracks, p: cleanPans };
+  if (Object.keys(cleanCoordinates).length > 0) {
+    payload.cd = cleanCoordinates;
+  }
   if (preset.orbitingBreeze) {
     payload.ob = 1;
   }
@@ -1533,8 +1579,30 @@ export function decodeSoundscapeCode(code) {
 
     const orbitingBreeze = Boolean(parsed.ob || parsed.orbitingBreeze);
 
+    const coordinates = {};
+    const rawCoords = parsed.cd || parsed.coordinates;
+    if (rawCoords && typeof rawCoords === "object") {
+      AMBIENT_SOUND_TYPES.forEach((type) => {
+        const coord = rawCoords[type];
+        if (coord && typeof coord === "object") {
+          const x = Number(Array.isArray(coord) ? coord[0] : coord.x);
+          const y = Number(Array.isArray(coord) ? coord[1] : coord.y);
+          if (Number.isFinite(x) && Number.isFinite(y)) {
+            coordinates[type] = {
+              x: Math.max(-1, Math.min(1, Math.round(x * 100) / 100)),
+              y: Math.max(0, Math.min(1, Math.round(y * 100) / 100)),
+            };
+          }
+        }
+      });
+    }
+
     if (Object.keys(tracks).length === 0) return null;
-    return { name, tracks, pans, eq, reverb, orbitingBreeze };
+    const result = { name, tracks, pans, eq, reverb, orbitingBreeze };
+    if (Object.keys(coordinates).length > 0) {
+      result.coordinates = coordinates;
+    }
+    return result;
   } catch {
     return null;
   }

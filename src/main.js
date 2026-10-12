@@ -295,6 +295,7 @@ const elements = {
   btnCloseSoundstage: $("#btnCloseSoundstage"),
   soundstageCanvas: $("#soundstageCanvas"),
   soundstagePresetPills: [...document.querySelectorAll(".soundstage-preset-pill")],
+  btnSaveSoundstagePreset: $("#btnSaveSoundstagePreset"),
   btnGiftBookmarkToPeers: $("#btnGiftBookmarkToPeers"),
   photoInput: $("#photoInput"),
   photoDrop: $("#photoDrop"),
@@ -1858,7 +1859,11 @@ function applyCurrentAura() {
     auraToApply = "none";
   } else {
     const config = AFFINITY_AURAS[userPref];
-    if (config && rank.level >= config.minLevel) {
+    const isLegendaryBotanist = userPref === "golden_botanist";
+    const isUnlocked = isLegendaryBotanist
+      ? Boolean(studyStats?.getBadges?.()?.find?.((b) => b.id === "golden_botanist")?.unlocked)
+      : Boolean(config && rank.level >= config.minLevel);
+    if (config && isUnlocked) {
       auraToApply = userPref;
     } else {
       auraToApply = getUnlockedAura(rank.level);
@@ -1927,17 +1932,27 @@ function renderAffinityAuraChips() {
   elements.affinityAuraChips.append(noneBtn);
 
   // 3. Specific Auras
+  const isGoldenBotanistUnlocked = Boolean(
+    studyStats?.getBadges?.()?.find?.((b) => b.id === "golden_botanist")?.unlocked,
+  );
   Object.values(AFFINITY_AURAS).forEach((aura) => {
     if (aura.id === "none") return;
-    const isUnlocked = currentRank.level >= aura.minLevel;
+    const isLegendary = aura.id === "golden_botanist";
+    const isUnlocked = isLegendary ? isGoldenBotanistUnlocked : currentRank.level >= aura.minLevel;
     const isSelected = selectedPref === aura.id;
 
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = `affinity-aura-chip${isSelected ? " active" : ""}`;
     btn.disabled = !isUnlocked;
-    btn.textContent = `${aura.icon} ${aura.label} (Lv.${aura.minLevel})`;
-    btn.title = isUnlocked ? `佩戴【${aura.label}】光環` : `需達到 Lv.${aura.minLevel} 解鎖`;
+    btn.textContent = isLegendary
+      ? `${aura.icon} ${aura.label} (傳奇成就)`
+      : `${aura.icon} ${aura.label} (Lv.${aura.minLevel})`;
+    btn.title = isUnlocked
+      ? `佩戴【${aura.label}】光環`
+      : isLegendary
+        ? "需解鎖「金色植物大師」傳奇成就 (5品種 & 15次採收)"
+        : `需達到 Lv.${aura.minLevel} 解鎖`;
 
     if (isUnlocked) {
       btn.addEventListener("click", () => {
@@ -2554,6 +2569,7 @@ function syncAcousticUI() {
   elements.acousticPresetBtns?.forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.acoustic === reverb.preset);
   });
+  viewer?.setAcousticGaze?.(ambientSound.getDominantTrackPan());
 }
 
 function updateOrbitBreezeUI(enabled) {
@@ -2659,6 +2675,7 @@ function bindAmbientSound() {
       }
       renderAmbientMixer();
       syncWeatherAtmosphere();
+      viewer?.setAcousticGaze?.(ambientSound.getDominantTrackPan());
     });
   });
 
@@ -2672,6 +2689,7 @@ function bindAmbientSound() {
       ambientSound.setTrackVolume(trackName, vol / 100);
       const valueLabel = trackRow.querySelector(".mixer-track-value");
       if (valueLabel) valueLabel.textContent = `${vol}%`;
+      viewer?.setAcousticGaze?.(ambientSound.getDominantTrackPan());
       return;
     }
 
@@ -2686,6 +2704,7 @@ function bindAmbientSound() {
       if (panLabel) {
         panLabel.textContent = `方位: ${formatPanLabel(panVal / 100)}`;
       }
+      viewer?.setAcousticGaze?.(ambientSound.getDominantTrackPan());
       return;
     }
 
@@ -3025,6 +3044,7 @@ function bindSoundstageModal() {
     const dist = Math.max(0, Math.min(1, 1 - (radius - 80) / 220));
 
     ambientSound.setTrackCoordinates(trackKey, { x: pan, y: dist });
+    viewer?.setAcousticGaze?.(ambientSound.getDominantTrackPan());
     renderSoundstage();
   }
 
@@ -3082,10 +3102,40 @@ function bindSoundstageModal() {
       const scenario = pill.dataset.scenario;
       if (!scenario) return;
       ambientSound.applySpatialScenario(scenario);
+      viewer?.setAcousticGaze?.(ambientSound.getDominantTrackPan());
       elements.soundstagePresetPills.forEach((p) => p.classList.toggle("active", p === pill));
       renderSoundstage();
       showToast(`🧭 已切換為「${pill.textContent.trim()}」聲學空間方位`);
     });
+  });
+
+  elements.btnSaveSoundstagePreset?.addEventListener("click", () => {
+    const activeMix = ambientSound.getCurrentTrackMix();
+    if (Object.keys(activeMix).length === 0) {
+      showToast("目前沒有播放中的音軌，請先開啟音軌後再儲存配置 🎧");
+      return;
+    }
+    const currentPresets = store.get().customPresets || [];
+    if (currentPresets.length >= 12) {
+      showToast("已達自訂預設上限 (12 組)。");
+      return;
+    }
+    const inputName = window.prompt("請輸入自訂聲學舞台預設名稱：", `空間舞台 ${currentPresets.length + 1}`);
+    if (inputName === null) return;
+    const name = (inputName.trim() || `空間舞台 ${currentPresets.length + 1}`).slice(0, 16);
+    const newPreset = {
+      id: crypto.randomUUID(),
+      name,
+      tracks: activeMix,
+      pans: ambientSound.getCurrentTrackPans(),
+      coordinates: ambientSound.getAllTrackCoordinates(),
+      eq: ambientSound.getMasterEQ(),
+      reverb: ambientSound.getMasterReverb(),
+      orbitingBreeze: ambientSound.isOrbitingBreeze(),
+    };
+    store.update({ customPresets: [...currentPresets, newPreset] });
+    renderCustomPresets();
+    showToast(`已成功儲存「${name}」聲學空間預設！💾`);
   });
 }
 
@@ -3143,8 +3193,10 @@ function handleImportSoundscape(rawInput) {
     name: finalName,
     tracks: normalizedTracks,
     pans: decoded.pans || {},
+    coordinates: decoded.coordinates || null,
     eq: decoded.eq || null,
     reverb: decoded.reverb || null,
+    orbitingBreeze: Boolean(decoded.orbitingBreeze),
   };
 
   const currentPresets = store.get().customPresets || [];
@@ -3152,6 +3204,11 @@ function handleImportSoundscape(rawInput) {
   renderCustomPresets();
 
   ambientSound.applyTrackMix(newPreset.tracks, newPreset.pans);
+  if (newPreset.coordinates) {
+    Object.entries(newPreset.coordinates).forEach(([track, coord]) => {
+      ambientSound.setTrackCoordinates(track, coord);
+    });
+  }
   if (newPreset.eq) ambientSound.setMasterEQ(newPreset.eq);
   if (newPreset.reverb) ambientSound.setMasterReverb(newPreset.reverb);
   syncAcousticUI();
@@ -3187,6 +3244,11 @@ function renderCustomPresets() {
 
     nameBtn.addEventListener("click", () => {
       ambientSound.applyTrackMix(preset.tracks, preset.pans || {});
+      if (preset.coordinates) {
+        Object.entries(preset.coordinates).forEach(([track, coord]) => {
+          ambientSound.setTrackCoordinates(track, coord);
+        });
+      }
       if (preset.eq) {
         ambientSound.setMasterEQ(preset.eq);
       }
@@ -3914,14 +3976,18 @@ function renderPosterCard(theme = store.get().posterTheme || "midnight") {
   if (currentPosterMode === "bookmark" && currentBookmarkData) {
     if (elements.btnGiftBookmarkToPeers) elements.btnGiftBookmarkToPeers.hidden = Boolean(currentBookmarkData.isGift);
     if (elements.posterModalTitle) {
-      elements.posterModalTitle.textContent = currentBookmarkData.isGift
-        ? "🎁 書伴贈予草木典藏書籤"
-        : "🔖 草木手作標本自習書籤";
+      elements.posterModalTitle.textContent = currentBookmarkData.isMaster
+        ? "👑 榮譽傳奇 · 金色植物大師藏書票"
+        : currentBookmarkData.isGift
+          ? "🎁 書伴贈予草木典藏書籤"
+          : "🔖 草木手作標本自習書籤";
     }
     if (elements.posterModalSubtitle) {
-      elements.posterModalSubtitle.textContent = currentBookmarkData.isGift
-        ? "跨越空間的書伴溫暖贈禮 · 純前端 Retina 2x 高解析度繪製 · 銘記專注時光"
-        : "純前端 Retina 2x 高解析度繪製 · 絲線孔扣與火漆封印 · 專屬花語典藏";
+      elements.posterModalSubtitle.textContent = currentBookmarkData.isMaster
+        ? "榮譽傳奇成就 · 純前端向量 SVG 燙金印記 · 專屬花語典藏"
+        : currentBookmarkData.isGift
+          ? "跨越空間的書伴溫暖贈禮 · 純前端 Retina 2x 高解析度繪製 · 銘記專注時光"
+          : "純前端 Retina 2x 高解析度繪製 · 絲線孔扣與火漆封印 · 專屬花語典藏";
     }
 
     if (elements.btnDownloadSvgPoster) elements.btnDownloadSvgPoster.hidden = false;
@@ -4030,12 +4096,15 @@ function openBookmarkPoster(plantKey) {
     firstUnlockedAt: new Date().toISOString(),
   };
 
+  const isMaster = Boolean(studyStats.getBadges().find((b) => b.id === "golden_botanist")?.unlocked);
+
   currentBookmarkData = {
     plantKey,
     harvestCount: plant.harvestCount || 1,
     nickname: store.get().nickname || "自習旅人",
     firstHarvestDate: plant.firstUnlockedAt || new Date().toISOString().split("T")[0],
     personalInscription: store.get().focusIntention || "",
+    isMaster,
   };
 
   const activeTheme = store.get().posterTheme || "forest";
@@ -5842,6 +5911,7 @@ function checkSoundscapeUrlHash() {
     name,
     tracks: normalizedTracks,
     pans: decoded.pans || {},
+    coordinates: decoded.coordinates || null,
     eq: decoded.eq || null,
     reverb: decoded.reverb || null,
     orbitingBreeze: Boolean(decoded.orbitingBreeze),
@@ -5852,6 +5922,11 @@ function checkSoundscapeUrlHash() {
   renderCustomPresets();
 
   ambientSound.applyTrackMix(newPreset.tracks, newPreset.pans);
+  if (newPreset.coordinates) {
+    Object.entries(newPreset.coordinates).forEach(([track, coord]) => {
+      ambientSound.setTrackCoordinates(track, coord);
+    });
+  }
   if (newPreset.eq) ambientSound.setMasterEQ(newPreset.eq);
   if (newPreset.reverb) ambientSound.setMasterReverb(newPreset.reverb);
   if (newPreset.orbitingBreeze) {

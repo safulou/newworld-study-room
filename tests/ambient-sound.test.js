@@ -490,5 +490,49 @@ describe("AmbientSoundscapeManager", () => {
     // Clamps out of bounds coordinates
     manager.setTrackCoordinates("ocean_waves", { x: 2.5, y: -0.5 });
     expect(manager.getTrackCoordinates("ocean_waves")).toEqual({ x: 1, y: 0 });
+
+    const allCoords = manager.getAllTrackCoordinates();
+    expect(allCoords.rain).toEqual({ x: -0.4, y: 0.8 });
+    expect(allCoords.ocean_waves).toEqual({ x: 1, y: 0 });
+  });
+
+  it("calculates dominant track pan weighted by volume", () => {
+    const manager = new AmbientSoundscapeManager();
+    expect(manager.getDominantTrackPan()).toBe(0);
+
+    // Rain on left (-0.6, vol 0.8) and Wind on right (0.2, vol 0.2)
+    manager.nodes.set("rain", { volume: 0.8 });
+    manager.trackVolumes.rain = 0.8;
+    manager.trackPans.rain = -0.6;
+
+    manager.nodes.set("wind", { volume: 0.2 });
+    manager.trackVolumes.wind = 0.2;
+    manager.trackPans.wind = 0.2;
+
+    // (-0.6 * 0.8 + 0.2 * 0.2) / (0.8 + 0.2) = (-0.48 + 0.04) / 1.0 = -0.44
+    expect(manager.getDominantTrackPan()).toBeCloseTo(-0.44);
+  });
+
+  it("encodes and decodes 2D soundstage coordinates in soundscape share code", () => {
+    const preset = {
+      name: "立體松林",
+      tracks: { rain: 60, wind: 40 },
+      pans: { rain: -0.5, wind: 0.5 },
+      coordinates: {
+        rain: [-0.5, 0.75],
+        wind: [0.5, 0.3],
+      },
+    };
+
+    const code = encodeSoundscapeCode(preset);
+    expect(code.startsWith("sc_")).toBe(true);
+
+    const decoded = decodeSoundscapeCode(code);
+    expect(decoded.name).toBe("立體松林");
+    expect(decoded.tracks.rain).toBe(60);
+    expect(decoded.pans.rain).toBe(-0.5);
+    expect(decoded.coordinates).toBeDefined();
+    expect(decoded.coordinates.rain).toEqual({ x: -0.5, y: 0.75 });
+    expect(decoded.coordinates.wind).toEqual({ x: 0.5, y: 0.3 });
   });
 });

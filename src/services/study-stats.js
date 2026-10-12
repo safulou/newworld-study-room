@@ -664,6 +664,22 @@ export class StudyStatsManager {
         progressPercent: Math.min(100, Math.round((uniquePlants / 5) * 100)),
       },
       {
+        id: "golden_botanist",
+        title: "金色植物大師",
+        name: "金色植物大師",
+        icon: "👑",
+        category: "botany",
+        rarity: "legendary",
+        description: "解鎖所有 5 種草木品種且總採收達到 15 次，榮獲金色桂冠傳奇藏書票印記",
+        unlocked: uniquePlants >= 5 && totalHarvest >= 15,
+        progressText:
+          uniquePlants >= 5 ? `${Math.min(15, totalHarvest)}/15 次採收` : `${uniquePlants}/5 品種 (需 15 採收)`,
+        progressPercent: Math.min(
+          100,
+          Math.round(((uniquePlants / 5) * 0.4 + Math.min(1, totalHarvest / 15) * 0.6) * 100),
+        ),
+      },
+      {
         id: "streak_master",
         title: "連貫心流",
         name: "連貫心流",

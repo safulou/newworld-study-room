@@ -206,5 +206,17 @@ describe("FocusPosterGenerator", () => {
     });
     expect(giftSvg).toContain("EX LIBRIS · COMPANION GIFT");
     expect(giftSvg).toContain("贈禮書伴：");
+
+    const masterSvg = FocusPosterGenerator.generateBotanicalSvg({
+      plantKey: "rose",
+      harvestCount: 15,
+      nickname: "自習大師",
+      firstHarvestDate: "2026-10-12",
+      isMaster: true,
+    });
+    expect(masterSvg).toContain("GOLDEN BOTANIST");
+    expect(masterSvg).toContain("goldFoilGrad");
+    expect(masterSvg).toContain("金色植物大師");
+    expect(masterSvg).toContain("👑 GB");
   });
 });

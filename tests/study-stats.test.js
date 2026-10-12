@@ -104,13 +104,16 @@ describe("StudyStatsManager Service", () => {
     expect(tulip.unlocked).toBe(false);
 
     const badges = stats.getBadges();
-    expect(badges.length).toBe(12);
+    expect(badges.length).toBe(13);
     const firstSprout = badges.find((b) => b.id === "first_sprout");
     expect(firstSprout.unlocked).toBe(true);
     expect(firstSprout.progressPercent).toBe(100);
     const botanist = badges.find((b) => b.id === "botanist");
     expect(botanist.unlocked).toBe(false);
     expect(botanist.progressPercent).toBe(20);
+    const goldenBotanist = badges.find((b) => b.id === "golden_botanist");
+    expect(goldenBotanist.unlocked).toBe(false);
+    expect(goldenBotanist.rarity).toBe("legendary");
 
     const badgesWithGoal = stats.getBadges({ dailyGoalAchieved: true });
     const goalBadge = badgesWithGoal.find((b) => b.id === "goal_achiever");

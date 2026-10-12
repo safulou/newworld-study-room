@@ -223,4 +223,55 @@ describe("drawDollFace", () => {
     expect(fakeViewer.hemiLight.groundColor.setHex).toHaveBeenCalledWith(0x3b0764);
     expect(fakeViewer.rimLight.color.setHex).toHaveBeenCalledWith(0xfbbf24);
   });
+
+  it("calculates acoustic gaze yaw and tilt with clamping", () => {
+    const fakeViewer = {
+      acousticGazeYaw: 0,
+      acousticGazeTilt: 0,
+    };
+    fakeViewer.setAcousticGaze = DollViewer.prototype.setAcousticGaze.bind(fakeViewer);
+
+    // Center
+    fakeViewer.setAcousticGaze(0);
+    expect(fakeViewer.acousticGazeYaw).toBeCloseTo(0);
+    expect(fakeViewer.acousticGazeTilt).toBeCloseTo(0);
+
+    // Left emitter (-0.8 pan) -> doll turns left (-yaw is positive), tilts head
+    fakeViewer.setAcousticGaze(-0.8);
+    expect(fakeViewer.acousticGazeYaw).toBeCloseTo(0.28);
+    expect(fakeViewer.acousticGazeTilt).toBeCloseTo(-0.096);
+
+    // Clamping beyond boundary (> 1 or < -1)
+    fakeViewer.setAcousticGaze(2.5);
+    expect(fakeViewer.acousticGazeYaw).toBeCloseTo(-0.35);
+    expect(fakeViewer.acousticGazeTilt).toBeCloseTo(0.12);
+
+    fakeViewer.setAcousticGaze(-5);
+    expect(fakeViewer.acousticGazeYaw).toBeCloseTo(0.35);
+    expect(fakeViewer.acousticGazeTilt).toBeCloseTo(-0.12);
+  });
+
+  it("constructs golden_botanist laurel aura meshes", () => {
+    const fakeChildren = [];
+    const fakeAuraGroup = {
+      visible: false,
+      children: fakeChildren,
+      add: vi.fn((mesh) => fakeChildren.push(mesh)),
+      remove: vi.fn(),
+    };
+    const fakeViewer = {
+      auraGroup: fakeAuraGroup,
+      currentAura: "none",
+    };
+    fakeViewer.setAffinityAura = DollViewer.prototype.setAffinityAura.bind(fakeViewer);
+
+    expect(AFFINITY_AURAS.golden_botanist).toBeDefined();
+    expect(AFFINITY_AURAS.golden_botanist.label).toBe("金色桂冠");
+
+    fakeViewer.setAffinityAura("golden_botanist");
+    expect(fakeViewer.currentAura).toBe("golden_botanist");
+    expect(fakeAuraGroup.visible).toBe(true);
+    // 1 torus ring + 8 octahedron leaves = 9 meshes
+    expect(fakeAuraGroup.add).toHaveBeenCalledTimes(9);
+  });
 });

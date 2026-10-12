@@ -882,6 +882,7 @@ export class FocusPosterGenerator {
     personalInscription = "",
     theme = "midnight",
     isGift = false,
+    isMaster = false,
   } = {}) {
     const width = 400;
     const height = 800;
@@ -900,8 +901,23 @@ export class FocusPosterGenerator {
     const dateStr = escapeXml(firstHarvestDate || new Date().toISOString().split("T")[0]);
     const noteText = escapeXml(personalInscription?.trim() || "在寧靜專注的時光中，靜靜扎根，等待下一季綻放。");
     const specimenCode = `#NW-${plantKey.toUpperCase()}-${String(safeCount).padStart(3, "0")}`;
-    const headerTitle = isGift ? "EX LIBRIS · COMPANION GIFT" : "EX LIBRIS · BOTANICAL ARCHIVE";
-    const subTitle = isGift ? "— 書 伴 贈 禮 草 木 藏 書 票 —" : "— 新 世 界 自 習 標 本 藏 書 票 —";
+    const headerTitle = isMaster
+      ? "👑 EX LIBRIS · GOLDEN BOTANIST 👑"
+      : isGift
+        ? "EX LIBRIS · COMPANION GIFT"
+        : "EX LIBRIS · BOTANICAL ARCHIVE";
+    const subTitle = isMaster
+      ? "— 榮譽傳奇 · 金色植物大師典藏藏書票 —"
+      : isGift
+        ? "— 書 伴 贈 禮 草 木 藏 書 票 —"
+        : "— 新 世 界 自 習 標 本 藏 書 票 —";
+
+    const outerStroke = isMaster ? "url(#goldFoilGrad)" : themeConfig.outerBorder;
+    const outerStrokeWidth = isMaster ? 2.8 : 2;
+    const innerStroke = isMaster ? "#fde047" : themeConfig.innerBorder;
+    const innerStrokeWidth = isMaster ? 1.4 : 1;
+    const filigreeStroke = isMaster ? "url(#goldFoilGrad)" : themeConfig.outerBorder;
+    const filigreeStrokeWidth = isMaster ? 2.4 : 1.8;
 
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
   <defs>
@@ -915,13 +931,19 @@ export class FocusPosterGenerator {
       <stop offset="50%" stop-color="#f59e0b" />
       <stop offset="100%" stop-color="#b45309" />
     </linearGradient>
+    <linearGradient id="goldFoilGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fffbeb" />
+      <stop offset="30%" stop-color="#fef08a" />
+      <stop offset="65%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#b45309" />
+    </linearGradient>
   </defs>
 
   <!-- Background Layer -->
   <rect width="${width}" height="${height}" fill="url(#bgGrad)" />
 
   <!-- Starlight Constellation Points -->
-  <g fill="${themeConfig.stars}">
+  <g fill="${isMaster ? "#fde047" : themeConfig.stars}">
     <circle cx="45" cy="85" r="1.5" />
     <circle cx="355" cy="75" r="1.2" />
     <circle cx="65" cy="235" r="1.4" />
@@ -934,37 +956,37 @@ export class FocusPosterGenerator {
 
   <!-- Outer Ornate Bookmark Border -->
   <rect x="16" y="16" width="${width - 32}" height="${height - 32}" rx="22" ry="22"
-        fill="none" stroke="${themeConfig.outerBorder}" stroke-width="2" />
+        fill="none" stroke="${outerStroke}" stroke-width="${outerStrokeWidth}" />
   <rect x="22" y="22" width="${width - 44}" height="${height - 44}" rx="18" ry="18"
-        fill="none" stroke="${themeConfig.innerBorder}" stroke-width="1" stroke-dasharray="6 3" />
+        fill="none" stroke="${innerStroke}" stroke-width="${innerStrokeWidth}" stroke-dasharray="6 3" />
 
   <!-- Corner Filigree Accents -->
-  <path d="M 28 44 L 28 28 L 44 28" fill="none" stroke="${themeConfig.outerBorder}" stroke-width="1.8" />
-  <path d="M 372 44 L 372 28 L 356 28" fill="none" stroke="${themeConfig.outerBorder}" stroke-width="1.8" />
-  <path d="M 28 756 L 28 772 L 44 772" fill="none" stroke="${themeConfig.outerBorder}" stroke-width="1.8" />
-  <path d="M 372 756 L 372 772 L 356 772" fill="none" stroke="${themeConfig.outerBorder}" stroke-width="1.8" />
+  <path d="M 28 44 L 28 28 L 44 28" fill="none" stroke="${filigreeStroke}" stroke-width="${filigreeStrokeWidth}" />
+  <path d="M 372 44 L 372 28 L 356 28" fill="none" stroke="${filigreeStroke}" stroke-width="${filigreeStrokeWidth}" />
+  <path d="M 28 756 L 28 772 L 44 772" fill="none" stroke="${filigreeStroke}" stroke-width="${filigreeStrokeWidth}" />
+  <path d="M 372 756 L 372 772 L 356 772" fill="none" stroke="${filigreeStroke}" stroke-width="${filigreeStrokeWidth}" />
 
   <!-- Top Silk Cord & Eyelet -->
-  <path d="M 196 46 Q 188 12 200 4 Q 212 12 204 46" fill="none" stroke="#e2b36f" stroke-width="2.5" />
-  <circle cx="200" cy="46" r="9" fill="${themeConfig.bgGradient[2]}" stroke="#f1b65f" stroke-width="2" />
+  <path d="M 196 46 Q 188 12 200 4 Q 212 12 204 46" fill="none" stroke="${isMaster ? "#fde047" : "#e2b36f"}" stroke-width="2.5" />
+  <circle cx="200" cy="46" r="9" fill="${themeConfig.bgGradient[2]}" stroke="${isMaster ? "#f59e0b" : "#f1b65f"}" stroke-width="2" />
 
   <!-- Header Banner -->
-  <text x="200" y="80" text-anchor="middle" fill="${themeConfig.brandTitle}"
-        font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" font-weight="bold" letter-spacing="2">
+  <text x="200" y="80" text-anchor="middle" fill="${isMaster ? "#fde047" : themeConfig.brandTitle}"
+        font-family="ui-sans-serif, system-ui, sans-serif" font-size="${isMaster ? 11 : 10}" font-weight="bold" letter-spacing="2">
     ${headerTitle}
   </text>
-  <text x="200" y="98" text-anchor="middle" fill="${themeConfig.accent}"
+  <text x="200" y="98" text-anchor="middle" fill="${isMaster ? "#fef08a" : themeConfig.accent}"
         font-family="Georgia, Cambria, serif" font-size="12" letter-spacing="1">
     ${subTitle}
   </text>
 
   <!-- Specimen Plaque -->
   <rect x="36" y="116" width="${width - 72}" height="264" rx="16" ry="16"
-        fill="${themeConfig.cardBg}" stroke="${themeConfig.cardBorder}" stroke-width="1" />
+        fill="${themeConfig.cardBg}" stroke="${isMaster ? "rgba(245, 158, 11, 0.45)" : themeConfig.cardBorder}" stroke-width="1" />
   <text x="200" y="196" text-anchor="middle" font-size="68" font-family="'Segoe UI Emoji', 'Noto Color Emoji', sans-serif">
     ${plant.emoji}
   </text>
-  <text x="200" y="242" text-anchor="middle" fill="${themeConfig.plantTitle}"
+  <text x="200" y="242" text-anchor="middle" fill="${isMaster ? "#fef08a" : themeConfig.plantTitle}"
         font-family="Georgia, Cambria, serif" font-size="20" font-weight="bold">
     ${escapeXml(plant.name)}
   </text>
@@ -973,7 +995,7 @@ export class FocusPosterGenerator {
     ${escapeXml(plant.latin || "Flora")} · Herbarium Specimen
   </text>
   <line x1="72" y1="284" x2="328" y2="284" stroke="rgba(255, 255, 255, 0.15)" stroke-width="1" />
-  <text x="200" y="306" text-anchor="middle" fill="${themeConfig.accent}"
+  <text x="200" y="306" text-anchor="middle" fill="${isMaster ? "#fef08a" : themeConfig.accent}"
         font-family="ui-sans-serif, system-ui, sans-serif" font-size="11">
     🌿 花 語 典 藏 🌿
   </text>
@@ -983,49 +1005,55 @@ export class FocusPosterGenerator {
   </text>
 
   <!-- Provenance Box -->
-  <rect x="36" y="398" width="${width - 72}" height="174" rx="14" ry="14"
-        fill="rgba(0, 0, 0, 0.25)" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" />
-  <text x="56" y="424" fill="${themeConfig.accent}" font-family="ui-sans-serif, system-ui, sans-serif"
+  <rect x="36" y="394" width="${width - 72}" height="${isMaster ? 194 : 174}" rx="14" ry="14"
+        fill="rgba(0, 0, 0, 0.25)" stroke="${isMaster ? "rgba(245, 158, 11, 0.3)" : "rgba(255, 255, 255, 0.08)"}" stroke-width="1" />
+  <text x="56" y="418" fill="${isMaster ? "#fde047" : themeConfig.accent}" font-family="ui-sans-serif, system-ui, sans-serif"
         font-size="11" font-weight="bold">
     📜 標本銘牌 Provenance
   </text>
   <g font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">
-    <text x="56" y="452" fill="#94a3b8">${isGift ? "贈禮書伴：" : "培育書伴："}</text>
-    <text x="132" y="452" fill="#f1f5f9" font-weight="bold">${safeNickname}</text>
+    <text x="56" y="444" fill="#94a3b8">${isGift ? "贈禮書伴：" : "培育書伴："}</text>
+    <text x="132" y="444" fill="#f1f5f9" font-weight="bold">${safeNickname}</text>
 
-    <text x="56" y="478" fill="#94a3b8">累計綻放：</text>
-    <text x="132" y="478" fill="#f1f5f9" font-weight="bold">共 ${safeCount} 次收穫</text>
+    <text x="56" y="470" fill="#94a3b8">累計綻放：</text>
+    <text x="132" y="470" fill="#f1f5f9" font-weight="bold">共 ${safeCount} 次收穫</text>
 
-    <text x="56" y="504" fill="#94a3b8">紀錄時日：</text>
-    <text x="132" y="504" fill="#f1f5f9" font-weight="bold">${dateStr}</text>
+    <text x="56" y="496" fill="#94a3b8">紀錄時日：</text>
+    <text x="132" y="496" fill="#f1f5f9" font-weight="bold">${dateStr}</text>
 
-    <text x="56" y="530" fill="#94a3b8">標本編號：</text>
-    <text x="132" y="530" fill="${themeConfig.accent}" font-weight="bold">${specimenCode}</text>
+    <text x="56" y="522" fill="#94a3b8">標本編號：</text>
+    <text x="132" y="522" fill="${isMaster ? "#fde047" : themeConfig.accent}" font-weight="bold">${specimenCode}</text>
+    ${
+      isMaster
+        ? `<text x="56" y="548" fill="#f59e0b" font-weight="bold">傳奇印記：</text>
+    <text x="132" y="548" fill="#fef08a" font-weight="bold">👑 金色植物大師 (Master)</text>`
+        : ""
+    }
   </g>
 
   <!-- Inscription Block -->
-  <rect x="36" y="588" width="${width - 72}" height="110" rx="14" ry="14"
+  <rect x="36" y="${isMaster ? 602 : 584}" width="${width - 72}" height="${isMaster ? 98 : 110}" rx="14" ry="14"
         fill="${themeConfig.cardBg}" stroke="${themeConfig.cardBorder}" stroke-width="1" />
-  <text x="56" y="614" fill="${themeConfig.brandTitle}" font-family="ui-sans-serif, system-ui, sans-serif"
+  <text x="56" y="${isMaster ? 626 : 610}" fill="${themeConfig.brandTitle}" font-family="ui-sans-serif, system-ui, sans-serif"
         font-size="11" font-weight="bold">
     ✍️ 旅人題字 Inscription
   </text>
-  <text x="56" y="646" fill="#fed7aa" font-family="Georgia, serif" font-size="12" font-style="italic">
+  <text x="56" y="${isMaster ? 656 : 642}" fill="#fed7aa" font-family="Georgia, serif" font-size="12" font-style="italic">
     “${noteText}”
   </text>
 
   <!-- Artisanal Seal Stamp -->
   <g transform="translate(200, 736)">
-    <circle cx="0" cy="0" r="18" fill="none" stroke="url(#sealGrad)" stroke-width="1.8" />
-    <circle cx="0" cy="0" r="15" fill="none" stroke="url(#sealGrad)" stroke-width="0.8" stroke-dasharray="3 2" />
-    <text x="0" y="4" text-anchor="middle" fill="#f1b65f" font-family="Georgia, serif"
+    <circle cx="0" cy="0" r="18" fill="none" stroke="${isMaster ? "url(#goldFoilGrad)" : "url(#sealGrad)"}" stroke-width="${isMaster ? 2.5 : 1.8}" />
+    <circle cx="0" cy="0" r="15" fill="none" stroke="${isMaster ? "#fde047" : "url(#sealGrad)"}" stroke-width="${isMaster ? 1.2 : 0.8}" stroke-dasharray="3 2" />
+    <text x="0" y="4" text-anchor="middle" fill="${isMaster ? "#fef08a" : "#f1b65f"}" font-family="Georgia, serif"
           font-size="12" font-weight="bold" letter-spacing="1">
-      NW
+      ${isMaster ? "👑 GB" : "NW"}
     </text>
   </g>
-  <text x="200" y="774" text-anchor="middle" fill="${themeConfig.signature}"
+  <text x="200" y="774" text-anchor="middle" fill="${isMaster ? "#fde047" : themeConfig.signature}"
         font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" letter-spacing="1">
-    — 手作自習標本典藏 · 願專注常伴 —
+    ${isMaster ? "— 金色植物大師傳奇印記 · 專注長青 —" : "— 手作自習標本典藏 · 願專注常伴 —"}
   </text>
 </svg>`;
   }

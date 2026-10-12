@@ -215,11 +215,19 @@ export class DollViewer {
     this.targetLookPitch = 0;
     this.currentLookYaw = 0;
     this.currentLookPitch = 0;
+    this.acousticGazeYaw = 0;
+    this.acousticGazeTilt = 0;
     this.onWindowPointerMove = null;
     this.onWindowPointerLeave = null;
     this.auraGroup = null;
     this.currentAura = "none";
     this.init();
+  }
+
+  setAcousticGaze(azimuth = 0) {
+    const clamped = Math.max(-1, Math.min(1, Number(azimuth) || 0));
+    this.acousticGazeYaw = -clamped * 0.35;
+    this.acousticGazeTilt = clamped * 0.12;
   }
 
   init() {
@@ -1071,6 +1079,28 @@ export class DollViewer {
         star.position.set(Math.cos(angle) * 0.58, 2.2, Math.sin(angle) * 0.58);
         this.auraGroup.add(star);
       }
+    } else if (auraType === "golden_botanist") {
+      const ringGeo = new THREE.TorusGeometry(0.56, 0.032, 12, 48);
+      const ringMat = new THREE.MeshBasicMaterial({ color: config.color, transparent: true, opacity: 0.95 });
+      const mainRing = new THREE.Mesh(ringGeo, ringMat);
+      mainRing.rotation.x = Math.PI / 2.1;
+      mainRing.position.set(0, 2.18, 0);
+      this.auraGroup.add(mainRing);
+
+      const leafGeo = new THREE.OctahedronGeometry(0.065, 0);
+      const leafMat = new THREE.MeshBasicMaterial({
+        color: config.secondaryColor || 0x10b981,
+        transparent: true,
+        opacity: 0.9,
+      });
+      for (let i = 0; i < 8; i++) {
+        const leaf = new THREE.Mesh(leafGeo, leafMat);
+        const angle = (i * Math.PI) / 4;
+        leaf.position.set(Math.cos(angle) * 0.58, 2.22 + (i % 2 === 0 ? 0.04 : -0.04), Math.sin(angle) * 0.58);
+        leaf.rotation.y = angle;
+        leaf.rotation.z = 0.4;
+        this.auraGroup.add(leaf);
+      }
     }
   }
 
@@ -1094,7 +1124,7 @@ export class DollViewer {
 
     // Head Tracking & Eye Contact
     const lerpFactor = 0.06;
-    const lookTargetYaw = this.dragging ? 0 : this.targetLookYaw;
+    const lookTargetYaw = (this.dragging ? 0 : this.targetLookYaw) + (this.acousticGazeYaw || 0);
     const lookTargetPitch = this.dragging ? 0 : this.targetLookPitch;
     this.currentLookYaw += (lookTargetYaw - this.currentLookYaw) * lerpFactor;
     this.currentLookPitch += (lookTargetPitch - this.currentLookPitch) * lerpFactor;
@@ -1286,6 +1316,7 @@ export class DollViewer {
       }
       if (this.head) {
         this.head.rotation.x = 0.14 + breathe * 0.5;
+        this.head.rotation.z = (this.acousticGazeTilt || 0) * 0.5;
       }
     } else if (this.timerState === "resting" && !this.reducedMotion) {
       const stretch = Math.sin(elapsed * 1.2) * 0.06;
@@ -1297,6 +1328,7 @@ export class DollViewer {
       }
       if (this.head) {
         this.head.rotation.x = -0.08 + stretch * 0.3;
+        this.head.rotation.z = (this.acousticGazeTilt || 0) * 0.5;
       }
     } else {
       if (this.currentEmote && now >= this.currentEmote.startTime + this.currentEmote.duration) {
@@ -1310,7 +1342,7 @@ export class DollViewer {
       }
       if (this.head) {
         this.head.rotation.x = 0;
-        this.head.rotation.z = 0;
+        this.head.rotation.z = this.acousticGazeTilt || 0;
       }
     }
 

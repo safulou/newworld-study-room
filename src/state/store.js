@@ -131,6 +131,14 @@ export const AFFINITY_AURAS = {
   aurora: { id: "aurora", label: "極光流彩", minLevel: 7, icon: "🌟", color: 0x34d399, secondaryColor: 0x818cf8 },
   crown: { id: "crown", label: "神聖日冕", minLevel: 10, icon: "👑", color: 0xfcd34d },
   co_focus: { id: "co_focus", label: "同心星芒", minLevel: 1, icon: "💫", color: 0xf59e0b, secondaryColor: 0xec4899 },
+  golden_botanist: {
+    id: "golden_botanist",
+    label: "金色桂冠",
+    minLevel: 1,
+    icon: "👑",
+    color: 0xf59e0b,
+    secondaryColor: 0x10b981,
+  },
 };
 
 export function getUnlockedAura(level = 1) {
