@@ -2096,6 +2096,7 @@ function bindTimer() {
       isRunning: true,
       totalSeconds: timer.minutes * 60,
     });
+    viewer?.setFocusProgress?.(timer.getProgress());
 
     tickPhase = !tickPhase;
     if (elements.timerPendulumIndicator) {
@@ -2123,6 +2124,7 @@ function bindTimer() {
   timer.addEventListener("modechange", (event) => {
     elements.timer.classList.remove("paused", "final-stretch");
     elements.timerPendulumIndicator?.classList.remove("swing-left", "swing-right");
+    viewer?.setFocusProgress?.(0);
     if (store.get().audioDuckingOnPause) {
       ambientSound.unduck(0.8);
       music.unduck(0.8);
@@ -2325,6 +2327,7 @@ function bindTimer() {
     }
     ambientSound.setAtmosphereMode(timer.mode);
     viewer?.setTimerState("idle");
+    viewer?.setFocusProgress?.(0);
     notificationManager.updateTitle({ remaining: null, isRunning: false });
     broadcastTimerSyncIfHost();
     applyCabinMood();
@@ -2933,6 +2936,27 @@ function bindSoundstageModal() {
   };
 
   let draggingTrack = null;
+  let soundstageAnimId = null;
+
+  function startSoundstageAnimation() {
+    if (soundstageAnimId) return;
+    const animate = () => {
+      if (!elements.soundstageModal?.open) {
+        soundstageAnimId = null;
+        return;
+      }
+      renderSoundstage();
+      soundstageAnimId = requestAnimationFrame(animate);
+    };
+    soundstageAnimId = requestAnimationFrame(animate);
+  }
+
+  function stopSoundstageAnimation() {
+    if (soundstageAnimId) {
+      cancelAnimationFrame(soundstageAnimId);
+      soundstageAnimId = null;
+    }
+  }
 
   function renderSoundstage() {
     const width = canvas.width;
@@ -2941,6 +2965,8 @@ function bindSoundstageModal() {
 
     const centerX = width / 2;
     const listenerY = height - 55;
+    const now = performance.now() / 1000;
+    const isReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     // 1. Acoustic Stage Range Arcs
     ctx.strokeStyle = "rgba(105, 200, 189, 0.15)";
@@ -2972,7 +2998,19 @@ function bindSoundstageModal() {
     ctx.textAlign = "right";
     ctx.fillText("右聲道 (R)", width - 24, listenerY + 4);
 
-    // 2. Listener (Center Bottom)
+    // 2. Listener (Center Bottom) with subtle acoustic aura
+    const activeTracks = ambientSound.getActiveTracks();
+    const activeMix = ambientSound.getCurrentTrackMix();
+
+    if (activeTracks.length > 0 && !isReducedMotion) {
+      const listenerPulse = Math.sin(now * 2.2) * 4;
+      ctx.strokeStyle = "rgba(105, 200, 189, 0.28)";
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.arc(centerX, listenerY, 32 + listenerPulse, Math.PI * 0.9, Math.PI * 2.1, false);
+      ctx.stroke();
+    }
+
     ctx.textAlign = "center";
     ctx.font = "28px sans-serif";
     ctx.fillText("🎧", centerX, listenerY + 6);
@@ -2980,8 +3018,7 @@ function bindSoundstageModal() {
     ctx.fillStyle = "#69c8bd";
     ctx.fillText("聆聽者 (You)", centerX, listenerY + 28);
 
-    // 3. Track Emitters
-    const activeTracks = ambientSound.getActiveTracks();
+    // 3. Track Emitters & Expanding Acoustic Ripples
     const tracksToDraw = activeTracks.length ? activeTracks : ["rain", "campfire", "wind", "ocean_waves"];
 
     tracksToDraw.forEach((trackKey) => {
@@ -2993,6 +3030,29 @@ function bindSoundstageModal() {
 
       const isDragged = draggingTrack === trackKey;
       const meta = TRACK_ICONS[trackKey] || { icon: "🎵", label: trackKey };
+      const trackVol = activeMix[trackKey] ?? (activeTracks.length === 0 ? 0.3 : 0);
+      const isEmitting = trackVol > 0.02;
+
+      // Concentric Expanding Soundwave Ripples for emitting tracks
+      if (isEmitting && !isReducedMotion) {
+        const color =
+          trackKey === "campfire"
+            ? "245, 158, 11"
+            : trackKey.startsWith("binaural")
+              ? "192, 132, 252"
+              : "105, 200, 189";
+
+        for (let i = 0; i < 2; i++) {
+          const wavePhase = (now * 0.85 + i * 0.5) % 1.0;
+          const waveRadius = 18 + wavePhase * (28 + trackVol * 30);
+          const alpha = (1 - wavePhase) * 0.38 * Math.min(1, trackVol * 2.5);
+          ctx.strokeStyle = `rgba(${color}, ${alpha.toFixed(3)})`;
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.arc(emitterX, emitterY, waveRadius, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
 
       // Glow halo
       ctx.fillStyle = isDragged ? "rgba(241, 182, 95, 0.3)" : "rgba(105, 200, 189, 0.18)";
@@ -3015,6 +3075,55 @@ function bindSoundstageModal() {
       ctx.font = "bold 10px ui-sans-serif, system-ui, sans-serif";
       ctx.fillText(meta.label, emitterX, emitterY + 28);
     });
+
+    // 4. Drag Tether Beam & HUD Readout Badge
+    if (draggingTrack) {
+      const coords = ambientSound.getTrackCoordinates(draggingTrack);
+      const angle = (coords.x * Math.PI) / 2.5;
+      const radius = 80 + (1 - coords.y) * 220;
+      const emitterX = centerX + Math.sin(angle) * radius;
+      const emitterY = listenerY - Math.cos(angle) * radius;
+
+      // Tether Beam to listener
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = "rgba(241, 182, 95, 0.65)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(centerX, listenerY);
+      ctx.lineTo(emitterX, emitterY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // HUD readout badge
+      const panDeg = Math.round(coords.x * 90);
+      const panText = panDeg > 0 ? `R ${panDeg}°` : panDeg < 0 ? `L ${Math.abs(panDeg)}°` : "C 0°";
+      const distPct = Math.round(coords.y * 100);
+      const cutoffHz = Math.round(ambientSound.calculateDistanceCutoff(coords.y));
+      const hudText = `方位 ${panText} · 距離 ${distPct}% · 截止 ${cutoffHz}Hz`;
+
+      ctx.font = "bold 11px ui-sans-serif, system-ui, sans-serif";
+      const textWidth = ctx.measureText(hudText).width;
+      const badgeW = textWidth + 20;
+      const badgeH = 22;
+      const badgeX = Math.max(10, Math.min(width - badgeW - 10, emitterX - badgeW / 2));
+      const badgeY = Math.max(12, emitterY - 40);
+
+      ctx.fillStyle = "rgba(17, 25, 35, 0.9)";
+      ctx.strokeStyle = "rgba(241, 182, 95, 0.75)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      if (typeof ctx.roundRect === "function") {
+        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 6);
+      } else {
+        ctx.rect(badgeX, badgeY, badgeW, badgeH);
+      }
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#ffe0a3";
+      ctx.textAlign = "center";
+      ctx.fillText(hudText, badgeX + badgeW / 2, badgeY + 15);
+    }
 
     if (ambientSound.isDistanceDamping()) {
       ctx.fillStyle = "rgba(105, 200, 189, 0.65)";
@@ -3087,6 +3196,10 @@ function bindSoundstageModal() {
 
   const onPointerUp = () => {
     if (draggingTrack) {
+      const dominantPan = ambientSound.getDominantTrackPan();
+      viewer?.setAcousticGaze?.(dominantPan);
+      viewer?.triggerListen?.({ direction: dominantPan });
+      companionSound?.playAcousticListenChime?.();
       draggingTrack = null;
       renderSoundstage();
     }
@@ -3095,18 +3208,25 @@ function bindSoundstageModal() {
   canvas.addEventListener("pointercancel", onPointerUp);
 
   elements.btnOpenSoundstage?.addEventListener("click", () => {
-    renderSoundstage();
     elements.soundstageModal?.showModal();
+    renderSoundstage();
+    startSoundstageAnimation();
   });
 
   elements.btnCloseSoundstage?.addEventListener("click", () => {
     elements.soundstageModal?.close();
+    stopSoundstageAnimation();
   });
 
   elements.soundstageModal?.addEventListener("click", (e) => {
     if (e.target === elements.soundstageModal) {
       elements.soundstageModal.close();
+      stopSoundstageAnimation();
     }
+  });
+
+  elements.soundstageModal?.addEventListener("close", () => {
+    stopSoundstageAnimation();
   });
 
   elements.soundstagePresetPills?.forEach((pill) => {
@@ -3114,7 +3234,10 @@ function bindSoundstageModal() {
       const scenario = pill.dataset.scenario;
       if (!scenario) return;
       ambientSound.applySpatialScenario(scenario);
-      viewer?.setAcousticGaze?.(ambientSound.getDominantTrackPan());
+      const dominantPan = ambientSound.getDominantTrackPan();
+      viewer?.setAcousticGaze?.(dominantPan);
+      viewer?.triggerListen?.({ direction: dominantPan });
+      companionSound?.playAcousticListenChime?.();
       elements.soundstagePresetPills.forEach((p) => p.classList.toggle("active", p === pill));
       renderSoundstage();
       showToast(`🧭 已切換為「${pill.textContent.trim()}」聲學空間方位`);
@@ -3456,6 +3579,7 @@ function bindCustomPresets() {
       tracks: currentMix,
       pans: currentPans,
       coordinates: currentCoordinates,
+      distanceDamping: ambientSound.isDistanceDamping(),
       eq: ambientSound.getMasterEQ(),
       reverb: ambientSound.getMasterReverb(),
       senderNickname: store.get().nickname || "房主",
@@ -4990,6 +5114,15 @@ async function startP2P() {
           }
         }
       }
+      if (typeof detail.distanceDamping === "boolean") {
+        ambientSound.setDistanceDamping(detail.distanceDamping);
+        if (elements.btnToggleDistanceDamping) {
+          elements.btnToggleDistanceDamping.classList.toggle("active", detail.distanceDamping);
+          elements.btnToggleDistanceDamping.textContent = detail.distanceDamping
+            ? "🍃 空氣阻尼：開"
+            : "🍃 空氣阻尼：關";
+        }
+      }
       if (detail.eq) {
         ambientSound.setMasterEQ(detail.eq);
       }
@@ -4997,7 +5130,9 @@ async function startP2P() {
         ambientSound.setMasterReverb(detail.reverb);
       }
       syncAcousticUI();
-      viewer?.setAcousticGaze?.(ambientSound.getDominantTrackPan());
+      const dominantPan = ambientSound.getDominantTrackPan();
+      viewer?.setAcousticGaze?.(dominantPan);
+      viewer?.triggerListen?.({ direction: dominantPan });
       if (elements.soundstageModal?.open && refreshSoundstageRadar) {
         refreshSoundstageRadar();
       }

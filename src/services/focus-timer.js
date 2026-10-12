@@ -196,6 +196,12 @@ export class FocusTimer extends EventTarget {
     this.emitTick();
   }
 
+  getProgress() {
+    const total = this.minutes * 60;
+    if (total <= 0) return 0;
+    return Math.max(0, Math.min(1, (total - this.remaining) / total));
+  }
+
   emitTick() {
     this.dispatchEvent(new CustomEvent("tick", { detail: this.remaining }));
   }

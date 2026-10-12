@@ -76,7 +76,8 @@ function isSoundscapeSync(msg) {
     msg.tracks !== null &&
     typeof msg.by === "string" &&
     msg.by.length > 0 &&
-    msg.by.length <= 18,
+    msg.by.length <= 18 &&
+    (msg.distanceDamping === undefined || typeof msg.distanceDamping === "boolean"),
   );
 }
 
@@ -560,7 +561,15 @@ export class P2PRoom extends EventTarget {
     return msg;
   }
 
-  sendSoundscapeSync({ name = "房主音景", tracks = {}, pans = {}, coordinates = null, eq = null, reverb = null } = {}) {
+  sendSoundscapeSync({
+    name = "房主音景",
+    tracks = {},
+    pans = {},
+    coordinates = null,
+    distanceDamping = null,
+    eq = null,
+    reverb = null,
+  } = {}) {
     const msg = {
       type: "soundscape-sync",
       version: MESSAGE_VERSION,
@@ -569,6 +578,7 @@ export class P2PRoom extends EventTarget {
       tracks: typeof tracks === "object" && tracks !== null ? tracks : {},
       pans: typeof pans === "object" && pans !== null ? pans : {},
       coordinates: coordinates && typeof coordinates === "object" ? coordinates : null,
+      distanceDamping: typeof distanceDamping === "boolean" ? distanceDamping : null,
       eq: eq && typeof eq === "object" ? eq : null,
       reverb: reverb && typeof reverb === "object" ? reverb : null,
       timestamp: Date.now(),

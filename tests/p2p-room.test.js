@@ -128,10 +128,31 @@ describe("P2P protocol validation", () => {
         tracks: { rain: 0.6, campfire: 0.3 },
         pans: { rain: -0.2 },
         coordinates: { rain: { x: -0.2, y: 0.7 } },
+        distanceDamping: true,
         eq: { bass: 2, mid: 0, treble: -1 },
         reverb: { preset: "cabin", wet: 0.2 },
       }),
     ).toBe(true);
+
+    // Boolean distanceDamping is accepted (false)
+    expect(
+      p2pInternals.isSoundscapeSync({
+        type: "soundscape-sync",
+        by: "HostArsen",
+        tracks: { rain: 0.5 },
+        distanceDamping: false,
+      }),
+    ).toBe(true);
+
+    // Non-boolean distanceDamping fails validation
+    expect(
+      p2pInternals.isSoundscapeSync({
+        type: "soundscape-sync",
+        by: "HostArsen",
+        tracks: { rain: 0.5 },
+        distanceDamping: "invalid_string",
+      }),
+    ).toBe(false);
 
     // Invalid type
     expect(

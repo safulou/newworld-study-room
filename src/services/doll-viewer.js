@@ -221,7 +221,12 @@ export class DollViewer {
     this.onWindowPointerLeave = null;
     this.auraGroup = null;
     this.currentAura = "none";
+    this.focusProgress = 0;
     this.init();
+  }
+
+  setFocusProgress(progress = 0) {
+    this.focusProgress = Math.max(0, Math.min(1, Number(progress) || 0));
   }
 
   setAcousticGaze(azimuth = 0) {
@@ -772,6 +777,17 @@ export class DollViewer {
     this.triggerBounce();
   }
 
+  triggerListen({ duration = 2400, direction = 0 } = {}) {
+    this.currentEmote = {
+      type: "listen",
+      startTime: performance.now(),
+      duration,
+      direction: Math.max(-1, Math.min(1, Number(direction) || 0)),
+    };
+    this.lastFaceMode = null;
+    this.triggerBounce();
+  }
+
   setTimerState(state) {
     this.timerState = state;
     if (this.studyBook) {
@@ -1114,6 +1130,13 @@ export class DollViewer {
         this.auraGroup.add(leaf);
       }
     }
+
+    this.auraGroup?.traverse?.((child) => {
+      if (child.isMesh && child.material) {
+        child.userData = child.userData || {};
+        child.userData.baseOpacity = child.material.opacity ?? 1.0;
+      }
+    });
   }
 
   resize() {
@@ -1320,6 +1343,18 @@ export class DollViewer {
           this.head.rotation.x = -0.14 + wishSway;
           this.head.rotation.z = Math.sin(elapsedEmote * 4) * 0.04;
         }
+      } else if (emote.type === "listen") {
+        const listenSway = Math.sin(elapsedEmote * 4) * 0.04;
+        const targetDir = emote.direction || 0.2;
+        if (this.arms && this.arms.length === 2) {
+          // Attentive listening posture: one arm touches near ear, other arm rested peacefully
+          this.arms[0].rotation.set(0.4, 0.25, -1.05 + listenSway);
+          this.arms[1].rotation.set(-0.1, 0, 0.42);
+        }
+        if (this.head) {
+          this.head.rotation.z = targetDir * 0.35 + listenSway;
+          this.head.rotation.x = -0.06;
+        }
       }
     } else if (this.celebrationStartTime && performance.now() - this.celebrationStartTime < 6000) {
       const wave = Math.sin(elapsed * 9) * 0.38;
@@ -1382,9 +1417,26 @@ export class DollViewer {
       this.scanMaterial.opacity = 0.45 + Math.sin(elapsed * 5) * 0.2;
     }
     if (this.auraGroup && this.auraGroup.visible && !this.reducedMotion) {
-      this.auraGroup.rotation.y += 0.012;
-      const breathe = Math.sin(elapsed * 2.4) * 0.035;
+      const isFocus = this.timerState === "focusing";
+      const isRest = this.timerState === "resting";
+
+      // Dynamically resonance-tune rotation speed and breathing pace
+      const spinSpeed = isFocus ? 0.005 + (1 - (this.focusProgress || 0)) * 0.003 : isRest ? 0.008 : 0.012;
+      this.auraGroup.rotation.y += spinSpeed;
+
+      const breatheSpeed = isFocus ? 0.95 : isRest ? 1.4 : 2.2;
+      const breatheAmp = isFocus ? 0.045 + (this.focusProgress || 0) * 0.025 : 0.035;
+      const breathe = Math.sin(elapsed * breatheSpeed) * breatheAmp;
       this.auraGroup.scale.set(1 + breathe, 1 + breathe, 1 + breathe);
+
+      // Smooth breath-synced luminescent opacity
+      const breathPhase = Math.sin(elapsed * breatheSpeed) * 0.5 + 0.5;
+      this.auraGroup?.traverse?.((child) => {
+        if (child.isMesh && child.material && child.material.transparent) {
+          const base = child.userData?.baseOpacity ?? child.material.opacity;
+          child.material.opacity = base * (0.8 + 0.2 * breathPhase);
+        }
+      });
     }
     this.renderer.render(this.scene, this.camera);
   }

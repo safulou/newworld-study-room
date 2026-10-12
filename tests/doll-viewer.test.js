@@ -138,6 +138,7 @@ describe("drawDollFace", () => {
         const idx = fakeChildren.indexOf(mesh);
         if (idx !== -1) fakeChildren.splice(idx, 1);
       }),
+      traverse: vi.fn((fn) => fakeChildren.forEach(fn)),
     };
     const fakeViewer = {
       auraGroup: fakeAuraGroup,
@@ -258,6 +259,7 @@ describe("drawDollFace", () => {
       children: fakeChildren,
       add: vi.fn((mesh) => fakeChildren.push(mesh)),
       remove: vi.fn(),
+      traverse: vi.fn((fn) => fakeChildren.forEach(fn)),
     };
     const fakeViewer = {
       auraGroup: fakeAuraGroup,
@@ -273,6 +275,7 @@ describe("drawDollFace", () => {
     expect(fakeAuraGroup.visible).toBe(true);
     // 1 torus ring + 8 octahedron leaves = 9 meshes
     expect(fakeAuraGroup.add).toHaveBeenCalledTimes(9);
+    expect(fakeAuraGroup.traverse).toHaveBeenCalled();
   });
 
   it("triggers wish micro-emote with starlight duration and bounce", () => {
@@ -289,5 +292,40 @@ describe("drawDollFace", () => {
     expect(fakeViewer.currentEmote.duration).toBe(2500);
     expect(fakeViewer.lastFaceMode).toBeNull();
     expect(fakeViewer.triggerBounce).toHaveBeenCalled();
+  });
+
+  it("sets and clamps focus progress smoothly between 0 and 1", () => {
+    const fakeViewer = { focusProgress: 0 };
+    fakeViewer.setFocusProgress = DollViewer.prototype.setFocusProgress.bind(fakeViewer);
+
+    fakeViewer.setFocusProgress(0.72);
+    expect(fakeViewer.focusProgress).toBeCloseTo(0.72);
+
+    fakeViewer.setFocusProgress(1.85);
+    expect(fakeViewer.focusProgress).toBe(1.0);
+
+    fakeViewer.setFocusProgress(-0.5);
+    expect(fakeViewer.focusProgress).toBe(0.0);
+  });
+
+  it("triggers listen micro-emote with direction, duration, and bounce", () => {
+    const fakeViewer = {
+      currentEmote: null,
+      lastFaceMode: "open",
+      triggerBounce: vi.fn(),
+    };
+    fakeViewer.triggerListen = DollViewer.prototype.triggerListen.bind(fakeViewer);
+
+    fakeViewer.triggerListen({ duration: 3000, direction: -0.75 });
+    expect(fakeViewer.currentEmote).toBeDefined();
+    expect(fakeViewer.currentEmote.type).toBe("listen");
+    expect(fakeViewer.currentEmote.duration).toBe(3000);
+    expect(fakeViewer.currentEmote.direction).toBeCloseTo(-0.75);
+    expect(fakeViewer.lastFaceMode).toBeNull();
+    expect(fakeViewer.triggerBounce).toHaveBeenCalled();
+
+    // Clamps direction beyond [-1, 1]
+    fakeViewer.triggerListen({ direction: 4.2 });
+    expect(fakeViewer.currentEmote.direction).toBe(1.0);
   });
 });

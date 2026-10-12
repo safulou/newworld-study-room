@@ -144,4 +144,18 @@ describe("FocusTimer Service", () => {
     // Invalid preset returns null
     expect(timer.applySprintPreset("unknown")).toBeNull();
   });
+
+  it("calculates progress ratio smoothly from 0 to 1", () => {
+    expect(timer.getProgress()).toBe(0);
+
+    timer.remaining = 12.5 * 60;
+    expect(timer.getProgress()).toBeCloseTo(0.5);
+
+    timer.remaining = 0;
+    expect(timer.getProgress()).toBe(1.0);
+
+    // Defensive clamping
+    timer.remaining = -10;
+    expect(timer.getProgress()).toBe(1.0);
+  });
 });

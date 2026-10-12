@@ -52,6 +52,7 @@ describe("CompanionSoundManager", () => {
     expect(() => manager.playAffirmativeNod()).not.toThrow();
     expect(() => manager.playStarWishChime()).not.toThrow();
     expect(() => manager.playDeliveryChime()).not.toThrow();
+    expect(() => manager.playAcousticListenChime()).not.toThrow();
     expect(() => manager.playClockworkTick({ isTock: false, mode: "wood", volume: 0.5 })).not.toThrow();
     expect(() => manager.playClockworkTick({ isTock: true, mode: "crisp", volume: 0.3 })).not.toThrow();
     expect(() => manager.playClockworkTick({ isTock: false, mode: "wood", volume: 0 })).not.toThrow();
@@ -90,5 +91,39 @@ describe("CompanionSoundManager", () => {
     expect(createdOscillators[1].frequency.setValueAtTime).toHaveBeenCalledWith(1479.98, 10.08);
     expect(createdOscillators[2].frequency.setValueAtTime).toHaveBeenCalledWith(1760.0, 10.16);
     expect(createdOscillators[3].frequency.setValueAtTime).toHaveBeenCalledWith(2349.32, 10.24);
+  });
+
+  it("synthesizes pure fifth harmonic interval in playAcousticListenChime", () => {
+    const createdOscillators = [];
+    const mockCtx = {
+      currentTime: 25,
+      createOscillator: vi.fn(() => {
+        const osc = {
+          type: "sine",
+          frequency: { setValueAtTime: vi.fn() },
+          connect: vi.fn(),
+          start: vi.fn(),
+          stop: vi.fn(),
+        };
+        createdOscillators.push(osc);
+        return osc;
+      }),
+      createGain: vi.fn(() => ({
+        gain: {
+          setValueAtTime: vi.fn(),
+          linearRampToValueAtTime: vi.fn(),
+          exponentialRampToValueAtTime: vi.fn(),
+        },
+        connect: vi.fn(),
+      })),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playAcousticListenChime();
+    // 2 notes: E6 (1318.51Hz) and B6 (1975.53Hz)
+    expect(createdOscillators).toHaveLength(2);
+    expect(createdOscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(1318.51, 25);
+    expect(createdOscillators[1].frequency.setValueAtTime).toHaveBeenCalledWith(1975.53, 25.09);
   });
 });
