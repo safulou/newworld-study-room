@@ -665,11 +665,13 @@ export class DollViewer {
             this.triggerJoySpin();
             this.onJoySpin?.();
           } else if (this.consecutiveTaps === 2) {
-            const emoteType = Math.random() < 0.6 ? "wave" : "nod";
+            const emoteType = Math.random() < 0.4 ? "wave" : Math.random() < 0.7 ? "nod" : "wish";
             if (emoteType === "wave") {
               this.triggerWave();
-            } else {
+            } else if (emoteType === "nod") {
               this.triggerNod();
+            } else {
+              this.triggerWish();
             }
             this.onMicroEmote?.(emoteType);
           } else {
@@ -753,6 +755,16 @@ export class DollViewer {
   triggerCheer({ duration = 1500 } = {}) {
     this.currentEmote = {
       type: "cheer",
+      startTime: performance.now(),
+      duration,
+    };
+    this.lastFaceMode = null;
+    this.triggerBounce();
+  }
+
+  triggerWish({ duration = 2000 } = {}) {
+    this.currentEmote = {
+      type: "wish",
       startTime: performance.now(),
       duration,
     };
@@ -1297,6 +1309,16 @@ export class DollViewer {
         if (this.head) {
           this.head.rotation.x = -0.15;
           this.head.rotation.z = 0;
+        }
+      } else if (emote.type === "wish") {
+        const wishSway = Math.sin(elapsedEmote * 6) * 0.05;
+        if (this.arms && this.arms.length === 2) {
+          this.arms[0].rotation.set(0.65, 0.45, -0.15 + wishSway);
+          this.arms[1].rotation.set(0.65, -0.45, 0.15 - wishSway);
+        }
+        if (this.head) {
+          this.head.rotation.x = -0.14 + wishSway;
+          this.head.rotation.z = Math.sin(elapsedEmote * 4) * 0.04;
         }
       }
     } else if (this.celebrationStartTime && performance.now() - this.celebrationStartTime < 6000) {

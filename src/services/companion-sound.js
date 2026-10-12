@@ -564,6 +564,39 @@ export class CompanionSoundManager {
   }
 
   /**
+   * Play an ethereal, crystalline arpeggio shimmer for doll starlight wish micro-emote
+   */
+  playStarWishChime() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    // D6, F#6, A6, D7 crystalline harmonic cascade
+    const notes = [
+      { freq: 1174.66, delay: 0.0, dur: 0.35 }, // D6
+      { freq: 1479.98, delay: 0.08, dur: 0.42 }, // F#6
+      { freq: 1760.0, delay: 0.16, dur: 0.55 }, // A6
+      { freq: 2349.32, delay: 0.24, dur: 0.8 }, // D7
+    ];
+
+    notes.forEach(({ freq, delay, dur }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + delay);
+
+      const peak = 0.16 * this.volume;
+      gain.gain.setValueAtTime(0.0001, now + delay);
+      gain.gain.exponentialRampToValueAtTime(peak, now + delay + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + delay);
+      osc.stop(now + delay + dur + 0.05);
+    });
+  }
+
+  /**
    * Play an ethereal crystalline delivery chime when receiving/sending a gift or bookmark
    */
   playDeliveryChime() {

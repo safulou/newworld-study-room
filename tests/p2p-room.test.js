@@ -127,6 +127,7 @@ describe("P2P protocol validation", () => {
         by: "HostArsen",
         tracks: { rain: 0.6, campfire: 0.3 },
         pans: { rain: -0.2 },
+        coordinates: { rain: { x: -0.2, y: 0.7 } },
         eq: { bass: 2, mid: 0, treble: -1 },
         reverb: { preset: "cabin", wet: 0.2 },
       }),

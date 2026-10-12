@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { CompanionSoundManager } from "../src/services/companion-sound.js";
 
 describe("CompanionSoundManager", () => {
@@ -50,9 +50,45 @@ describe("CompanionSoundManager", () => {
     expect(() => manager.playWindDownChime()).not.toThrow();
     expect(() => manager.playGreetingWave()).not.toThrow();
     expect(() => manager.playAffirmativeNod()).not.toThrow();
+    expect(() => manager.playStarWishChime()).not.toThrow();
     expect(() => manager.playDeliveryChime()).not.toThrow();
     expect(() => manager.playClockworkTick({ isTock: false, mode: "wood", volume: 0.5 })).not.toThrow();
     expect(() => manager.playClockworkTick({ isTock: true, mode: "crisp", volume: 0.3 })).not.toThrow();
     expect(() => manager.playClockworkTick({ isTock: false, mode: "wood", volume: 0 })).not.toThrow();
+  });
+
+  it("plays ethereal crystalline arpeggio in playStarWishChime when AudioContext is present", () => {
+    const createdOscillators = [];
+    const mockCtx = {
+      currentTime: 10,
+      createOscillator: vi.fn(() => {
+        const osc = {
+          type: "sine",
+          frequency: { setValueAtTime: vi.fn() },
+          connect: vi.fn(),
+          start: vi.fn(),
+          stop: vi.fn(),
+        };
+        createdOscillators.push(osc);
+        return osc;
+      }),
+      createGain: vi.fn(() => ({
+        gain: {
+          setValueAtTime: vi.fn(),
+          exponentialRampToValueAtTime: vi.fn(),
+        },
+        connect: vi.fn(),
+      })),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playStarWishChime();
+    // 4 notes: D6, F#6, A6, D7
+    expect(createdOscillators).toHaveLength(4);
+    expect(createdOscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(1174.66, 10);
+    expect(createdOscillators[1].frequency.setValueAtTime).toHaveBeenCalledWith(1479.98, 10.08);
+    expect(createdOscillators[2].frequency.setValueAtTime).toHaveBeenCalledWith(1760.0, 10.16);
+    expect(createdOscillators[3].frequency.setValueAtTime).toHaveBeenCalledWith(2349.32, 10.24);
   });
 });

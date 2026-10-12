@@ -535,4 +535,37 @@ describe("AmbientSoundscapeManager", () => {
     expect(decoded.coordinates.rain).toEqual({ x: -0.5, y: 0.75 });
     expect(decoded.coordinates.wind).toEqual({ x: 0.5, y: 0.3 });
   });
+
+  it("calculates acoustic distance air absorption cutoff and dynamically adjusts lowpass filter", () => {
+    const manager = new AmbientSoundscapeManager();
+    expect(manager.isDistanceDamping()).toBe(true);
+
+    // At y = 1 (close to listener): full spectrum (20,000 Hz)
+    expect(manager.calculateDistanceCutoff(1.0)).toBe(20000);
+    // At y = 0 (far away): atmospheric air damping (2,600 Hz)
+    expect(manager.calculateDistanceCutoff(0.0)).toBe(2600);
+    // At y = 0.5: intermediate cutoff (11,300 Hz)
+    expect(manager.calculateDistanceCutoff(0.5)).toBe(11300);
+
+    // When distance damping is disabled: always 20000 Hz
+    manager.setDistanceDamping(false);
+    expect(manager.isDistanceDamping()).toBe(false);
+    expect(manager.calculateDistanceCutoff(0.1)).toBe(20000);
+    manager.setDistanceDamping(true);
+
+    // Update track with distance filter
+    const mockFilter = {
+      frequency: {
+        setValueAtTime: vi.fn(),
+      },
+    };
+    manager.audioCtx = { currentTime: 25 };
+    manager.nodes.set("campfire", {
+      distanceFilter: mockFilter,
+    });
+
+    manager.setTrackCoordinates("campfire", { x: 0.5, y: 0.2 });
+    // y = 0.2 -> 2600 + 0.2 * 17400 = 6080 Hz
+    expect(mockFilter.frequency.setValueAtTime).toHaveBeenCalledWith(6080, 25);
+  });
 });

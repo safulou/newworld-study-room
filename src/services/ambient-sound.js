@@ -263,6 +263,7 @@ export class AmbientSoundscapeManager {
     this.autoAtmosphereSync = false;
     this.atmosphereMode = "neutral";
     this.tidalSurge = true;
+    this.distanceDamping = true;
     this.trackCoordinates = {};
     this.currentSpatialScenario = "cabin_realism";
     this.sleepTimerRemainingSec = 0;
@@ -522,12 +523,30 @@ export class AmbientSoundscapeManager {
       trackGain.gain.setValueAtTime(initialVolume, now);
     }
 
+    let distanceFilter = null;
+    if (ctx.createBiquadFilter) {
+      distanceFilter = ctx.createBiquadFilter();
+      distanceFilter.type = "lowpass";
+      const initialCoords = this.getTrackCoordinates(name);
+      const cutoff = this.calculateDistanceCutoff(initialCoords.y);
+      distanceFilter.frequency.setValueAtTime(cutoff, ctx.currentTime);
+      distanceFilter.Q.setValueAtTime(0.7, ctx.currentTime);
+    }
+
     let panner = null;
     if (ctx.createStereoPanner) {
       panner = ctx.createStereoPanner();
       panner.pan.setValueAtTime(Math.max(-1, Math.min(1, initialPan)), ctx.currentTime);
-      trackGain.connect(panner);
+      if (distanceFilter) {
+        trackGain.connect(distanceFilter);
+        distanceFilter.connect(panner);
+      } else {
+        trackGain.connect(panner);
+      }
       panner.connect(this.masterGain);
+    } else if (distanceFilter) {
+      trackGain.connect(distanceFilter);
+      distanceFilter.connect(this.masterGain);
     } else {
       trackGain.connect(this.masterGain);
     }
@@ -565,13 +584,17 @@ export class AmbientSoundscapeManager {
       oscL.start();
       oscR.start();
 
-      this._registerTrack(name, {
-        sources: [oscL, oscR],
-        gain: trackGain,
-        panner,
-        volume,
-        pan: initialPan,
-      });
+      this._registerTrack(
+        name,
+        {
+          sources: [oscL, oscR],
+          gain: trackGain,
+          panner,
+          volume,
+          pan: initialPan,
+        },
+        distanceFilter,
+      );
       return true;
     }
 
@@ -587,17 +610,21 @@ export class AmbientSoundscapeManager {
       };
       let timerId = window.setTimeout(playKey, 120);
 
-      this._registerTrack(name, {
-        timerId,
-        stopTimer: () => {
-          active = false;
-          window.clearTimeout(timerId);
+      this._registerTrack(
+        name,
+        {
+          timerId,
+          stopTimer: () => {
+            active = false;
+            window.clearTimeout(timerId);
+          },
+          gain: trackGain,
+          panner,
+          volume,
+          pan: initialPan,
         },
-        gain: trackGain,
-        panner,
-        volume,
-        pan: initialPan,
-      });
+        distanceFilter,
+      );
       return true;
     }
 
@@ -631,15 +658,19 @@ export class AmbientSoundscapeManager {
       noiseSource.start();
       lfo.start();
 
-      this._registerTrack(name, {
-        source: noiseSource,
-        lfo,
-        filter: hpFilter,
-        gain: trackGain,
-        panner,
-        volume,
-        pan: initialPan,
-      });
+      this._registerTrack(
+        name,
+        {
+          source: noiseSource,
+          lfo,
+          filter: hpFilter,
+          gain: trackGain,
+          panner,
+          volume,
+          pan: initialPan,
+        },
+        distanceFilter,
+      );
       return true;
     }
 
@@ -706,19 +737,23 @@ export class AmbientSoundscapeManager {
 
       timerId = window.setTimeout(scheduleCrackle, 80);
 
-      this._registerTrack(name, {
-        source: hissSource,
-        filter: hissFilter,
-        timerId,
-        stopTimer: () => {
-          active = false;
-          window.clearTimeout(timerId);
+      this._registerTrack(
+        name,
+        {
+          source: hissSource,
+          filter: hissFilter,
+          timerId,
+          stopTimer: () => {
+            active = false;
+            window.clearTimeout(timerId);
+          },
+          gain: trackGain,
+          panner,
+          volume,
+          pan: initialPan,
         },
-        gain: trackGain,
-        panner,
-        volume,
-        pan: initialPan,
-      });
+        distanceFilter,
+      );
       return true;
     }
 
@@ -738,14 +773,18 @@ export class AmbientSoundscapeManager {
       lpFilter.connect(trackGain);
       pinkSource.start();
 
-      this._registerTrack(name, {
-        source: pinkSource,
-        filter: lpFilter,
-        gain: trackGain,
-        panner,
-        volume,
-        pan: initialPan,
-      });
+      this._registerTrack(
+        name,
+        {
+          source: pinkSource,
+          filter: lpFilter,
+          gain: trackGain,
+          panner,
+          volume,
+          pan: initialPan,
+        },
+        distanceFilter,
+      );
       return true;
     }
 
@@ -829,16 +868,20 @@ export class AmbientSoundscapeManager {
       const allLfos = [lfo, foamLfo];
       if (panLfo) allLfos.push(panLfo);
 
-      this._registerTrack(name, {
-        source: waveSource,
-        lfo,
-        lfos: allLfos,
-        filter: waveFilter,
-        gain: trackGain,
-        panner,
-        volume,
-        pan: initialPan,
-      });
+      this._registerTrack(
+        name,
+        {
+          source: waveSource,
+          lfo,
+          lfos: allLfos,
+          filter: waveFilter,
+          gain: trackGain,
+          panner,
+          volume,
+          pan: initialPan,
+        },
+        distanceFilter,
+      );
       return true;
     }
 
@@ -877,18 +920,25 @@ export class AmbientSoundscapeManager {
     filter.connect(trackGain);
     noiseSource.start();
 
-    this._registerTrack(name, {
-      source: noiseSource,
-      filter,
-      gain: trackGain,
-      panner,
-      volume,
-      pan: initialPan,
-    });
+    this._registerTrack(
+      name,
+      {
+        source: noiseSource,
+        filter,
+        gain: trackGain,
+        panner,
+        volume,
+        pan: initialPan,
+      },
+      distanceFilter,
+    );
     return true;
   }
 
-  _registerTrack(name, trackNode) {
+  _registerTrack(name, trackNode, distanceFilter = null) {
+    if (distanceFilter) {
+      trackNode.distanceFilter = distanceFilter;
+    }
     this.nodes.set(name, trackNode);
     if (this.orbitingBreeze) {
       this._attachOrbitLfo(name, trackNode);
@@ -983,6 +1033,7 @@ export class AmbientSoundscapeManager {
         });
       }
       if (track.filter) track.filter.disconnect();
+      if (track.distanceFilter) track.distanceFilter.disconnect();
       if (track.gain) track.gain.disconnect();
       if (track.panner) track.panner.disconnect();
     } catch {}
@@ -1115,11 +1166,42 @@ export class AmbientSoundscapeManager {
     return Object.values(SPATIAL_SCENARIOS);
   }
 
+  calculateDistanceCutoff(y = 0.5) {
+    if (!this.distanceDamping) return 20000;
+    const clampedY = Math.max(0, Math.min(1, Number(y ?? 0.5)));
+    return Math.round(2600 + clampedY * 17400);
+  }
+
+  setDistanceDamping(enabled) {
+    this.distanceDamping = Boolean(enabled);
+    if (this.audioCtx) {
+      for (const [name, track] of this.nodes.entries()) {
+        if (track && track.distanceFilter && track.distanceFilter.frequency) {
+          const coords = this.getTrackCoordinates(name);
+          const cutoff = this.calculateDistanceCutoff(coords.y);
+          track.distanceFilter.frequency.setValueAtTime(cutoff, this.audioCtx.currentTime);
+        }
+      }
+    }
+    return this.distanceDamping;
+  }
+
+  isDistanceDamping() {
+    return this.distanceDamping;
+  }
+
   setTrackCoordinates(name, { x = 0, y = 0.5 } = {}) {
     const clampedX = Math.max(-1, Math.min(1, Number(x) || 0));
-    const clampedY = Math.max(0, Math.min(1, Number(y) || 0.5));
+    const clampedY = Math.max(0, Math.min(1, Number(y ?? 0.5)));
     this.trackCoordinates[name] = { x: clampedX, y: clampedY };
     this.setTrackPan(name, clampedX);
+
+    const track = this.nodes.get(name);
+    if (track && track.distanceFilter && this.audioCtx && track.distanceFilter.frequency) {
+      const cutoff = this.calculateDistanceCutoff(clampedY);
+      track.distanceFilter.frequency.setValueAtTime(cutoff, this.audioCtx.currentTime);
+    }
+
     return { ...this.trackCoordinates[name] };
   }
 

@@ -560,7 +560,7 @@ export class P2PRoom extends EventTarget {
     return msg;
   }
 
-  sendSoundscapeSync({ name = "房主音景", tracks = {}, pans = {}, eq = null, reverb = null } = {}) {
+  sendSoundscapeSync({ name = "房主音景", tracks = {}, pans = {}, coordinates = null, eq = null, reverb = null } = {}) {
     const msg = {
       type: "soundscape-sync",
       version: MESSAGE_VERSION,
@@ -568,6 +568,7 @@ export class P2PRoom extends EventTarget {
       name: String(name || "房主音景").slice(0, 30),
       tracks: typeof tracks === "object" && tracks !== null ? tracks : {},
       pans: typeof pans === "object" && pans !== null ? pans : {},
+      coordinates: coordinates && typeof coordinates === "object" ? coordinates : null,
       eq: eq && typeof eq === "object" ? eq : null,
       reverb: reverb && typeof reverb === "object" ? reverb : null,
       timestamp: Date.now(),

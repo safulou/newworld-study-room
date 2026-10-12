@@ -274,4 +274,20 @@ describe("drawDollFace", () => {
     // 1 torus ring + 8 octahedron leaves = 9 meshes
     expect(fakeAuraGroup.add).toHaveBeenCalledTimes(9);
   });
+
+  it("triggers wish micro-emote with starlight duration and bounce", () => {
+    const fakeViewer = {
+      currentEmote: null,
+      lastFaceMode: "open",
+      triggerBounce: vi.fn(),
+    };
+    fakeViewer.triggerWish = DollViewer.prototype.triggerWish.bind(fakeViewer);
+
+    fakeViewer.triggerWish({ duration: 2500 });
+    expect(fakeViewer.currentEmote).toBeDefined();
+    expect(fakeViewer.currentEmote.type).toBe("wish");
+    expect(fakeViewer.currentEmote.duration).toBe(2500);
+    expect(fakeViewer.lastFaceMode).toBeNull();
+    expect(fakeViewer.triggerBounce).toHaveBeenCalled();
+  });
 });

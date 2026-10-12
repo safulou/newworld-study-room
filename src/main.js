@@ -295,6 +295,7 @@ const elements = {
   btnCloseSoundstage: $("#btnCloseSoundstage"),
   soundstageCanvas: $("#soundstageCanvas"),
   soundstagePresetPills: [...document.querySelectorAll(".soundstage-preset-pill")],
+  btnToggleDistanceDamping: $("#btnToggleDistanceDamping"),
   btnSaveSoundstagePreset: $("#btnSaveSoundstagePreset"),
   btnGiftBookmarkToPeers: $("#btnGiftBookmarkToPeers"),
   photoInput: $("#photoInput"),
@@ -2909,6 +2910,8 @@ function startAcousticVisualizer() {
   renderVisualizer();
 }
 
+let refreshSoundstageRadar = null;
+
 function bindSoundstageModal() {
   const canvas = elements.soundstageCanvas;
   if (!canvas) return;
@@ -3012,7 +3015,16 @@ function bindSoundstageModal() {
       ctx.font = "bold 10px ui-sans-serif, system-ui, sans-serif";
       ctx.fillText(meta.label, emitterX, emitterY + 28);
     });
+
+    if (ambientSound.isDistanceDamping()) {
+      ctx.fillStyle = "rgba(105, 200, 189, 0.65)";
+      ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText("🍃 空氣阻尼啟用中 (2.6k~20kHz)", width - 16, 24);
+    }
   }
+
+  refreshSoundstageRadar = renderSoundstage;
 
   function getTrackAtPosition(cx, cy) {
     const centerX = canvas.width / 2;
@@ -3107,6 +3119,15 @@ function bindSoundstageModal() {
       renderSoundstage();
       showToast(`🧭 已切換為「${pill.textContent.trim()}」聲學空間方位`);
     });
+  });
+
+  elements.btnToggleDistanceDamping?.addEventListener("click", () => {
+    const currentState = ambientSound.isDistanceDamping();
+    const newState = ambientSound.setDistanceDamping(!currentState);
+    elements.btnToggleDistanceDamping.classList.toggle("active", newState);
+    elements.btnToggleDistanceDamping.textContent = newState ? "🍃 空氣阻尼：開" : "🍃 空氣阻尼：關";
+    showToast(newState ? "已開啟空間高頻空氣阻尼（近清脆、遠柔和）" : "已關閉空間高頻空氣阻尼（全頻傳遞）");
+    renderSoundstage();
   });
 
   elements.btnSaveSoundstagePreset?.addEventListener("click", () => {
@@ -3429,16 +3450,18 @@ function bindCustomPresets() {
     }
     const currentMix = ambientSound.getCurrentTrackMix();
     const currentPans = ambientSound.getCurrentTrackPans();
+    const currentCoordinates = ambientSound.getAllTrackCoordinates();
     const soundscapeData = {
       name: "小木屋共鳴音景",
       tracks: currentMix,
       pans: currentPans,
+      coordinates: currentCoordinates,
       eq: ambientSound.getMasterEQ(),
       reverb: ambientSound.getMasterReverb(),
       senderNickname: store.get().nickname || "房主",
     };
     p2p.sendSoundscapeSync(soundscapeData);
-    showToast("📻 已向同房夥伴即時廣播專注音景！");
+    showToast("📻 已向同房夥伴即時廣播空間聲學音景！");
   });
 
   elements.saveCustomPresetBtn?.addEventListener("click", () => {
@@ -4960,6 +4983,13 @@ async function startP2P() {
       if (detail.tracks) {
         ambientSound.applyTrackMix(detail.tracks, detail.pans || {});
       }
+      if (detail.coordinates && typeof detail.coordinates === "object") {
+        for (const [track, coord] of Object.entries(detail.coordinates)) {
+          if (coord && typeof coord.x === "number" && typeof coord.y === "number") {
+            ambientSound.setTrackCoordinates(track, coord);
+          }
+        }
+      }
       if (detail.eq) {
         ambientSound.setMasterEQ(detail.eq);
       }
@@ -4967,6 +4997,10 @@ async function startP2P() {
         ambientSound.setMasterReverb(detail.reverb);
       }
       syncAcousticUI();
+      viewer?.setAcousticGaze?.(ambientSound.getDominantTrackPan());
+      if (elements.soundstageModal?.open && refreshSoundstageRadar) {
+        refreshSoundstageRadar();
+      }
       elements.ambientChips.forEach((chipEl) => {
         const sound = chipEl.dataset.sound;
         if (sound === "lofi") return;
@@ -4976,7 +5010,7 @@ async function startP2P() {
       });
       syncWeatherAtmosphere();
       renderAmbientMixer();
-      showToast(`📻 已即時同步 ${author} 的「${soundscapeName}」音景！`);
+      showToast(`📻 已即時同步 ${author} 的「${soundscapeName}」空間聲學音景！`);
     } else {
       showToast(`📻 ${author} 正在廣播「${soundscapeName}」音景，可至設定開啟自動同步`);
     }
@@ -5037,6 +5071,25 @@ function spawnPetHearts(x = 115, y = 70) {
     heart.style.setProperty("--rot", `${rot}deg`);
     elements.petHearts.appendChild(heart);
     setTimeout(() => heart.remove(), 1200);
+  }
+}
+
+function spawnStarlightParticles(x = 115, y = 70) {
+  if (!elements.petHearts) return;
+  const stars = ["⭐", "✨", "🌟", "💫", "🌠"];
+  for (let i = 0; i < 5; i++) {
+    const star = document.createElement("span");
+    star.className = "pet-heart";
+    star.textContent = stars[Math.floor(Math.random() * stars.length)];
+    const dx = (Math.random() - 0.5) * 60;
+    const dy = (Math.random() - 0.5) * 30;
+    const rot = (Math.random() - 0.5) * 50;
+    star.style.left = `${Math.max(10, Math.min(220, x + dx))}px`;
+    star.style.top = `${Math.max(10, Math.min(200, y + dy))}px`;
+    star.style.setProperty("--dx", `${(Math.random() - 0.5) * 50}px`);
+    star.style.setProperty("--rot", `${rot}deg`);
+    elements.petHearts.appendChild(star);
+    setTimeout(() => star.remove(), 1400);
   }
 }
 
@@ -5844,6 +5897,16 @@ async function startViewer() {
         ];
         const quote = waveQuotes[Math.floor(Math.random() * waveQuotes.length)];
         showCompanionBubble(quote, 3200);
+      } else if (emoteType === "wish") {
+        companionSound.playStarWishChime();
+        spawnStarlightParticles();
+        const wishQuotes = [
+          "雙手合十祈願～願你的每分專注都化為璀璨星光！🌠✨",
+          "閉眼許願中... 祈禱今天所有目標都能順利達成！🌌💫",
+          "流星劃過了！我們許下心願，一定能堅持到最後！🌟🕊️",
+        ];
+        const quote = wishQuotes[Math.floor(Math.random() * wishQuotes.length)];
+        showCompanionBubble(quote, 3400);
       } else {
         companionSound.playAffirmativeNod();
         const nodQuotes = [
