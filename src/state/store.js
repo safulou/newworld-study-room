@@ -78,6 +78,7 @@ const profileDefaults = {
   orbitingBreeze: false,
   autoAtmosphereSync: true,
   binauralCrossfeed: false,
+  stereoWidth: 1.0,
 };
 
 export const AFFINITY_RANKS = [
@@ -363,6 +364,10 @@ function sanitizeProfile(value = {}) {
     autoAtmosphereSync:
       value.autoAtmosphereSync !== undefined ? Boolean(value.autoAtmosphereSync) : profileDefaults.autoAtmosphereSync,
     binauralCrossfeed: Boolean(value.binauralCrossfeed),
+    stereoWidth:
+      value.stereoWidth !== undefined
+        ? Math.max(0, Math.min(2, Number(value.stereoWidth) || 0))
+        : profileDefaults.stereoWidth,
   };
 }
 

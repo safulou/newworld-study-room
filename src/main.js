@@ -303,7 +303,10 @@ const elements = {
   btnToggleSoundstageGyro: $("#btnToggleSoundstageGyro"),
   btnToggleDistanceDamping: $("#btnToggleDistanceDamping"),
   btnToggleBinauralCrossfeed: $("#btnToggleBinauralCrossfeed"),
+  stereoWidthSlider: $("#stereoWidthSlider"),
+  stereoWidthBadge: $("#stereoWidthBadge"),
   gardenDewDrops: $("#gardenDewDrops"),
+  gardenButterfly: $("#gardenButterfly"),
   btnSaveSoundstagePreset: $("#btnSaveSoundstagePreset"),
   btnGiftBookmarkToPeers: $("#btnGiftBookmarkToPeers"),
   photoInput: $("#photoInput"),
@@ -1573,6 +1576,7 @@ function updateGarden(remaining = timer.remaining) {
   const weather = store.get().windowWeather;
   const isDewWeather = weather === "rain" || weather === "snow" || weather === "fireflies";
   elements.focusGarden.classList.toggle("dew-active", isDewWeather || growth >= 0.7);
+  elements.focusGarden.classList.toggle("butterfly-active", growth >= 0.75);
 
   const stageKey = `${plantType}:${stage}`;
   if (stageKey !== lastGardenStage) {
@@ -2623,6 +2627,7 @@ function syncAcousticUI() {
     btn.classList.toggle("active", btn.dataset.acoustic === reverb.preset);
   });
   syncBinauralCrossfeedUI(ambientSound.isBinauralCrossfeed());
+  syncStereoWidthUI(ambientSound.getStereoWidth());
   viewer?.setAcousticGaze?.(ambientSound.getDominantTrackPan());
 }
 
@@ -2630,6 +2635,29 @@ function syncBinauralCrossfeedUI(active) {
   if (!elements.btnToggleBinauralCrossfeed) return;
   elements.btnToggleBinauralCrossfeed.classList.toggle("active", Boolean(active));
   elements.btnToggleBinauralCrossfeed.textContent = active ? "🎧 雙耳舒壓外放：開" : "🎧 雙耳舒壓外放：關";
+}
+
+function syncStereoWidthUI(widthValue) {
+  const w = Math.max(0, Math.min(2, Number(widthValue ?? 1.0) || 0));
+  if (elements.stereoWidthSlider) {
+    elements.stereoWidthSlider.value = String(w);
+  }
+  if (elements.stereoWidthBadge) {
+    const percent = Math.round(w * 100);
+    let label;
+    if (w < 0.25) {
+      label = "單聲聚焦 (Mono)";
+    } else if (w < 0.8) {
+      label = "窄角凝聚";
+    } else if (w <= 1.2) {
+      label = "自然立體";
+    } else if (w <= 1.7) {
+      label = "廣闊音場";
+    } else {
+      label = "全景環繞";
+    }
+    elements.stereoWidthBadge.textContent = `${percent}% · ${label}`;
+  }
 }
 
 function updateOrbitBreezeUI(enabled) {
@@ -3458,6 +3486,13 @@ function bindSoundstageModal() {
         ? "🎧 已開啟雙耳舒壓外放（微延遲交越，模擬自然揚聲器外放空間感）"
         : "🎧 已關閉雙耳舒壓外放（標準左右獨立聲相）",
     );
+  });
+
+  elements.stereoWidthSlider?.addEventListener("input", (e) => {
+    const w = Number(e.target.value);
+    ambientSound.setStereoWidth(w);
+    store.update({ stereoWidth: w });
+    syncStereoWidthUI(w);
   });
 
   elements.btnSaveSoundstagePreset?.addEventListener("click", () => {
@@ -6186,8 +6221,19 @@ function bindHerbarium() {
 
   elements.focusGarden?.addEventListener("click", (e) => {
     if (e.target.closest("#openHerbarium")) return;
+    if (e.target.closest("#gardenButterfly")) {
+      companionSound.playButterflyFlutterSound();
+      spawnZenSpark("🦋 花間彩蝶", e.clientX, e.clientY);
+      const bfly = elements.gardenButterfly;
+      if (bfly) {
+        bfly.style.animation = "none";
+        bfly.offsetHeight;
+        bfly.style.animation = "";
+      }
+      return;
+    }
     companionSound.playDewDropSound();
-    spawnZenSpark("💧 晶瑩晨露");
+    spawnZenSpark("💧 晶瑩晨露", e.clientX, e.clientY);
     const gardenDew = elements.gardenDewDrops;
     if (gardenDew) {
       gardenDew.style.animation = "none";
@@ -6333,6 +6379,16 @@ async function startViewer() {
         ];
         const quote = sipQuotes[Math.floor(Math.random() * sipQuotes.length)];
         showCompanionBubble(quote, 3400);
+      } else if (emoteType === "petcat") {
+        companionSound.playKittenPurr(2.6);
+        spawnPetHearts(window.innerWidth / 2 - 80, window.innerHeight / 2 + 60);
+        const catQuotes = [
+          "🐱 呼嚕呼嚕... 慵懶的小貓也在陪你專注呢～",
+          "🐾 輕輕摸摸小貓，身心都被溫柔療癒了！",
+          "🧡 伸個舒服的懶腰，等一下再精神滿滿地出發！🌸",
+        ];
+        const quote = catQuotes[Math.floor(Math.random() * catQuotes.length)];
+        showCompanionBubble(quote, 3400);
       } else {
         companionSound.playAffirmativeNod();
         const nodQuotes = [
@@ -6458,6 +6514,10 @@ function init() {
   const initialCrossfeed = Boolean(store.get().binauralCrossfeed);
   ambientSound.setBinauralCrossfeed(initialCrossfeed);
   syncBinauralCrossfeedUI(initialCrossfeed);
+
+  const initialStereoWidth = Number(store.get().stereoWidth ?? 1.0);
+  ambientSound.setStereoWidth(initialStereoWidth);
+  syncStereoWidthUI(initialStereoWidth);
 
   const autoAtm = store.get().autoAtmosphereSync !== false;
   ambientSound.setAutoAtmosphereSync(autoAtm);

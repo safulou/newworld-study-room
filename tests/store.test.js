@@ -434,15 +434,29 @@ describe("room-scoped store", () => {
     expect(typeof store.get().receivedBookmarks[0].gratitudeSentAt).toBe("string");
   });
 
-  it("sanitizes orbitingBreeze, autoAtmosphereSync, and binauralCrossfeed settings", () => {
+  it("sanitizes orbitingBreeze, autoAtmosphereSync, binauralCrossfeed, and stereoWidth settings", () => {
     const store = createStore({ roomId: "room-h", includeStarterTips: false });
     expect(store.get().orbitingBreeze).toBe(false);
     expect(store.get().autoAtmosphereSync).toBe(true);
     expect(store.get().binauralCrossfeed).toBe(false);
+    expect(store.get().stereoWidth).toBe(1.0);
 
-    store.update({ orbitingBreeze: true, autoAtmosphereSync: false, binauralCrossfeed: true });
+    store.update({
+      orbitingBreeze: true,
+      autoAtmosphereSync: false,
+      binauralCrossfeed: true,
+      stereoWidth: 1.6,
+    });
     expect(store.get().orbitingBreeze).toBe(true);
     expect(store.get().autoAtmosphereSync).toBe(false);
     expect(store.get().binauralCrossfeed).toBe(true);
+    expect(store.get().stereoWidth).toBe(1.6);
+
+    // Clamping bounds [0, 2]
+    store.update({ stereoWidth: 3.5 });
+    expect(store.get().stereoWidth).toBe(2);
+
+    store.update({ stereoWidth: -1.2 });
+    expect(store.get().stereoWidth).toBe(0);
   });
 });

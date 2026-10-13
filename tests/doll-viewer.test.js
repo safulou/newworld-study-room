@@ -417,4 +417,23 @@ describe("drawDollFace", () => {
     expect(fakeViewer.lastFaceMode).toBeNull();
     expect(fakeViewer.triggerBounce).toHaveBeenCalled();
   });
+
+  it("triggers petcat micro-emote with kitten visibility setup, duration, and bounce", () => {
+    const fakeViewer = {
+      currentEmote: null,
+      lastFaceMode: "open",
+      triggerBounce: vi.fn(),
+      catGroup: { visible: false },
+    };
+    fakeViewer.triggerPetCat = DollViewer.prototype.triggerPetCat.bind(fakeViewer);
+
+    fakeViewer.triggerPetCat({ duration: 2600 });
+    expect(fakeViewer.currentEmote).toBeDefined();
+    expect(fakeViewer.currentEmote.type).toBe("petcat");
+    expect(fakeViewer.currentEmote.duration).toBe(2600);
+    expect(fakeViewer.catGroup.visible).toBe(true);
+    expect(fakeViewer.tempCatVisible).toBe(true);
+    expect(fakeViewer.lastFaceMode).toBeNull();
+    expect(fakeViewer.triggerBounce).toHaveBeenCalled();
+  });
 });

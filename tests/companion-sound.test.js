@@ -299,4 +299,88 @@ describe("CompanionSoundManager", () => {
     expect(createdOscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(1180, 70);
     expect(createdOscillators[1].frequency.setValueAtTime).toHaveBeenCalledWith(440, 70);
   });
+
+  it("synthesizes procedural kitten purring in playKittenPurr", () => {
+    expect(() => manager.playKittenPurr(2.0)).not.toThrow();
+
+    const createdOscillators = [];
+    const mockFilter = {
+      type: "",
+      frequency: { setValueAtTime: vi.fn() },
+      Q: { setValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const mockCtx = {
+      currentTime: 80,
+      createGain: vi.fn(() => ({
+        gain: {
+          setValueAtTime: vi.fn(),
+          linearRampToValueAtTime: vi.fn(),
+          exponentialRampToValueAtTime: vi.fn(),
+        },
+        connect: vi.fn(),
+      })),
+      createBiquadFilter: vi.fn(() => mockFilter),
+      createOscillator: vi.fn(() => {
+        const osc = {
+          type: "",
+          frequency: { setValueAtTime: vi.fn() },
+          connect: vi.fn(),
+          start: vi.fn(),
+          stop: vi.fn(),
+        };
+        createdOscillators.push(osc);
+        return osc;
+      }),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playKittenPurr(2.5);
+    // carrier (32Hz) + tremolo LFO (24Hz) + breath LFO (0.6Hz)
+    expect(createdOscillators.length).toBe(3);
+    expect(createdOscillators[0].type).toBe("triangle");
+    expect(createdOscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(32, 80);
+    expect(createdOscillators[1].frequency.setValueAtTime).toHaveBeenCalledWith(24, 80);
+    expect(createdOscillators[2].frequency.setValueAtTime).toHaveBeenCalledWith(0.6, 80);
+    expect(mockFilter.type).toBe("lowpass");
+    expect(mockFilter.frequency.setValueAtTime).toHaveBeenCalledWith(160, 80);
+  });
+
+  it("synthesizes ethereal crystal arpeggio in playButterflyFlutterSound", () => {
+    expect(() => manager.playButterflyFlutterSound()).not.toThrow();
+
+    const createdOscillators = [];
+    const mockCtx = {
+      currentTime: 90,
+      createGain: vi.fn(() => ({
+        gain: {
+          setValueAtTime: vi.fn(),
+          linearRampToValueAtTime: vi.fn(),
+          exponentialRampToValueAtTime: vi.fn(),
+        },
+        connect: vi.fn(),
+      })),
+      createOscillator: vi.fn(() => {
+        const osc = {
+          type: "",
+          frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+          connect: vi.fn(),
+          start: vi.fn(),
+          stop: vi.fn(),
+        };
+        createdOscillators.push(osc);
+        return osc;
+      }),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playButterflyFlutterSound();
+    // 3 crystal notes: 680, 1020, 1360
+    expect(createdOscillators.length).toBe(3);
+    expect(createdOscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(680, 90);
+    expect(createdOscillators[1].frequency.setValueAtTime).toHaveBeenCalledWith(1020, 90 + 0.045);
+    expect(createdOscillators[2].frequency.setValueAtTime).toHaveBeenCalledWith(1360, 90 + 0.09);
+  });
 });

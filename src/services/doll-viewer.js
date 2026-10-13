@@ -498,6 +498,11 @@ export class DollViewer {
     const tail = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.028, 8, 20, Math.PI * 0.9), catMat);
     tail.position.set(-0.76, -1.06, 0.3);
     this.catGroup.add(catBody, catHead, earL, earR, tail);
+    this.catBody = catBody;
+    this.catHead = catHead;
+    this.catEarL = earL;
+    this.catEarR = earR;
+    this.catTail = tail;
     this.catGroup.visible = false;
 
     // 5. Stargazing Brass Telescope on Tripod
@@ -841,7 +846,7 @@ export class DollViewer {
             const emoteChoices =
               this.timerState === "focusing"
                 ? ["wave", "nod", "wish", "stargaze", "pageturn"]
-                : ["wave", "nod", "wish", "stargaze", "coffeesip"];
+                : ["wave", "nod", "wish", "stargaze", "coffeesip", "petcat"];
             const emoteType = emoteChoices[Math.floor(Math.random() * emoteChoices.length)];
             if (emoteType === "wave") {
               this.triggerWave();
@@ -853,6 +858,8 @@ export class DollViewer {
               this.triggerPageTurn();
             } else if (emoteType === "coffeesip") {
               this.triggerCoffeeSip();
+            } else if (emoteType === "petcat") {
+              this.triggerPetCat();
             } else {
               this.triggerStargaze();
             }
@@ -1002,6 +1009,20 @@ export class DollViewer {
     }
     this.currentEmote = {
       type: "coffeesip",
+      startTime: performance.now(),
+      duration: Math.max(800, duration),
+    };
+    this.lastFaceMode = null;
+    this.triggerBounce();
+  }
+
+  triggerPetCat({ duration = 2600 } = {}) {
+    if (!this.catGroup?.visible) {
+      if (this.catGroup) this.catGroup.visible = true;
+      this.tempCatVisible = true;
+    }
+    this.currentEmote = {
+      type: "petcat",
       startTime: performance.now(),
       duration: Math.max(800, duration),
     };
@@ -1647,6 +1668,36 @@ export class DollViewer {
           this.head.rotation.y = p * 0.08;
           this.head.rotation.z = -p * 0.04;
         }
+      } else if (emote.type === "petcat") {
+        const progress = Math.min(1, elapsedEmote / (emote.duration / 1000));
+        const stretchPhase = Math.sin(progress * Math.PI);
+        const p = stretchPhase * stretchPhase * (3 - 2 * stretchPhase);
+        // Companion leans forward & downward to gently pet kitten with left arm
+        if (this.arms && this.arms.length === 2) {
+          this.arms[0].rotation.set(0.62 * p, 0.22 * p, -0.22 * p);
+          this.arms[1].rotation.set(0.18 * p, -0.12 * p, 0.38);
+        }
+        if (this.head) {
+          this.head.rotation.x = 0.22 * p;
+          this.head.rotation.y = -0.32 * p;
+          this.head.rotation.z = -0.06 * p;
+        }
+        // Kitten arches back in comfortable stretch & lifts head up affectionately
+        if (this.catBody) {
+          this.catBody.scale.set(1.25 - p * 0.12, 0.8 + p * 0.32, 1.0);
+        }
+        if (this.catHead) {
+          this.catHead.position.set(-0.52, -0.96 + p * 0.08, 0.42 + p * 0.04);
+          this.catHead.rotation.x = -p * 0.28;
+        }
+        if (this.catEarL && this.catEarR) {
+          this.catEarL.rotation.z = -0.2 - p * 0.18;
+          this.catEarR.rotation.z = 0.2 + p * 0.18;
+        }
+        if (this.catTail) {
+          this.catTail.rotation.x = p * 0.55;
+          this.catTail.rotation.z = Math.sin(elapsedEmote * 7) * (0.2 + p * 0.35);
+        }
       }
     } else if (this.celebrationStartTime && performance.now() - this.celebrationStartTime < 6000) {
       const wave = Math.sin(elapsed * 9) * 0.38;
@@ -1715,6 +1766,29 @@ export class DollViewer {
       this.tempCoffeeVisible = false;
       if (this.coffeeGroup && !this.accessories?.coffee) {
         this.coffeeGroup.visible = false;
+      }
+    }
+
+    if (this.catGroup && (!this.currentEmote || this.currentEmote.type !== "petcat")) {
+      if (this.catBody) {
+        const breathe = !this.reducedMotion && this.catGroup.visible ? Math.sin(elapsed * 1.2) * 0.025 : 0;
+        this.catBody.scale.set(1.25, 0.8 + breathe, 1.0);
+      }
+      if (this.catHead) {
+        this.catHead.position.set(-0.52, -0.96, 0.42);
+        this.catHead.rotation.set(0, 0, 0);
+      }
+      if (this.catEarL) this.catEarL.rotation.set(0, 0, -0.2);
+      if (this.catEarR) this.catEarR.rotation.set(0, 0, 0.2);
+      if (this.catTail) {
+        const tailSway = !this.reducedMotion && this.catGroup.visible ? Math.sin(elapsed * 1.5) * 0.14 : 0;
+        this.catTail.rotation.set(0, 0, tailSway);
+      }
+    }
+    if (this.tempCatVisible && (!this.currentEmote || this.currentEmote.type !== "petcat")) {
+      this.tempCatVisible = false;
+      if (this.catGroup && !this.accessories?.cat) {
+        this.catGroup.visible = false;
       }
     }
 

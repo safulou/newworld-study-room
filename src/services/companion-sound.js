@@ -839,4 +839,100 @@ export class CompanionSoundManager {
     oscBody.start(now);
     oscBody.stop(now + 0.12);
   }
+
+  /**
+   * Play a procedural kitten purring sound (ASMR purr)
+   * Deep sub-bass triangle wave at ~32Hz modulated by a 24Hz tremolo LFO and 0.6Hz breathing cycle
+   * Filtered through a warm 160Hz lowpass filter to mimic cat chest vibration.
+   */
+  playKittenPurr(duration = 2.4) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const dur = Math.max(0.6, duration);
+
+    // Carrier: Warm sub-bass triangle wave (32Hz)
+    const carrier = ctx.createOscillator();
+    carrier.type = "triangle";
+    carrier.frequency.setValueAtTime(32, now);
+
+    // Lowpass filter to muffle harsh harmonics and retain deep chest resonance
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(160, now);
+    filter.Q.setValueAtTime(1.2, now);
+
+    // Tremolo LFO for rapid throat motor flutter (~24Hz)
+    const tremoloLFO = ctx.createOscillator();
+    tremoloLFO.type = "sine";
+    tremoloLFO.frequency.setValueAtTime(24, now);
+
+    const tremoloGain = ctx.createGain();
+    tremoloGain.gain.setValueAtTime(0.45, now);
+
+    // Respiration LFO for gentle inhale/exhale swell (~0.6Hz)
+    const breathLFO = ctx.createOscillator();
+    breathLFO.type = "sine";
+    breathLFO.frequency.setValueAtTime(0.6, now);
+
+    const breathGain = ctx.createGain();
+    breathGain.gain.setValueAtTime(0.2, now);
+
+    // Master purr gain with smooth fade-in and fade-out envelope
+    const masterPurrGain = ctx.createGain();
+    const peakGain = 0.28 * this.volume;
+    masterPurrGain.gain.setValueAtTime(0.0001, now);
+    masterPurrGain.gain.linearRampToValueAtTime(peakGain, now + 0.3);
+    masterPurrGain.gain.setValueAtTime(peakGain, now + dur - 0.4);
+    masterPurrGain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+    // Wire up modulation: Carrier -> Filter -> masterPurrGain -> Destination
+    tremoloLFO.connect(tremoloGain);
+    breathLFO.connect(breathGain);
+    tremoloGain.connect(masterPurrGain.gain);
+    breathGain.connect(masterPurrGain.gain);
+
+    carrier.connect(filter);
+    filter.connect(masterPurrGain);
+    masterPurrGain.connect(ctx.destination);
+
+    carrier.start(now);
+    tremoloLFO.start(now);
+    breathLFO.start(now);
+
+    carrier.stop(now + dur + 0.05);
+    tremoloLFO.stop(now + dur + 0.05);
+    breathLFO.stop(now + dur + 0.05);
+  }
+
+  /**
+   * Play an ethereal micro-arpeggio chime when a butterfly flutters off a bloom
+   * Delicate crystal notes in ascending triad (680Hz -> 1020Hz -> 1360Hz) with rapid sparkling decay
+   */
+  playButterflyFlutterSound() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const notes = [680, 1020, 1360];
+
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      const startTime = now + idx * 0.045;
+      const decay = 0.22;
+      osc.frequency.setValueAtTime(freq, startTime);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.05, startTime + decay);
+
+      const notePeak = (0.12 / (idx + 1)) * this.volume;
+      gain.gain.setValueAtTime(0.0001, startTime);
+      gain.gain.linearRampToValueAtTime(notePeak, startTime + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + decay);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + decay + 0.02);
+    });
+  }
 }

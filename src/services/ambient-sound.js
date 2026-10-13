@@ -286,6 +286,8 @@ export class AmbientSoundscapeManager {
     this.binauralCrossfeed = false;
     this.masterSumGain = null;
     this.crossfeedNodes = null;
+    this.stereoWidth = 1.0;
+    this.stereoWidthNodes = null;
     this.sleepTimerRemainingSec = 0;
     this.sleepTimerDurationSec = 0;
     this.sleepTimerInterval = null;
@@ -401,6 +403,32 @@ export class AmbientSoundscapeManager {
     return Boolean(this.binauralCrossfeed);
   }
 
+  setStereoWidth(widthFactor) {
+    const clamped = Math.max(0, Math.min(2, Number(widthFactor ?? 1.0) || 0));
+    this.stereoWidth = clamped;
+
+    if (this.stereoWidthNodes && this.audioCtx) {
+      const cd = (1 + clamped) / 2;
+      const cc = (1 - clamped) / 2;
+      const now = this.audioCtx.currentTime;
+      try {
+        this.stereoWidthNodes.gainLL.gain.setValueAtTime(cd, now);
+        this.stereoWidthNodes.gainRR.gain.setValueAtTime(cd, now);
+        this.stereoWidthNodes.gainLR.gain.setValueAtTime(cc, now);
+        this.stereoWidthNodes.gainRL.gain.setValueAtTime(cc, now);
+      } catch {
+        this.updateOutputRouting();
+      }
+    } else {
+      this.updateOutputRouting();
+    }
+    return this.stereoWidth;
+  }
+
+  getStereoWidth() {
+    return this.stereoWidth;
+  }
+
   updateOutputRouting() {
     const targetSource = this.masterSumGain || this.masterGain;
     if (!this.audioCtx || !targetSource || !this.audioCtx.destination) return;
@@ -409,6 +437,13 @@ export class AmbientSoundscapeManager {
       targetSource.disconnect();
     } catch {}
 
+    if (this.stereoWidthNodes) {
+      try {
+        this.stereoWidthNodes.merger.disconnect();
+      } catch {}
+      this.stereoWidthNodes = null;
+    }
+
     if (this.crossfeedNodes) {
       try {
         this.crossfeedNodes.merger.disconnect();
@@ -416,6 +451,58 @@ export class AmbientSoundscapeManager {
       this.crossfeedNodes = null;
     }
 
+    let currentOut = targetSource;
+
+    // 1. Stereo Width Imager Stage (Mid-Side Matrix)
+    const needsStereoWidth =
+      Math.abs(this.stereoWidth - 1.0) > 0.001 &&
+      typeof this.audioCtx.createChannelSplitter === "function" &&
+      typeof this.audioCtx.createChannelMerger === "function";
+
+    if (needsStereoWidth) {
+      try {
+        const splitter = this.audioCtx.createChannelSplitter(2);
+        const merger = this.audioCtx.createChannelMerger(2);
+        const cd = (1 + this.stereoWidth) / 2;
+        const cc = (1 - this.stereoWidth) / 2;
+
+        const gainLL = this.audioCtx.createGain();
+        const gainLR = this.audioCtx.createGain();
+        const gainRL = this.audioCtx.createGain();
+        const gainRR = this.audioCtx.createGain();
+
+        gainLL.gain.value = cd;
+        gainRR.gain.value = cd;
+        gainLR.gain.value = cc;
+        gainRL.gain.value = cc;
+
+        currentOut.connect(splitter);
+
+        splitter.connect(gainLL, 0);
+        splitter.connect(gainLR, 0);
+        splitter.connect(gainRL, 1);
+        splitter.connect(gainRR, 1);
+
+        gainLL.connect(merger, 0, 0);
+        gainRL.connect(merger, 0, 0);
+        gainLR.connect(merger, 0, 1);
+        gainRR.connect(merger, 0, 1);
+
+        this.stereoWidthNodes = {
+          splitter,
+          merger,
+          gainLL,
+          gainLR,
+          gainRL,
+          gainRR,
+        };
+        currentOut = merger;
+      } catch {
+        // Fallback on limitation
+      }
+    }
+
+    // 2. Binaural Crossfeed Stage
     if (
       this.binauralCrossfeed &&
       typeof this.audioCtx.createChannelSplitter === "function" &&
@@ -458,7 +545,7 @@ export class AmbientSoundscapeManager {
         const crossGainR = this.audioCtx.createGain();
         crossGainR.gain.value = 0.58;
 
-        targetSource.connect(splitter);
+        currentOut.connect(splitter);
 
         // Left channel splits into direct Left output and delayed crossfeed to Right ear
         splitter.connect(directL, 0);
@@ -478,7 +565,6 @@ export class AmbientSoundscapeManager {
         delayR.connect(crossGainR);
         crossGainR.connect(merger, 0, 0);
 
-        merger.connect(this.audioCtx.destination);
         this.crossfeedNodes = {
           splitter,
           merger,
@@ -491,14 +577,14 @@ export class AmbientSoundscapeManager {
           crossGainL,
           crossGainR,
         };
-        return;
+        currentOut = merger;
       } catch {
         // Fallback to direct routing if any node creation fails
       }
     }
 
     try {
-      targetSource.connect(this.audioCtx.destination);
+      currentOut.connect(this.audioCtx.destination);
     } catch {}
   }
 

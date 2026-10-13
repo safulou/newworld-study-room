@@ -690,4 +690,58 @@ describe("AmbientSoundscapeManager", () => {
     expect(manager.isBinauralCrossfeed()).toBe(false);
     expect(mockSumGain.connect).toHaveBeenCalledWith(mockCtx.destination);
   });
+
+  it("configures and updates stereo width via Mid-Side matrix", () => {
+    const manager = new AmbientSoundscapeManager();
+    expect(manager.getStereoWidth()).toBe(1.0);
+
+    // Clamping bounds
+    manager.setStereoWidth(2.5);
+    expect(manager.getStereoWidth()).toBe(2.0);
+
+    manager.setStereoWidth(-0.5);
+    expect(manager.getStereoWidth()).toBe(0.0);
+
+    manager.setStereoWidth(1.4);
+    expect(manager.getStereoWidth()).toBe(1.4);
+
+    const mockSplitter = { connect: vi.fn(), disconnect: vi.fn() };
+    const mockMerger = { connect: vi.fn(), disconnect: vi.fn() };
+    const createdGains = [];
+    const mockCtx = {
+      currentTime: 50,
+      destination: {},
+      createChannelSplitter: vi.fn(() => mockSplitter),
+      createChannelMerger: vi.fn(() => mockMerger),
+      createGain: vi.fn(() => {
+        const g = {
+          gain: { value: 1, setValueAtTime: vi.fn() },
+          connect: vi.fn(),
+          disconnect: vi.fn(),
+        };
+        createdGains.push(g);
+        return g;
+      }),
+    };
+    manager.audioCtx = mockCtx;
+    const mockSumGain = { disconnect: vi.fn(), connect: vi.fn() };
+    manager.masterSumGain = mockSumGain;
+
+    // Set width to 1.5 (cd = 1.25, cc = -0.25)
+    manager.setStereoWidth(1.5);
+    expect(mockCtx.createChannelSplitter).toHaveBeenCalledWith(2);
+    expect(mockCtx.createChannelMerger).toHaveBeenCalledWith(2);
+    // 4 gains: LL, LR, RL, RR
+    expect(createdGains.length).toBe(4);
+    expect(createdGains[0].gain.value).toBe(1.25); // LL
+    expect(createdGains[1].gain.value).toBe(-0.25); // LR
+    expect(createdGains[2].gain.value).toBe(-0.25); // RL
+    expect(createdGains[3].gain.value).toBe(1.25); // RR
+    expect(mockMerger.connect).toHaveBeenCalledWith(mockCtx.destination);
+
+    // Dynamic runtime update without reconnecting when nodes exist
+    manager.setStereoWidth(0.0); // Mono (cd = 0.5, cc = 0.5)
+    expect(createdGains[0].gain.setValueAtTime).toHaveBeenCalledWith(0.5, 50);
+    expect(createdGains[1].gain.setValueAtTime).toHaveBeenCalledWith(0.5, 50);
+  });
 });

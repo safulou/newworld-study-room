@@ -134,6 +134,16 @@
               <span class="dew-drop dew-drop-2"></span>
               <span class="dew-drop dew-drop-3"></span>
             </div>
+            <div class="garden-butterfly" id="gardenButterfly" aria-hidden="true" title="花間彩蝶">
+              <div class="butterfly-wings">
+                <span class="butterfly-wing wing-left"></span>
+                <span class="butterfly-wing wing-right"></span>
+              </div>
+              <div class="pollen-trail">
+                <span class="pollen-dot pollen-1"></span>
+                <span class="pollen-dot pollen-2"></span>
+              </div>
+            </div>
             <span class="garden-ground" aria-hidden="true"></span>
             <span class="garden-status" id="gardenStatus" aria-live="polite">玫瑰 · 種子</span>
             <button
@@ -1900,6 +1910,26 @@
           >
             📱 陀螺儀：關
           </button>
+        </div>
+        <div class="soundstage-stereo-width-row">
+          <div class="stereo-width-label-group">
+            <span class="stereo-width-label">🌐 立體聲音場寬度：</span>
+            <span class="stereo-width-badge" id="stereoWidthBadge">100% · 自然立體</span>
+          </div>
+          <div class="stereo-width-slider-wrap">
+            <span class="slider-end-label">0% 聚焦</span>
+            <input
+              type="range"
+              id="stereoWidthSlider"
+              class="stereo-width-slider"
+              min="0"
+              max="2"
+              step="0.05"
+              value="1"
+              aria-label="立體聲音場寬度"
+            />
+            <span class="slider-end-label">200% 環繞</span>
+          </div>
         </div>
         <div class="soundstage-radar-wrap">
           <canvas id="soundstageCanvas" width="560" height="420" class="soundstage-canvas"></canvas>
