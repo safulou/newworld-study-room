@@ -47,6 +47,7 @@ const profileDefaults = {
     coffee: false,
     cat: false,
     telescope: false,
+    lantern: false,
   },
   ambientMode: "auto",
   desktopNotifications: false,
@@ -205,6 +206,8 @@ function sanitizeProfile(value = {}) {
     crown: Boolean(value.accessories?.crown),
     coffee: Boolean(value.accessories?.coffee),
     cat: Boolean(value.accessories?.cat),
+    telescope: Boolean(value.accessories?.telescope),
+    lantern: Boolean(value.accessories?.lantern),
   };
   const ambientMode = ["auto", "day", "dusk", "night"].includes(value.ambientMode) ? value.ambientMode : "auto";
   const heatmapTheme = ["emerald", "amber", "cyber", "ocean"].includes(value.heatmapTheme)

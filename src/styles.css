@@ -7267,6 +7267,37 @@ body[data-timer-mode="longBreak"] {
   font-weight: 600;
 }
 
+.soundstage-gyro-btn {
+  margin-left: auto;
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+}
+
+.soundstage-gyro-btn:hover {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: #38bdf8;
+  color: #7dd3fc;
+}
+
+.soundstage-gyro-btn.active {
+  background: rgba(56, 189, 248, 0.22);
+  border-color: #38bdf8;
+  color: #38bdf8;
+  font-weight: 600;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+  animation: gyro-pulse 2s infinite ease-in-out;
+}
+
+@keyframes gyro-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 6px rgba(56, 189, 248, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(56, 189, 248, 0.55);
+  }
+}
+
 .soundstage-radar-wrap {
   display: flex;
   flex-direction: column;

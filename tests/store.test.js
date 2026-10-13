@@ -63,6 +63,18 @@ describe("room-scoped store", () => {
     expect(store.get().posterTheme).toBe("midnight");
   });
 
+  it("initializes default accessories including lantern and telescope", () => {
+    const store = createStore({ roomId: "room-a", includeStarterTips: false });
+    expect(store.get().accessories).toEqual({
+      glasses: false,
+      crown: false,
+      coffee: false,
+      cat: false,
+      telescope: false,
+      lantern: false,
+    });
+  });
+
   it("persists outbox delivery state", () => {
     const store = createStore({ roomId: "room-a", includeStarterTips: false });
     store.addTip(tip, "outgoing");

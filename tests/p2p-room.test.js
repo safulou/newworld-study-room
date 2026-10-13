@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { P2PRoom, p2pInternals } from "../src/services/p2p-room.js";
 
 describe("P2P protocol validation", () => {
@@ -262,5 +262,54 @@ describe("P2P protocol validation", () => {
     room.removeConnection({ peer: "peer-1" });
     expect(room.getFocusingPeerCount()).toBe(1);
     expect(room.getFocusingPeers()).toEqual([{ peerId: "peer-2", by: "Bob", status: "focusing" }]);
+  });
+
+  it("validates weather-sync payload and constructs broadcast message", () => {
+    expect(p2pInternals.isWeatherSync).toBeDefined();
+    expect(p2pInternals.VALID_WEATHER_MODES).toContain("fireflies");
+    expect(p2pInternals.VALID_WEATHER_MODES).toContain("rain");
+
+    expect(
+      p2pInternals.isWeatherSync({
+        type: "weather-sync",
+        mode: "fireflies",
+        by: "Arsen",
+      }),
+    ).toBe(true);
+
+    // Invalid mode
+    expect(
+      p2pInternals.isWeatherSync({
+        type: "weather-sync",
+        mode: "tornado",
+        by: "Arsen",
+      }),
+    ).toBe(false);
+
+    // Empty or too long author
+    expect(
+      p2pInternals.isWeatherSync({
+        type: "weather-sync",
+        mode: "rain",
+        by: "",
+      }),
+    ).toBe(false);
+
+    expect(
+      p2pInternals.isWeatherSync({
+        type: "weather-sync",
+        mode: "rain",
+        by: "A".repeat(20),
+      }),
+    ).toBe(false);
+
+    // sendWeatherSync host broadcast test
+    const room = new P2PRoom({ role: "host", getSnapshot: () => ({ tips: [] }) });
+    room.broadcast = vi.fn();
+    const msg = room.sendWeatherSync({ mode: "fireflies", nickname: "房主小森" });
+    expect(msg.type).toBe("weather-sync");
+    expect(msg.mode).toBe("fireflies");
+    expect(msg.by).toBe("房主小森");
+    expect(room.broadcast).toHaveBeenCalledWith(msg);
   });
 });

@@ -526,12 +526,80 @@ export class DollViewer {
     this.telescopeGroup.add(tubeAssembly, tripodHub, leg1, leg2, leg3);
     this.telescopeGroup.visible = false;
 
+    // 6. Bioluminescent Mason Jar Lantern ("lantern")
+    this.lanternGroup = new THREE.Group();
+    this.lanternGroup.position.set(-0.76, -0.92, 0.42);
+
+    const glassMat = new THREE.MeshStandardMaterial({
+      color: 0xbae6fd,
+      transparent: true,
+      opacity: 0.38,
+      roughness: 0.15,
+      metalness: 0.1,
+    });
+    const corkMat = new THREE.MeshStandardMaterial({
+      color: 0x855430,
+      roughness: 0.85,
+    });
+    const copperMat = new THREE.MeshStandardMaterial({
+      color: 0xb45309,
+      metalness: 0.8,
+      roughness: 0.3,
+    });
+
+    const jarBody = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.26, 18), glassMat);
+    jarBody.position.y = 0.13;
+    const jarNeck = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 0.05, 18), glassMat);
+    jarNeck.position.y = 0.28;
+    const jarCork = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.088, 0.06, 16), corkMat);
+    jarCork.position.y = 0.33;
+    const copperBand = new THREE.Mesh(new THREE.TorusGeometry(0.092, 0.012, 6, 20), copperMat);
+    copperBand.position.y = 0.29;
+    const wireHandle = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.01, 6, 20, Math.PI), copperMat);
+    wireHandle.position.y = 0.35;
+    wireHandle.rotation.z = Math.PI / 2;
+
+    this.lanternGroup.add(jarBody, jarNeck, jarCork, copperBand, wireHandle);
+
+    this.jarFireflies = [];
+    const ffCoords = [
+      { x: -0.03, y: 0.1, z: 0.02, speed: 1.2, phase: 0.0 },
+      { x: 0.04, y: 0.15, z: -0.02, speed: 1.5, phase: 2.1 },
+      { x: -0.01, y: 0.19, z: 0.03, speed: 1.0, phase: 4.3 },
+    ];
+
+    ffCoords.forEach((coord) => {
+      const ffMat = new THREE.MeshStandardMaterial({
+        color: 0xfffbeb,
+        emissive: 0xd9f99d,
+        emissiveIntensity: 2.2,
+        roughness: 0.2,
+      });
+      const ffMesh = new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), ffMat);
+      ffMesh.position.set(coord.x, coord.y, coord.z);
+      this.lanternGroup.add(ffMesh);
+      this.jarFireflies.push({
+        mesh: ffMesh,
+        baseX: coord.x,
+        baseY: coord.y,
+        baseZ: coord.z,
+        speed: coord.speed,
+        phase: coord.phase,
+      });
+    });
+
+    this.lanternLight = new THREE.PointLight(0xd9f99d, 0, 1.2);
+    this.lanternLight.position.set(0, 0.15, 0);
+    this.lanternGroup.add(this.lanternLight);
+    this.lanternGroup.visible = false;
+
     this.customAccessories.add(
       this.glassesGroup,
       this.crownGroup,
       this.coffeeGroup,
       this.catGroup,
       this.telescopeGroup,
+      this.lanternGroup,
     );
     this.doll.add(this.customAccessories);
 
@@ -1067,12 +1135,21 @@ export class DollViewer {
     this.camera.updateProjectionMatrix();
   }
 
-  setAccessories({ glasses = false, crown = false, coffee = false, cat = false, telescope = false } = {}) {
+  setAccessories({
+    glasses = false,
+    crown = false,
+    coffee = false,
+    cat = false,
+    telescope = false,
+    lantern = false,
+  } = {}) {
     if (this.glassesGroup) this.glassesGroup.visible = Boolean(glasses);
     if (this.crownGroup) this.crownGroup.visible = Boolean(crown);
     if (this.coffeeGroup) this.coffeeGroup.visible = Boolean(coffee);
     if (this.catGroup) this.catGroup.visible = Boolean(cat);
     if (this.telescopeGroup) this.telescopeGroup.visible = Boolean(telescope);
+    if (this.lanternGroup) this.lanternGroup.visible = Boolean(lantern);
+    if (this.lanternLight) this.lanternLight.intensity = lantern ? 0.85 : 0;
   }
 
   setAffinityAura(auraType = "none") {
@@ -1511,6 +1588,25 @@ export class DollViewer {
       const lensColor = isStargaze ? 0xbbf0ff : 0x90caf9;
       if (this.telescopeLens.material?.color?.setHex) {
         this.telescopeLens.material.color.setHex(lensColor);
+      }
+    }
+
+    if (this.jarFireflies && this.lanternGroup?.visible && !this.reducedMotion) {
+      const isWish = this.currentEmote?.type === "wish";
+      const glowBoost = isWish ? 1.6 : 1.0;
+      this.jarFireflies.forEach((ff, idx) => {
+        const t = elapsed * ff.speed + ff.phase;
+        ff.mesh.position.x = ff.baseX + Math.sin(t * 1.3) * 0.035;
+        ff.mesh.position.y = ff.baseY + Math.cos(t * 1.8) * 0.045;
+        ff.mesh.position.z = ff.baseZ + Math.sin(t * 1.1 + idx) * 0.035;
+        if (ff.mesh.material && ff.mesh.material.emissiveIntensity !== undefined) {
+          const pulse = (Math.sin(t * 2.5) * 0.5 + 0.5) * glowBoost;
+          ff.mesh.material.emissiveIntensity = 1.6 + pulse * 1.8;
+        }
+      });
+      if (this.lanternLight) {
+        const pulse = Math.sin(elapsed * 2.8) * 0.2 + 0.8;
+        this.lanternLight.intensity = (isWish ? 1.3 : 0.85) * pulse;
       }
     }
 

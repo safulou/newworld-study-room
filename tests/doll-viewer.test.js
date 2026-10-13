@@ -329,23 +329,29 @@ describe("drawDollFace", () => {
     expect(fakeViewer.currentEmote.direction).toBe(1.0);
   });
 
-  it("manages accessories visibility including telescope", () => {
+  it("manages accessories visibility including telescope and lantern", () => {
     const fakeViewer = {
       glassesGroup: { visible: false },
       crownGroup: { visible: false },
       coffeeGroup: { visible: false },
       catGroup: { visible: false },
       telescopeGroup: { visible: false },
+      lanternGroup: { visible: false },
+      lanternLight: { intensity: 0 },
     };
     fakeViewer.setAccessories = DollViewer.prototype.setAccessories.bind(fakeViewer);
 
-    fakeViewer.setAccessories({ glasses: true, telescope: true });
+    fakeViewer.setAccessories({ glasses: true, telescope: true, lantern: true });
     expect(fakeViewer.glassesGroup.visible).toBe(true);
     expect(fakeViewer.crownGroup.visible).toBe(false);
     expect(fakeViewer.telescopeGroup.visible).toBe(true);
+    expect(fakeViewer.lanternGroup.visible).toBe(true);
+    expect(fakeViewer.lanternLight.intensity).toBeGreaterThan(0);
 
-    fakeViewer.setAccessories({ telescope: false });
+    fakeViewer.setAccessories({ telescope: false, lantern: false });
     expect(fakeViewer.telescopeGroup.visible).toBe(false);
+    expect(fakeViewer.lanternGroup.visible).toBe(false);
+    expect(fakeViewer.lanternLight.intensity).toBe(0);
   });
 
   it("triggers stargaze micro-emote with duration and bounce, detecting telescope", () => {

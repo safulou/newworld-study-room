@@ -299,7 +299,8 @@ const elements = {
   btnCloseSoundstage: $("#btnCloseSoundstage"),
   soundstageCanvas: $("#soundstageCanvas"),
   soundstagePresetPills: [...document.querySelectorAll(".soundstage-preset-pill")],
-  soundstageRotButtons: [...document.querySelectorAll(".soundstage-rot-btn")],
+  soundstageRotButtons: [...document.querySelectorAll(".soundstage-rot-btn:not(.soundstage-gyro-btn)")],
+  btnToggleSoundstageGyro: $("#btnToggleSoundstageGyro"),
   btnToggleDistanceDamping: $("#btnToggleDistanceDamping"),
   btnSaveSoundstagePreset: $("#btnSaveSoundstagePreset"),
   btnGiftBookmarkToPeers: $("#btnGiftBookmarkToPeers"),
@@ -3245,9 +3246,83 @@ function bindSoundstageModal() {
   canvas.addEventListener("pointerup", onPointerUp);
   canvas.addEventListener("pointercancel", onPointerUp);
 
+  let isGyroTracking = false;
+  let gyroHandler = null;
+
+  function stopGyroTracking() {
+    if (!isGyroTracking) return;
+    isGyroTracking = false;
+    if (gyroHandler) {
+      window.removeEventListener("deviceorientation", gyroHandler);
+      gyroHandler = null;
+    }
+    if (elements.btnToggleSoundstageGyro) {
+      elements.btnToggleSoundstageGyro.classList.remove("active");
+      elements.btnToggleSoundstageGyro.textContent = "📱 陀螺儀：關";
+    }
+  }
+
+  async function startGyroTracking() {
+    if (typeof window === "undefined" || !("DeviceOrientationEvent" in window)) {
+      showToast("此裝置或瀏覽器不支援陀螺儀感應器 📱");
+      return;
+    }
+
+    if (typeof DeviceOrientationEvent.requestPermission === "function") {
+      try {
+        const permission = await DeviceOrientationEvent.requestPermission();
+        if (permission !== "granted") {
+          showToast("未授予陀螺儀感應權限");
+          return;
+        }
+      } catch {
+        showToast("無法獲取陀螺儀感應權限");
+        return;
+      }
+    }
+
+    isGyroTracking = true;
+    elements.btnToggleSoundstageGyro?.classList.add("active");
+    if (elements.btnToggleSoundstageGyro) {
+      elements.btnToggleSoundstageGyro.textContent = "📱 陀螺儀：開";
+    }
+    elements.soundstageRotButtons?.forEach((b) => b.classList.remove("active"));
+
+    let lastUpdate = 0;
+    gyroHandler = (e) => {
+      const now = performance.now();
+      if (now - lastUpdate < 40) return;
+      lastUpdate = now;
+
+      let heading = 0;
+      if (typeof e.webkitCompassHeading === "number") {
+        heading = e.webkitCompassHeading;
+      } else if (typeof e.alpha === "number") {
+        heading = 360 - e.alpha;
+      }
+      let rad = ((heading % 360) * Math.PI) / 180;
+      if (rad > Math.PI) rad -= Math.PI * 2;
+      ambientSound.setStageRotation(rad);
+      renderSoundstage();
+    };
+
+    window.addEventListener("deviceorientation", gyroHandler, { passive: true });
+    showToast("🧭 已開啟動態陀螺儀追蹤，轉動裝置即可實時變換聲場方位！");
+  }
+
+  elements.btnToggleSoundstageGyro?.addEventListener("click", () => {
+    if (isGyroTracking) {
+      stopGyroTracking();
+      showToast("已停止陀螺儀動態追蹤");
+    } else {
+      startGyroTracking();
+    }
+  });
+
   elements.soundstageRotButtons?.forEach((btn) => {
     btn.addEventListener("click", () => {
-      const rot = parseFloat(btn.dataset.rotation || "0");
+      stopGyroTracking();
+      const rot = parseFloat(btn.dataset.rot ?? btn.dataset.rotation ?? "0");
       ambientSound.setStageRotation(rot);
       elements.soundstageRotButtons.forEach((b) => b.classList.toggle("active", b === btn));
       const dominantPan = ambientSound.getDominantTrackPan();
@@ -3261,7 +3336,7 @@ function bindSoundstageModal() {
     elements.soundstageModal?.showModal();
     const currentRot = ambientSound.getStageRotation ? ambientSound.getStageRotation() : 0;
     elements.soundstageRotButtons?.forEach((btn) => {
-      const rot = parseFloat(btn.dataset.rotation || "0");
+      const rot = parseFloat(btn.dataset.rot ?? btn.dataset.rotation ?? "0");
       btn.classList.toggle("active", Math.abs(rot - currentRot) < 0.05);
     });
     renderSoundstage();
@@ -3271,17 +3346,20 @@ function bindSoundstageModal() {
   elements.btnCloseSoundstage?.addEventListener("click", () => {
     elements.soundstageModal?.close();
     stopSoundstageAnimation();
+    stopGyroTracking();
   });
 
   elements.soundstageModal?.addEventListener("click", (e) => {
     if (e.target === elements.soundstageModal) {
       elements.soundstageModal.close();
       stopSoundstageAnimation();
+      stopGyroTracking();
     }
   });
 
   elements.soundstageModal?.addEventListener("close", () => {
     stopSoundstageAnimation();
+    stopGyroTracking();
   });
 
   elements.soundstagePresetPills?.forEach((pill) => {
@@ -3696,10 +3774,19 @@ function bindAtmosphere() {
   elements.toggleAtmosphere?.addEventListener("click", cycleMode);
   elements.windowCelestial?.addEventListener("click", cycleMode);
 
+  function broadcastWeatherIfConnected(mode) {
+    if (p2p && (p2p.connections?.size > 0 || p2p.role === "guest")) {
+      const validModes = ["clear", "rain", "snow", "leaves", "stars", "fireflies"];
+      const targetMode = validModes.includes(mode) ? mode : weatherEngine?.currentMode || "clear";
+      p2p.sendWeatherSync({ mode: targetMode, nickname: store.get().nickname });
+    }
+  }
+
   // Manual weather scene switching
   elements.windowWeather?.addEventListener("change", (e) => {
     store.update({ windowWeather: e.target.value });
     syncWeatherAtmosphere();
+    broadcastWeatherIfConnected(e.target.value);
   });
 
   elements.weatherChips?.forEach((chip) => {
@@ -3708,6 +3795,7 @@ function bindAtmosphere() {
       if (!mode) return;
       store.update({ windowWeather: mode });
       syncWeatherAtmosphere();
+      broadcastWeatherIfConnected(mode);
       const names = {
         auto: "✨ 自動智能連動",
         rain: "🌧️ 窗外細雨",
@@ -3729,6 +3817,7 @@ function bindAtmosphere() {
     const next = weatherModes[nextIdx];
     store.update({ windowWeather: next });
     syncWeatherAtmosphere();
+    broadcastWeatherIfConnected(next);
     const names = {
       auto: "✨ 自動智能連動",
       rain: "🌧️ 窗外細雨",
@@ -3780,6 +3869,7 @@ function bindAccessories() {
         coffee: "暖心熱咖啡",
         cat: "伴讀小貓",
         telescope: "觀星黃銅望遠鏡",
+        lantern: "夏夜螢火微光瓶",
       };
       showToast(`${next[acc] ? "已為玩偶佩戴" : "已卸下"}${labels[acc] || acc}。`);
     });
@@ -5207,6 +5297,23 @@ async function startP2P() {
     } else {
       showToast(`📻 ${author} 正在廣播「${soundscapeName}」音景，可至設定開啟自動同步`);
     }
+  });
+  p2p.addEventListener("weather-sync", (event) => {
+    const detail = event.detail;
+    if (!detail) return;
+    const author = detail.by || "夥伴";
+    const mode = detail.mode || "clear";
+    const names = {
+      auto: "✨ 自動智能連動",
+      rain: "🌧️ 窗外細雨",
+      snow: "❄️ 冬日落雪",
+      leaves: "🍂 飄零落葉",
+      clear: "🌌 晴空星塵",
+      fireflies: "✨ 仲夏螢火",
+    };
+    store.update({ windowWeather: mode });
+    syncWeatherAtmosphere();
+    showToast(`🌤️ ${author} 已將小木屋窗景同步為「${names[mode] || mode}」`);
   });
   p2p.addEventListener("presence", () => {
     if (p2p.role === "host") {

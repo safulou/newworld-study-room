@@ -81,6 +81,20 @@ function isSoundscapeSync(msg) {
   );
 }
 
+const VALID_WEATHER_MODES = ["clear", "rain", "snow", "leaves", "stars", "fireflies"];
+
+function isWeatherSync(msg) {
+  return Boolean(
+    msg &&
+    msg.type === "weather-sync" &&
+    typeof msg.mode === "string" &&
+    VALID_WEATHER_MODES.includes(msg.mode) &&
+    typeof msg.by === "string" &&
+    msg.by.length > 0 &&
+    msg.by.length <= 18,
+  );
+}
+
 function isBookmarkGift(msg) {
   return Boolean(
     msg &&
@@ -367,6 +381,13 @@ export class P2PRoom extends EventTarget {
       }
       return;
     }
+    if (message.type === "weather-sync" && isWeatherSync(message)) {
+      this.dispatchEvent(new CustomEvent("weather-sync", { detail: message }));
+      if (this.role === "host") {
+        this.broadcast(message, source.peer);
+      }
+      return;
+    }
     if (message.type === "bookmark-gift" && isBookmarkGift(message)) {
       this.dispatchEvent(new CustomEvent("bookmark-gift", { detail: message.bookmark }));
       if (this.role === "host") {
@@ -635,6 +656,24 @@ export class P2PRoom extends EventTarget {
     return msg;
   }
 
+  sendWeatherSync({ mode = "clear", nickname = "房主" } = {}) {
+    const sanitizedMode = VALID_WEATHER_MODES.includes(mode) ? mode : "clear";
+    const msg = {
+      type: "weather-sync",
+      version: MESSAGE_VERSION,
+      by: String(nickname || this.selfId || "夥伴").slice(0, 18),
+      mode: sanitizedMode,
+      timestamp: Date.now(),
+    };
+    if (this.role === "host") {
+      this.broadcast(msg);
+    } else {
+      const host = this.connections.get(this.hostId);
+      if (host) this.send(host, msg);
+    }
+    return msg;
+  }
+
   broadcast(message, exceptPeer = "") {
     this.connections.forEach((connection, peerId) => {
       if (peerId !== exceptPeer) this.send(connection, message);
@@ -742,6 +781,7 @@ export const p2pInternals = {
   publicTip,
   isTimerSync,
   isSoundscapeSync,
+  isWeatherSync,
   isInteraction,
   isPeerStatus,
   isBookmarkGift,
@@ -750,6 +790,7 @@ export const p2pInternals = {
   safeRoomToken,
   roomParams,
   validIceServers,
+  VALID_WEATHER_MODES,
   REACTION_EMOJIS: ["💡", "🔥", "☕", "✨", "💯", "🌱"],
   INTERACTION_ACTIONS: ["clink", "knock"],
 };

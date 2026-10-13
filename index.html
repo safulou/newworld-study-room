@@ -764,6 +764,16 @@
                 <i data-lucide="telescope"></i>
                 <span>望遠鏡</span>
               </button>
+              <button
+                class="accessory-chip"
+                type="button"
+                data-accessory="lantern"
+                aria-pressed="false"
+                title="夏夜螢火微光瓶"
+              >
+                <i data-lucide="sparkle"></i>
+                <span>微光瓶</span>
+              </button>
             </div>
             <div class="generation-card">
               <div class="generation-top">
@@ -1849,14 +1859,34 @@
             🍃 空氣阻尼：開
           </button>
         </div>
-        <div class="soundstage-rotation-row">
+        <div class="soundstage-rotation-row" role="group" aria-label="聲學舞台羅盤方位">
           <span>🧭 舞台羅盤方位：</span>
-          <button type="button" class="soundstage-rot-btn active" data-rot="0" title="正立朝向 0°">0° 北 (正面)</button>
-          <button type="button" class="soundstage-rot-btn" data-rot="1.5708" title="右轉 90°">+90° 東</button>
-          <button type="button" class="soundstage-rot-btn" data-rot="3.1416" title="反向背轉 180°">
+          <button type="button" class="soundstage-rot-btn active" data-rot="0" data-rotation="0" title="正立朝向 0°">
+            0° 北 (正面)
+          </button>
+          <button type="button" class="soundstage-rot-btn" data-rot="1.5708" data-rotation="1.5708" title="右轉 90°">
+            +90° 東
+          </button>
+          <button
+            type="button"
+            class="soundstage-rot-btn"
+            data-rot="3.1416"
+            data-rotation="3.1416"
+            title="反向背轉 180°"
+          >
             180° 南 (背向)
           </button>
-          <button type="button" class="soundstage-rot-btn" data-rot="-1.5708" title="左轉 -90°">-90° 西</button>
+          <button type="button" class="soundstage-rot-btn" data-rot="-1.5708" data-rotation="-1.5708" title="左轉 -90°">
+            -90° 西
+          </button>
+          <button
+            type="button"
+            class="soundstage-rot-btn soundstage-gyro-btn"
+            id="btnToggleSoundstageGyro"
+            title="啟用行動裝置陀螺儀動態頭部追蹤"
+          >
+            📱 陀螺儀：關
+          </button>
         </div>
         <div class="soundstage-radar-wrap">
           <canvas id="soundstageCanvas" width="560" height="420" class="soundstage-canvas"></canvas>
