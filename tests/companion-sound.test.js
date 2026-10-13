@@ -164,4 +164,47 @@ describe("CompanionSoundManager", () => {
     expect(createdOscillators[3].frequency.setValueAtTime).toHaveBeenCalledWith(1108.73, 40.21);
     expect(createdOscillators[4].frequency.setValueAtTime).toHaveBeenCalledWith(1244.51, 40.28);
   });
+
+  it("synthesizes organic paper leafing rustle in playPageTurnRustle", () => {
+    expect(() => manager.playPageTurnRustle()).not.toThrow();
+
+    const mockBufferSource = {
+      buffer: null,
+      connect: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+    };
+    const mockFilter = {
+      type: "",
+      Q: { setValueAtTime: vi.fn() },
+      frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const mockGain = {
+      gain: {
+        setValueAtTime: vi.fn(),
+        linearRampToValueAtTime: vi.fn(),
+        exponentialRampToValueAtTime: vi.fn(),
+      },
+      connect: vi.fn(),
+    };
+    const mockCtx = {
+      currentTime: 50,
+      sampleRate: 44100,
+      createBuffer: vi.fn(() => ({
+        getChannelData: vi.fn(() => new Float32Array(100)),
+      })),
+      createBufferSource: vi.fn(() => mockBufferSource),
+      createBiquadFilter: vi.fn(() => mockFilter),
+      createGain: vi.fn(() => mockGain),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playPageTurnRustle();
+    expect(mockCtx.createBufferSource).toHaveBeenCalled();
+    expect(mockCtx.createBiquadFilter).toHaveBeenCalled();
+    expect(mockFilter.type).toBe("bandpass");
+    expect(mockBufferSource.start).toHaveBeenCalledWith(50);
+  });
 });

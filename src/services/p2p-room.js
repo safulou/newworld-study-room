@@ -64,7 +64,12 @@ function isPeerStatus(msg) {
     msg.by.length > 0 &&
     msg.by.length <= 18 &&
     typeof msg.status === "string" &&
-    msg.status.length <= 20,
+    msg.status.length <= 20 &&
+    (msg.herbariumStats === undefined ||
+      msg.herbariumStats === null ||
+      (typeof msg.herbariumStats === "object" &&
+        typeof msg.herbariumStats.harvests === "number" &&
+        typeof msg.herbariumStats.badges === "number")),
   );
 }
 
@@ -318,6 +323,14 @@ export class P2PRoom extends EventTarget {
     }
     if (message.type === "peer-status" && isPeerStatus(message)) {
       const effectivePeerId = String(message.peerId || source?.peer || "").slice(0, 80);
+      const sanitizedStats =
+        message.herbariumStats && typeof message.herbariumStats === "object"
+          ? {
+              harvests: Math.max(0, Math.floor(Number(message.herbariumStats.harvests) || 0)),
+              badges: Math.max(0, Math.floor(Number(message.herbariumStats.badges) || 0)),
+              isMaster: Boolean(message.herbariumStats.isMaster),
+            }
+          : null;
       const sanitized = {
         type: "peer-status",
         version: MESSAGE_VERSION,
@@ -326,10 +339,13 @@ export class P2PRoom extends EventTarget {
         status: String(message.status || "idle").slice(0, 20),
         plant: String(message.plant || "rose").slice(0, 20),
         intention: typeof message.intention === "string" ? message.intention.slice(0, 48) : "",
-        weather: ["auto", "rain", "snow", "leaves", "clear"].includes(message.weather) ? message.weather : "auto",
+        weather: ["auto", "rain", "snow", "leaves", "clear", "fireflies"].includes(message.weather)
+          ? message.weather
+          : "auto",
         sprintPreset: ["classic", "deep", "sprint", "ultradian", "custom"].includes(message.sprintPreset)
           ? message.sprintPreset
           : "classic",
+        ...(sanitizedStats ? { herbariumStats: sanitizedStats } : {}),
         timestamp: Number(message.timestamp) || Date.now(),
       };
       if (effectivePeerId) {
@@ -464,11 +480,27 @@ export class P2PRoom extends EventTarget {
     this.broadcast({ type: "room-meta", version: MESSAGE_VERSION, roomName: String(roomName).trim().slice(0, 24) });
   }
 
-  sendStatus(status, nickname, plant, intention = "", weather = "auto", sprintPreset = "classic") {
-    const validWeather = ["auto", "rain", "snow", "leaves", "clear"].includes(weather) ? weather : "auto";
+  sendStatus(
+    status,
+    nickname,
+    plant,
+    intention = "",
+    weather = "auto",
+    sprintPreset = "classic",
+    herbariumStats = null,
+  ) {
+    const validWeather = ["auto", "rain", "snow", "leaves", "clear", "fireflies"].includes(weather) ? weather : "auto";
     const validPreset = ["classic", "deep", "sprint", "ultradian", "custom"].includes(sprintPreset)
       ? sprintPreset
       : "classic";
+    const sanitizedStats =
+      herbariumStats && typeof herbariumStats === "object"
+        ? {
+            harvests: Math.max(0, Math.floor(Number(herbariumStats.harvests) || 0)),
+            badges: Math.max(0, Math.floor(Number(herbariumStats.badges) || 0)),
+            isMaster: Boolean(herbariumStats.isMaster),
+          }
+        : null;
     const msg = {
       type: "peer-status",
       version: MESSAGE_VERSION,
@@ -479,6 +511,7 @@ export class P2PRoom extends EventTarget {
       intention: String(intention || "").slice(0, 48),
       weather: validWeather,
       sprintPreset: validPreset,
+      ...(sanitizedStats ? { herbariumStats: sanitizedStats } : {}),
       timestamp: Date.now(),
     };
     if (this.role === "host") {

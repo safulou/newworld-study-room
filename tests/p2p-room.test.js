@@ -312,4 +312,56 @@ describe("P2P protocol validation", () => {
     expect(msg.by).toBe("房主小森");
     expect(room.broadcast).toHaveBeenCalledWith(msg);
   });
+
+  it("validates and dispatches peer-status with herbariumStats and fireflies weather", () => {
+    expect(p2pInternals.isPeerStatus).toBeDefined();
+
+    // Valid without herbariumStats
+    expect(
+      p2pInternals.isPeerStatus({
+        type: "peer-status",
+        by: "Arsen",
+        status: "focusing",
+      }),
+    ).toBe(true);
+
+    // Valid with herbariumStats
+    expect(
+      p2pInternals.isPeerStatus({
+        type: "peer-status",
+        by: "Arsen",
+        status: "focusing",
+        herbariumStats: { harvests: 5, badges: 3, isMaster: true },
+      }),
+    ).toBe(true);
+
+    // Invalid herbariumStats (harvests is not a number)
+    expect(
+      p2pInternals.isPeerStatus({
+        type: "peer-status",
+        by: "Arsen",
+        status: "focusing",
+        herbariumStats: { harvests: "five", badges: 3 },
+      }),
+    ).toBe(false);
+
+    // sendStatus includes fireflies weather and herbariumStats
+    const hostRoom = new P2PRoom({ role: "host", getSnapshot: () => ({ tips: [] }) });
+    hostRoom.broadcast = vi.fn();
+    const statusMsg = hostRoom.sendStatus("focusing", "Arsen", "sakura", "深度閱讀中", "fireflies", "deep", {
+      harvests: 12,
+      badges: 4,
+      isMaster: true,
+    });
+
+    expect(statusMsg.type).toBe("peer-status");
+    expect(statusMsg.weather).toBe("fireflies");
+    expect(statusMsg.sprintPreset).toBe("deep");
+    expect(statusMsg.herbariumStats).toEqual({
+      harvests: 12,
+      badges: 4,
+      isMaster: true,
+    });
+    expect(hostRoom.broadcast).toHaveBeenCalledWith(statusMsg);
+  });
 });

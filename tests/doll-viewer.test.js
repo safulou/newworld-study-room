@@ -377,4 +377,25 @@ describe("drawDollFace", () => {
     expect(fakeViewer.currentEmote.hasTelescope).toBe(true);
     expect(fakeViewer.currentEmote.duration).toBe(4000);
   });
+
+  it("triggers pageturn micro-emote with duration, page pivot setup, and bounce", () => {
+    const fakePivot = { visible: false, rotation: { z: 0 } };
+    const fakeViewer = {
+      currentEmote: null,
+      lastFaceMode: "open",
+      triggerBounce: vi.fn(),
+      studyBook: { visible: false },
+      turningPagePivot: fakePivot,
+    };
+    fakeViewer.triggerPageTurn = DollViewer.prototype.triggerPageTurn.bind(fakeViewer);
+
+    fakeViewer.triggerPageTurn({ duration: 1250 });
+    expect(fakeViewer.currentEmote).toBeDefined();
+    expect(fakeViewer.currentEmote.type).toBe("pageturn");
+    expect(fakeViewer.currentEmote.duration).toBe(1250);
+    expect(fakeViewer.studyBook.visible).toBe(true);
+    expect(fakePivot.visible).toBe(true);
+    expect(fakePivot.rotation.z).toBeCloseTo(-0.18);
+    expect(fakeViewer.triggerBounce).toHaveBeenCalled();
+  });
 });

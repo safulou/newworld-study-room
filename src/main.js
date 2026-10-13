@@ -536,6 +536,24 @@ const studyStats = new StudyStatsManager();
 const companionSound = new CompanionSoundManager(0.4);
 const notificationManager = new NotificationManager({ baseTitle: "NewWorld Study Room" });
 const weatherEngine = new WeatherEngine(elements.windowRain);
+
+function getLocalHerbariumStats() {
+  try {
+    const counts = studyStats.getHarvestCounts ? studyStats.getHarvestCounts() : {};
+    const totalHarvests = Object.values(counts).reduce((a, b) => a + b, 0);
+    const badges = studyStats.getBadges ? studyStats.getBadges() : [];
+    const unlockedBadges = badges.filter((b) => b.unlocked).length;
+    const isMaster = badges.some((b) => b.id === "botanist_master" && b.unlocked);
+    return {
+      harvests: totalHarvests,
+      badges: unlockedBadges,
+      isMaster,
+    };
+  } catch {
+    return { harvests: 0, badges: 0, isMaster: false };
+  }
+}
+
 let viewer = null;
 let p2p = null;
 let toastTimeout = null;
@@ -2127,6 +2145,15 @@ function bindTimer() {
         spawnZenSpark("🕊️ 舒緩收尾");
       }
     }
+
+    // Periodic book page-turn micro-interaction during focus (every 120s of focused study)
+    const elapsedSeconds = timer.minutes * 60 - event.detail;
+    if (timer.mode === "focus" && timer.interval && elapsedSeconds > 0 && elapsedSeconds % 120 === 0) {
+      if (viewer?.triggerPageTurn) {
+        viewer.triggerPageTurn();
+        companionSound.playPageTurnRustle();
+      }
+    }
   });
 
   timer.addEventListener("modechange", (event) => {
@@ -2181,6 +2208,7 @@ function bindTimer() {
         store.get().focusIntention,
         store.get().windowWeather,
         store.get().sprintPreset,
+        getLocalHerbariumStats(),
       );
     } else {
       elements.focusGarden.classList.remove("growing");
@@ -2192,6 +2220,7 @@ function bindTimer() {
         store.get().focusIntention,
         store.get().windowWeather,
         store.get().sprintPreset,
+        getLocalHerbariumStats(),
       );
     }
 
@@ -3083,6 +3112,20 @@ function bindSoundstageModal() {
           ctx.beginPath();
           ctx.arc(emitterX, emitterY, waveRadius, 0, Math.PI * 2);
           ctx.stroke();
+        }
+
+        // Acoustic Wavefront Energy Particle Stream drifting from emitter towards listener
+        const particleCount = 3;
+        for (let p = 0; p < particleCount; p++) {
+          const phase = (now * 0.55 + p * (1 / particleCount)) % 1.0;
+          const px = emitterX + (centerX - emitterX) * phase;
+          const py = emitterY + (listenerY - emitterY) * phase;
+          const particleAlpha = Math.sin(phase * Math.PI) * 0.5 * Math.min(1, trackVol * 2.2);
+          const particleRadius = 1.6 + Math.sin(phase * Math.PI) * 1.4;
+          ctx.fillStyle = `rgba(${color}, ${particleAlpha.toFixed(3)})`;
+          ctx.beginPath();
+          ctx.arc(px, py, particleRadius, 0, Math.PI * 2);
+          ctx.fill();
         }
       }
 
@@ -4551,6 +4594,7 @@ function bindFocusIntention() {
         val,
         store.get().windowWeather,
         store.get().sprintPreset,
+        getLocalHerbariumStats(),
       );
     }
   };
@@ -4582,6 +4626,7 @@ function bindFocusIntention() {
           text,
           store.get().windowWeather,
           store.get().sprintPreset,
+          getLocalHerbariumStats(),
         );
       }
       showToast(`已同步當前任務意圖：「${text}」🎯`);
@@ -5215,6 +5260,7 @@ async function startP2P() {
         snow: "❄️",
         leaves: "🍂",
         clear: "🌌",
+        fireflies: "✨🪲",
       };
       const presetNameMap = {
         classic: "黃金 25m",
@@ -5229,7 +5275,16 @@ async function startP2P() {
         detail.weather && detail.weather !== "auto" ? ` · 窗外 ${weatherEmojiMap[detail.weather] || "✨"}` : "";
       const presetSnippet =
         detail.sprintPreset && detail.status === "focusing" ? ` · ${presetNameMap[detail.sprintPreset] || ""}` : "";
-      elements.peerStatusText.textContent = `${detail.by} ${statusAction}${intentionSnippet}${weatherSnippet}${presetSnippet}`;
+      let herbariumSnippet = "";
+      if (detail.herbariumStats) {
+        const { harvests, badges, isMaster } = detail.herbariumStats;
+        if (isMaster) {
+          herbariumSnippet = ` · 🌿 植物大師 (📜×${harvests} 🏅×${badges})`;
+        } else if (harvests > 0 || badges > 0) {
+          herbariumSnippet = ` · 🌿 草木集 (📜×${harvests} 🏅×${badges})`;
+        }
+      }
+      elements.peerStatusText.textContent = `${detail.by} ${statusAction}${intentionSnippet}${weatherSnippet}${presetSnippet}${herbariumSnippet}`;
       elements.peerStatusBar.hidden = false;
       window.setTimeout(() => {
         if (elements.peerStatusBar) elements.peerStatusBar.hidden = true;
@@ -6216,6 +6271,15 @@ async function startViewer() {
           "你看，夜空中的星斗正在閃爍，願今夜的思考澄澈如星！🌟🕊️",
         ];
         const quote = stargazeQuotes[Math.floor(Math.random() * stargazeQuotes.length)];
+        showCompanionBubble(quote, 3400);
+      } else if (emoteType === "pageturn") {
+        companionSound.playPageTurnRustle();
+        const pageturnQuotes = [
+          "翻開新的一頁～知識的芬芳隨著紙頁沙沙作響！📖✨",
+          "輕輕翻動書頁... 每一行字句都在默默沉澱成智慧！🌱🕊️",
+          "嘩啦～閱讀進度又向前推進了一章，我們繼續徜徉書海！🍃📚",
+        ];
+        const quote = pageturnQuotes[Math.floor(Math.random() * pageturnQuotes.length)];
         showCompanionBubble(quote, 3400);
       } else {
         companionSound.playAffirmativeNod();

@@ -615,7 +615,17 @@ export class DollViewer {
     rightPage.rotation.z = -0.18;
     const spine = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.02, 0.46), bookCoverMat);
     spine.position.set(0, -0.02, 0);
-    this.studyBook.add(leftPage, rightPage, spine);
+
+    // Turning page pivot & leaf for page-flip micro-interaction
+    this.turningPagePivot = new THREE.Group();
+    this.turningPagePivot.position.set(0, 0.018, 0);
+    const flipLeaf = new THREE.Mesh(new THREE.BoxGeometry(0.31, 0.008, 0.43), bookPageMat);
+    flipLeaf.position.set(0.155, 0, 0);
+    this.turningPagePivot.add(flipLeaf);
+    this.turningPagePivot.rotation.z = -0.18;
+    this.turningPagePivot.visible = false;
+
+    this.studyBook.add(leftPage, rightPage, spine, this.turningPagePivot);
     this.studyBook.position.set(0, 0.12, 0.58);
     this.studyBook.rotation.x = 0.62;
     this.studyBook.visible = false;
@@ -799,7 +809,10 @@ export class DollViewer {
             this.triggerJoySpin();
             this.onJoySpin?.();
           } else if (this.consecutiveTaps === 2) {
-            const emoteChoices = ["wave", "nod", "wish", "stargaze"];
+            const emoteChoices =
+              this.timerState === "focusing"
+                ? ["wave", "nod", "wish", "stargaze", "pageturn"]
+                : ["wave", "nod", "wish", "stargaze"];
             const emoteType = emoteChoices[Math.floor(Math.random() * emoteChoices.length)];
             if (emoteType === "wave") {
               this.triggerWave();
@@ -807,6 +820,8 @@ export class DollViewer {
               this.triggerNod();
             } else if (emoteType === "wish") {
               this.triggerWish();
+            } else if (emoteType === "pageturn") {
+              this.triggerPageTurn();
             } else {
               this.triggerStargaze();
             }
@@ -927,6 +942,24 @@ export class DollViewer {
       duration,
       hasTelescope: Boolean(this.telescopeGroup?.visible),
     };
+    this.lastFaceMode = null;
+    this.triggerBounce();
+  }
+
+  triggerPageTurn({ duration = 1250 } = {}) {
+    if (!this.studyBook?.visible) {
+      if (this.studyBook) this.studyBook.visible = true;
+      this.tempBookVisible = true;
+    }
+    this.currentEmote = {
+      type: "pageturn",
+      startTime: performance.now(),
+      duration: Math.max(600, duration),
+    };
+    if (this.turningPagePivot) {
+      this.turningPagePivot.visible = true;
+      this.turningPagePivot.rotation.z = -0.18;
+    }
     this.lastFaceMode = null;
     this.triggerBounce();
   }
@@ -1534,6 +1567,23 @@ export class DollViewer {
             this.head.rotation.z = Math.sin(elapsedEmote * 2.5) * 0.03;
           }
         }
+      } else if (emote.type === "pageturn") {
+        const progress = Math.min(1, elapsedEmote / (emote.duration / 1000));
+        const p = progress * progress * (3 - 2 * progress);
+        if (this.turningPagePivot) {
+          this.turningPagePivot.visible = true;
+          this.turningPagePivot.rotation.z = -0.18 + p * (Math.PI + 0.36);
+        }
+        if (this.arms && this.arms.length === 2) {
+          const armWave = Math.sin(progress * Math.PI);
+          this.arms[0].rotation.set(0.42, 0.1, -0.25);
+          this.arms[1].rotation.set(0.46 + armWave * 0.28, -0.2, 0.22 + armWave * 0.38);
+        }
+        if (this.head) {
+          this.head.rotation.x = 0.18 + Math.sin(progress * Math.PI) * 0.12;
+          this.head.rotation.y = 0;
+          this.head.rotation.z = -0.05;
+        }
       }
     } else if (this.celebrationStartTime && performance.now() - this.celebrationStartTime < 6000) {
       const wave = Math.sin(elapsed * 9) * 0.38;
@@ -1580,6 +1630,17 @@ export class DollViewer {
         this.head.rotation.x = 0;
         this.head.rotation.y = 0;
         this.head.rotation.z = this.acousticGazeTilt || 0;
+      }
+    }
+
+    if (this.turningPagePivot && (!this.currentEmote || this.currentEmote.type !== "pageturn")) {
+      this.turningPagePivot.visible = false;
+      this.turningPagePivot.rotation.z = -0.18;
+    }
+    if (this.tempBookVisible && (!this.currentEmote || this.currentEmote.type !== "pageturn")) {
+      this.tempBookVisible = false;
+      if (this.studyBook && this.timerState !== "focusing") {
+        this.studyBook.visible = false;
       }
     }
 

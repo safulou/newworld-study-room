@@ -691,4 +691,45 @@ export class CompanionSoundManager {
       osc.stop(now + delay + dur + 0.05);
     });
   }
+
+  /**
+   * Play an organic ASMR book page turn and paper friction rustle sound
+   * Dual bandpass-swept noise burst simulating book paper leafing through
+   */
+  playPageTurnRustle() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const bufferSize = Math.floor(ctx.sampleRate * 0.32);
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.7;
+    }
+
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+
+    const bandpass = ctx.createBiquadFilter();
+    bandpass.type = "bandpass";
+    bandpass.Q.setValueAtTime(1.8, now);
+    bandpass.frequency.setValueAtTime(1600, now);
+    bandpass.frequency.exponentialRampToValueAtTime(3200, now + 0.16);
+    bandpass.frequency.exponentialRampToValueAtTime(2100, now + 0.3);
+
+    const gain = ctx.createGain();
+    const peak = 0.16 * this.volume;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(peak, now + 0.025);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, peak * 0.45), now + 0.12);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, peak * 0.8), now + 0.18);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.31);
+
+    noiseSource.connect(bandpass);
+    bandpass.connect(gain);
+    gain.connect(ctx.destination);
+
+    noiseSource.start(now);
+    noiseSource.stop(now + 0.32);
+  }
 }
