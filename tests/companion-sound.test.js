@@ -207,4 +207,96 @@ describe("CompanionSoundManager", () => {
     expect(mockFilter.type).toBe("bandpass");
     expect(mockBufferSource.start).toHaveBeenCalledWith(50);
   });
+
+  it("synthesizes warm liquid intake and teacup clink in playCoffeeSip", () => {
+    expect(() => manager.playCoffeeSip()).not.toThrow();
+
+    const mockBufferSource = {
+      buffer: null,
+      connect: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+    };
+    const mockFilter = {
+      type: "",
+      Q: { setValueAtTime: vi.fn() },
+      frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const mockGain = {
+      gain: {
+        setValueAtTime: vi.fn(),
+        linearRampToValueAtTime: vi.fn(),
+        exponentialRampToValueAtTime: vi.fn(),
+      },
+      connect: vi.fn(),
+    };
+    const createdOscillators = [];
+    const mockCtx = {
+      currentTime: 60,
+      sampleRate: 44100,
+      createBuffer: vi.fn(() => ({
+        getChannelData: vi.fn(() => new Float32Array(100)),
+      })),
+      createBufferSource: vi.fn(() => mockBufferSource),
+      createBiquadFilter: vi.fn(() => mockFilter),
+      createGain: vi.fn(() => mockGain),
+      createOscillator: vi.fn(() => {
+        const osc = {
+          type: "",
+          frequency: { setValueAtTime: vi.fn() },
+          connect: vi.fn(),
+          start: vi.fn(),
+          stop: vi.fn(),
+        };
+        createdOscillators.push(osc);
+        return osc;
+      }),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playCoffeeSip();
+    expect(mockCtx.createBufferSource).toHaveBeenCalled();
+    expect(mockCtx.createBiquadFilter).toHaveBeenCalled();
+    expect(mockFilter.type).toBe("bandpass");
+    expect(mockBufferSource.start).toHaveBeenCalledWith(60);
+    expect(createdOscillators.length).toBe(3); // G5, G6, D7 porcelain clink
+  });
+
+  it("synthesizes pure crystalline dewdrop in playDewDropSound", () => {
+    expect(() => manager.playDewDropSound()).not.toThrow();
+
+    const createdOscillators = [];
+    const mockGain = {
+      gain: {
+        setValueAtTime: vi.fn(),
+        linearRampToValueAtTime: vi.fn(),
+        exponentialRampToValueAtTime: vi.fn(),
+      },
+      connect: vi.fn(),
+    };
+    const mockCtx = {
+      currentTime: 70,
+      createGain: vi.fn(() => mockGain),
+      createOscillator: vi.fn(() => {
+        const osc = {
+          type: "",
+          frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+          connect: vi.fn(),
+          start: vi.fn(),
+          stop: vi.fn(),
+        };
+        createdOscillators.push(osc);
+        return osc;
+      }),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playDewDropSound();
+    expect(createdOscillators.length).toBe(2); // droplet burst + water body resonance
+    expect(createdOscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(1180, 70);
+    expect(createdOscillators[1].frequency.setValueAtTime).toHaveBeenCalledWith(440, 70);
+  });
 });

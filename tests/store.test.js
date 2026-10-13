@@ -434,13 +434,15 @@ describe("room-scoped store", () => {
     expect(typeof store.get().receivedBookmarks[0].gratitudeSentAt).toBe("string");
   });
 
-  it("sanitizes orbitingBreeze and autoAtmosphereSync settings", () => {
+  it("sanitizes orbitingBreeze, autoAtmosphereSync, and binauralCrossfeed settings", () => {
     const store = createStore({ roomId: "room-h", includeStarterTips: false });
     expect(store.get().orbitingBreeze).toBe(false);
     expect(store.get().autoAtmosphereSync).toBe(true);
+    expect(store.get().binauralCrossfeed).toBe(false);
 
-    store.update({ orbitingBreeze: true, autoAtmosphereSync: false });
+    store.update({ orbitingBreeze: true, autoAtmosphereSync: false, binauralCrossfeed: true });
     expect(store.get().orbitingBreeze).toBe(true);
     expect(store.get().autoAtmosphereSync).toBe(false);
+    expect(store.get().binauralCrossfeed).toBe(true);
   });
 });

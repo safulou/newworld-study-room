@@ -77,6 +77,7 @@ const profileDefaults = {
   celebratedBadgeIds: [],
   orbitingBreeze: false,
   autoAtmosphereSync: true,
+  binauralCrossfeed: false,
 };
 
 export const AFFINITY_RANKS = [
@@ -361,6 +362,7 @@ function sanitizeProfile(value = {}) {
     orbitingBreeze: Boolean(value.orbitingBreeze),
     autoAtmosphereSync:
       value.autoAtmosphereSync !== undefined ? Boolean(value.autoAtmosphereSync) : profileDefaults.autoAtmosphereSync,
+    binauralCrossfeed: Boolean(value.binauralCrossfeed),
   };
 }
 

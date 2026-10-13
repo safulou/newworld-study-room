@@ -398,4 +398,23 @@ describe("drawDollFace", () => {
     expect(fakePivot.rotation.z).toBeCloseTo(-0.18);
     expect(fakeViewer.triggerBounce).toHaveBeenCalled();
   });
+
+  it("triggers coffeesip micro-emote with mug visibility setup, duration, and bounce", () => {
+    const fakeViewer = {
+      currentEmote: null,
+      lastFaceMode: "open",
+      triggerBounce: vi.fn(),
+      coffeeGroup: { visible: false },
+    };
+    fakeViewer.triggerCoffeeSip = DollViewer.prototype.triggerCoffeeSip.bind(fakeViewer);
+
+    fakeViewer.triggerCoffeeSip({ duration: 1800 });
+    expect(fakeViewer.currentEmote).toBeDefined();
+    expect(fakeViewer.currentEmote.type).toBe("coffeesip");
+    expect(fakeViewer.currentEmote.duration).toBe(1800);
+    expect(fakeViewer.coffeeGroup.visible).toBe(true);
+    expect(fakeViewer.tempCoffeeVisible).toBe(true);
+    expect(fakeViewer.lastFaceMode).toBeNull();
+    expect(fakeViewer.triggerBounce).toHaveBeenCalled();
+  });
 });

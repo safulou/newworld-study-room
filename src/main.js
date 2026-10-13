@@ -302,6 +302,8 @@ const elements = {
   soundstageRotButtons: [...document.querySelectorAll(".soundstage-rot-btn:not(.soundstage-gyro-btn)")],
   btnToggleSoundstageGyro: $("#btnToggleSoundstageGyro"),
   btnToggleDistanceDamping: $("#btnToggleDistanceDamping"),
+  btnToggleBinauralCrossfeed: $("#btnToggleBinauralCrossfeed"),
+  gardenDewDrops: $("#gardenDewDrops"),
   btnSaveSoundstagePreset: $("#btnSaveSoundstagePreset"),
   btnGiftBookmarkToPeers: $("#btnGiftBookmarkToPeers"),
   photoInput: $("#photoInput"),
@@ -1568,6 +1570,10 @@ function updateGarden(remaining = timer.remaining) {
   elements.focusGarden.style.setProperty("--bloom", bloom.toFixed(4));
   elements.focusGarden.classList.toggle("complete", growth >= 1);
 
+  const weather = store.get().windowWeather;
+  const isDewWeather = weather === "rain" || weather === "snow" || weather === "fireflies";
+  elements.focusGarden.classList.toggle("dew-active", isDewWeather || growth >= 0.7);
+
   const stageKey = `${plantType}:${stage}`;
   if (stageKey !== lastGardenStage) {
     const label = plantLabels[plantType];
@@ -2230,6 +2236,12 @@ function bindTimer() {
         showCompanionBubble(greeting, 3200);
       } else {
         showCompanionBubble("休息時間開始，放鬆一下眼睛與肩膀～🍵", 3000);
+        if (viewer?.triggerCoffeeSip) {
+          setTimeout(() => {
+            viewer.triggerCoffeeSip();
+            companionSound.playCoffeeSip();
+          }, 900);
+        }
       }
       notificationManager.updateTitle({
         remaining: timer.remaining,
@@ -2610,7 +2622,14 @@ function syncAcousticUI() {
   elements.acousticPresetBtns?.forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.acoustic === reverb.preset);
   });
+  syncBinauralCrossfeedUI(ambientSound.isBinauralCrossfeed());
   viewer?.setAcousticGaze?.(ambientSound.getDominantTrackPan());
+}
+
+function syncBinauralCrossfeedUI(active) {
+  if (!elements.btnToggleBinauralCrossfeed) return;
+  elements.btnToggleBinauralCrossfeed.classList.toggle("active", Boolean(active));
+  elements.btnToggleBinauralCrossfeed.textContent = active ? "🎧 雙耳舒壓外放：開" : "🎧 雙耳舒壓外放：關";
 }
 
 function updateOrbitBreezeUI(enabled) {
@@ -3427,6 +3446,18 @@ function bindSoundstageModal() {
     elements.btnToggleDistanceDamping.textContent = newState ? "🍃 空氣阻尼：開" : "🍃 空氣阻尼：關";
     showToast(newState ? "已開啟空間高頻空氣阻尼（近清脆、遠柔和）" : "已關閉空間高頻空氣阻尼（全頻傳遞）");
     renderSoundstage();
+  });
+
+  elements.btnToggleBinauralCrossfeed?.addEventListener("click", () => {
+    const currentState = ambientSound.isBinauralCrossfeed();
+    const newState = ambientSound.setBinauralCrossfeed(!currentState);
+    store.update({ binauralCrossfeed: newState });
+    syncBinauralCrossfeedUI(newState);
+    showToast(
+      newState
+        ? "🎧 已開啟雙耳舒壓外放（微延遲交越，模擬自然揚聲器外放空間感）"
+        : "🎧 已關閉雙耳舒壓外放（標準左右獨立聲相）",
+    );
   });
 
   elements.btnSaveSoundstagePreset?.addEventListener("click", () => {
@@ -6153,6 +6184,18 @@ function bindHerbarium() {
     }
   });
 
+  elements.focusGarden?.addEventListener("click", (e) => {
+    if (e.target.closest("#openHerbarium")) return;
+    companionSound.playDewDropSound();
+    spawnZenSpark("💧 晶瑩晨露");
+    const gardenDew = elements.gardenDewDrops;
+    if (gardenDew) {
+      gardenDew.style.animation = "none";
+      gardenDew.offsetHeight;
+      gardenDew.style.animation = "";
+    }
+  });
+
   elements.tabPlants?.addEventListener("click", () => {
     elements.tabPlants.classList.add("active");
     elements.tabBadges.classList.remove("active");
@@ -6281,6 +6324,15 @@ async function startViewer() {
         ];
         const quote = pageturnQuotes[Math.floor(Math.random() * pageturnQuotes.length)];
         showCompanionBubble(quote, 3400);
+      } else if (emoteType === "coffeesip") {
+        companionSound.playCoffeeSip();
+        const sipQuotes = [
+          "啜飲一口溫暖熱飲～放鬆肩膀，補充水分繼續前進！☕✨",
+          "暖呼呼的茶香飄上來了～休息片刻，思緒會更加澄澈喔！🍵🕊️",
+          "哈～好溫暖！讓熱氣溫暖身心，準備好迎接下一段心流！🌸☕",
+        ];
+        const quote = sipQuotes[Math.floor(Math.random() * sipQuotes.length)];
+        showCompanionBubble(quote, 3400);
       } else {
         companionSound.playAffirmativeNod();
         const nodQuotes = [
@@ -6402,6 +6454,10 @@ function init() {
   const initialOrbit = Boolean(store.get().orbitingBreeze);
   ambientSound.setOrbitingBreeze(initialOrbit);
   updateOrbitBreezeUI(initialOrbit);
+
+  const initialCrossfeed = Boolean(store.get().binauralCrossfeed);
+  ambientSound.setBinauralCrossfeed(initialCrossfeed);
+  syncBinauralCrossfeedUI(initialCrossfeed);
 
   const autoAtm = store.get().autoAtmosphereSync !== false;
   ambientSound.setAutoAtmosphereSync(autoAtm);

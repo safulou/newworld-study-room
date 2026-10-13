@@ -450,6 +450,35 @@ export class DollViewer {
     );
     coffeeLiquid.position.set(0.72, -0.8, 0.38);
     this.coffeeGroup.add(mug, handle, coffeeLiquid);
+
+    // Rising warm steam vapor particles
+    this.coffeeSteamParticles = [];
+    const steamOffsets = [
+      { x: 0.7, y: -0.74, z: 0.38, speed: 1.1, phase: 0.0, radius: 0.024 },
+      { x: 0.73, y: -0.71, z: 0.36, speed: 1.4, phase: 1.8, radius: 0.028 },
+      { x: 0.71, y: -0.68, z: 0.4, speed: 0.9, phase: 3.6, radius: 0.032 },
+    ];
+    steamOffsets.forEach((cfg) => {
+      const steamMat = new THREE.MeshStandardMaterial({
+        color: 0xfffbf0,
+        transparent: true,
+        opacity: 0.35,
+        roughness: 0.9,
+      });
+      const steamMesh = new THREE.Mesh(new THREE.SphereGeometry(cfg.radius, 10, 8), steamMat);
+      steamMesh.position.set(cfg.x, cfg.y, cfg.z);
+      this.coffeeGroup.add(steamMesh);
+      this.coffeeSteamParticles.push({
+        mesh: steamMesh,
+        baseX: cfg.x,
+        baseY: -0.76,
+        baseZ: cfg.z,
+        speed: cfg.speed,
+        phase: cfg.phase,
+        maxRise: 0.18,
+      });
+    });
+
     this.coffeeGroup.visible = false;
 
     // 4. Sleeping Kitten
@@ -812,7 +841,7 @@ export class DollViewer {
             const emoteChoices =
               this.timerState === "focusing"
                 ? ["wave", "nod", "wish", "stargaze", "pageturn"]
-                : ["wave", "nod", "wish", "stargaze"];
+                : ["wave", "nod", "wish", "stargaze", "coffeesip"];
             const emoteType = emoteChoices[Math.floor(Math.random() * emoteChoices.length)];
             if (emoteType === "wave") {
               this.triggerWave();
@@ -822,6 +851,8 @@ export class DollViewer {
               this.triggerWish();
             } else if (emoteType === "pageturn") {
               this.triggerPageTurn();
+            } else if (emoteType === "coffeesip") {
+              this.triggerCoffeeSip();
             } else {
               this.triggerStargaze();
             }
@@ -960,6 +991,20 @@ export class DollViewer {
       this.turningPagePivot.visible = true;
       this.turningPagePivot.rotation.z = -0.18;
     }
+    this.lastFaceMode = null;
+    this.triggerBounce();
+  }
+
+  triggerCoffeeSip({ duration = 1800 } = {}) {
+    if (!this.coffeeGroup?.visible) {
+      if (this.coffeeGroup) this.coffeeGroup.visible = true;
+      this.tempCoffeeVisible = true;
+    }
+    this.currentEmote = {
+      type: "coffeesip",
+      startTime: performance.now(),
+      duration: Math.max(800, duration),
+    };
     this.lastFaceMode = null;
     this.triggerBounce();
   }
@@ -1176,6 +1221,7 @@ export class DollViewer {
     telescope = false,
     lantern = false,
   } = {}) {
+    this.accessories = { glasses, crown, coffee, cat, telescope, lantern };
     if (this.glassesGroup) this.glassesGroup.visible = Boolean(glasses);
     if (this.crownGroup) this.crownGroup.visible = Boolean(crown);
     if (this.coffeeGroup) this.coffeeGroup.visible = Boolean(coffee);
@@ -1584,6 +1630,23 @@ export class DollViewer {
           this.head.rotation.y = 0;
           this.head.rotation.z = -0.05;
         }
+      } else if (emote.type === "coffeesip") {
+        const progress = Math.min(1, elapsedEmote / (emote.duration / 1000));
+        const sipPhase = Math.sin(progress * Math.PI);
+        const p = sipPhase * sipPhase * (3 - 2 * sipPhase);
+        if (this.coffeeGroup) {
+          this.coffeeGroup.position.set(-p * 0.32, p * 0.48, p * 0.08);
+          this.coffeeGroup.rotation.x = -p * 0.22;
+        }
+        if (this.arms && this.arms.length === 2) {
+          this.arms[0].rotation.set(0.25 + p * 0.15, 0.1, -0.32);
+          this.arms[1].rotation.set(0.48 + p * 0.42, -0.3, 0.28 + p * 0.35);
+        }
+        if (this.head) {
+          this.head.rotation.x = -p * 0.12;
+          this.head.rotation.y = p * 0.08;
+          this.head.rotation.z = -p * 0.04;
+        }
       }
     } else if (this.celebrationStartTime && performance.now() - this.celebrationStartTime < 6000) {
       const wave = Math.sin(elapsed * 9) * 0.38;
@@ -1644,6 +1707,17 @@ export class DollViewer {
       }
     }
 
+    if (this.coffeeGroup && (!this.currentEmote || this.currentEmote.type !== "coffeesip")) {
+      this.coffeeGroup.position.set(0, 0, 0);
+      this.coffeeGroup.rotation.set(0, 0, 0);
+    }
+    if (this.tempCoffeeVisible && (!this.currentEmote || this.currentEmote.type !== "coffeesip")) {
+      this.tempCoffeeVisible = false;
+      if (this.coffeeGroup && !this.accessories?.coffee) {
+        this.coffeeGroup.visible = false;
+      }
+    }
+
     if (this.telescopeLens && this.telescopeGroup?.visible) {
       const isStargaze = this.currentEmote?.type === "stargaze";
       const lensColor = isStargaze ? 0xbbf0ff : 0x90caf9;
@@ -1669,6 +1743,22 @@ export class DollViewer {
         const pulse = Math.sin(elapsed * 2.8) * 0.2 + 0.8;
         this.lanternLight.intensity = (isWish ? 1.3 : 0.85) * pulse;
       }
+    }
+
+    if (this.coffeeGroup?.visible && this.coffeeSteamParticles?.length && !this.reducedMotion) {
+      this.coffeeSteamParticles.forEach((sp) => {
+        const cycle = ((elapsed * sp.speed + sp.phase) % 3.0) / 3.0;
+        const waftX = Math.sin(cycle * Math.PI * 2 + sp.phase) * 0.025;
+        const waftZ = Math.cos(cycle * Math.PI * 2) * 0.015;
+        sp.mesh.position.y = sp.baseY + cycle * sp.maxRise;
+        sp.mesh.position.x = sp.baseX + waftX;
+        sp.mesh.position.z = sp.baseZ + waftZ;
+        const scale = 0.8 + cycle * 0.8;
+        sp.mesh.scale.set(scale, scale, scale);
+        if (sp.mesh.material && sp.mesh.material.opacity !== undefined) {
+          sp.mesh.material.opacity = Math.sin(cycle * Math.PI) * 0.38;
+        }
+      });
     }
 
     if (this.standee) {

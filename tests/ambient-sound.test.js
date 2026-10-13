@@ -652,4 +652,42 @@ describe("AmbientSoundscapeManager", () => {
     expect(mockPanner.pan.setValueAtTime).toHaveBeenCalledWith(0, 42);
     expect(mockFilter.frequency.setValueAtTime).toHaveBeenCalledWith(11300, 42);
   });
+
+  it("toggles and configures binaural crossfeed routing network", () => {
+    const manager = new AmbientSoundscapeManager();
+    expect(manager.isBinauralCrossfeed()).toBe(false);
+
+    expect(manager.setBinauralCrossfeed(true)).toBe(true);
+    expect(manager.isBinauralCrossfeed()).toBe(true);
+
+    const mockSplitter = { connect: vi.fn(), disconnect: vi.fn() };
+    const mockMerger = { connect: vi.fn(), disconnect: vi.fn() };
+    const mockDelay = { delayTime: { value: 0 }, connect: vi.fn() };
+    const mockFilter = { type: "", frequency: { value: 0 }, Q: { value: 0 }, connect: vi.fn() };
+    const mockGain = { gain: { value: 1 }, connect: vi.fn() };
+
+    const mockCtx = {
+      destination: {},
+      createChannelSplitter: vi.fn(() => mockSplitter),
+      createChannelMerger: vi.fn(() => mockMerger),
+      createDelay: vi.fn(() => mockDelay),
+      createBiquadFilter: vi.fn(() => mockFilter),
+      createGain: vi.fn(() => mockGain),
+    };
+    manager.audioCtx = mockCtx;
+    const mockSumGain = { disconnect: vi.fn(), connect: vi.fn() };
+    manager.masterSumGain = mockSumGain;
+
+    manager.setBinauralCrossfeed(true);
+    expect(mockCtx.createChannelSplitter).toHaveBeenCalledWith(2);
+    expect(mockCtx.createChannelMerger).toHaveBeenCalledWith(2);
+    expect(mockDelay.delayTime.value).toBeCloseTo(0.00032);
+    expect(mockFilter.frequency.value).toBe(720);
+    expect(mockMerger.connect).toHaveBeenCalledWith(mockCtx.destination);
+
+    // Disable crossfeed
+    manager.setBinauralCrossfeed(false);
+    expect(manager.isBinauralCrossfeed()).toBe(false);
+    expect(mockSumGain.connect).toHaveBeenCalledWith(mockCtx.destination);
+  });
 });

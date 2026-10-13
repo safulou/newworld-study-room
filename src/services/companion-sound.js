@@ -732,4 +732,111 @@ export class CompanionSoundManager {
     noiseSource.start(now);
     noiseSource.stop(now + 0.32);
   }
+
+  /**
+   * Play an authentic ASMR warm coffee/tea sip followed by a delicate porcelain clink
+   * Phase 1: Soft liquid inhalation bandpass-swept noise
+   * Phase 2: Gentle cup-on-saucer porcelain clink
+   */
+  playCoffeeSip() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // Phase 1: Gentle warm liquid sip noise (0.24s)
+    const sipDuration = 0.24;
+    const bufferSize = Math.floor(ctx.sampleRate * sipDuration);
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.45;
+    }
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+
+    const sipFilter = ctx.createBiquadFilter();
+    sipFilter.type = "bandpass";
+    sipFilter.Q.setValueAtTime(2.4, now);
+    sipFilter.frequency.setValueAtTime(380, now);
+    sipFilter.frequency.exponentialRampToValueAtTime(760, now + 0.14);
+    sipFilter.frequency.exponentialRampToValueAtTime(450, now + sipDuration);
+
+    const sipGain = ctx.createGain();
+    const sipPeak = 0.12 * this.volume;
+    sipGain.gain.setValueAtTime(0.0001, now);
+    sipGain.gain.linearRampToValueAtTime(sipPeak, now + 0.05);
+    sipGain.gain.exponentialRampToValueAtTime(0.0001, now + sipDuration);
+
+    noiseSource.connect(sipFilter);
+    sipFilter.connect(sipGain);
+    sipGain.connect(ctx.destination);
+
+    noiseSource.start(now);
+    noiseSource.stop(now + sipDuration + 0.02);
+
+    // Phase 2: Delicate teacup porcelain clink on saucer
+    const clinkDelay = 0.32;
+    const clinkFreqs = [783.99, 1567.98, 2349.32]; // G5, G6, D7
+    clinkFreqs.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + clinkDelay);
+      const clinkPeak = (idx === 0 ? 0.09 : 0.04) * this.volume;
+      const decay = idx === 0 ? 0.12 : 0.08;
+      gain.gain.setValueAtTime(0.0001, now + clinkDelay);
+      gain.gain.linearRampToValueAtTime(clinkPeak, now + clinkDelay + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + clinkDelay + decay);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + clinkDelay);
+      osc.stop(now + clinkDelay + decay + 0.02);
+    });
+  }
+
+  /**
+   * Play a pure, crystalline morning dewdrop falling on a leaf / water surface (ASMR water drop)
+   * Pitch glides quickly upward with deep hollow water resonance
+   */
+  playDewDropSound() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // Upward pitch-gliding droplet burst
+    const oscDrop = ctx.createOscillator();
+    const gainDrop = ctx.createGain();
+    oscDrop.type = "sine";
+    oscDrop.frequency.setValueAtTime(1180, now);
+    oscDrop.frequency.exponentialRampToValueAtTime(1920, now + 0.038);
+    oscDrop.frequency.exponentialRampToValueAtTime(1450, now + 0.075);
+
+    const dropPeak = 0.15 * this.volume;
+    gainDrop.gain.setValueAtTime(0.0001, now);
+    gainDrop.gain.linearRampToValueAtTime(dropPeak, now + 0.008);
+    gainDrop.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+
+    oscDrop.connect(gainDrop);
+    gainDrop.connect(ctx.destination);
+    oscDrop.start(now);
+    oscDrop.stop(now + 0.09);
+
+    // Deep sub-octave water body resonance
+    const oscBody = ctx.createOscillator();
+    const gainBody = ctx.createGain();
+    oscBody.type = "sine";
+    oscBody.frequency.setValueAtTime(440, now);
+    oscBody.frequency.exponentialRampToValueAtTime(320, now + 0.09);
+
+    const bodyPeak = 0.07 * this.volume;
+    gainBody.gain.setValueAtTime(0.0001, now);
+    gainBody.gain.linearRampToValueAtTime(bodyPeak, now + 0.006);
+    gainBody.gain.exponentialRampToValueAtTime(0.0001, now + 0.11);
+
+    oscBody.connect(gainBody);
+    gainBody.connect(ctx.destination);
+    oscBody.start(now);
+    oscBody.stop(now + 0.12);
+  }
 }

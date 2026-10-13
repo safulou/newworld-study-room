@@ -283,6 +283,9 @@ export class AmbientSoundscapeManager {
     this.stageRotation = 0;
     this.trackCoordinates = {};
     this.currentSpatialScenario = "cabin_realism";
+    this.binauralCrossfeed = false;
+    this.masterSumGain = null;
+    this.crossfeedNodes = null;
     this.sleepTimerRemainingSec = 0;
     this.sleepTimerDurationSec = 0;
     this.sleepTimerInterval = null;
@@ -355,18 +358,23 @@ export class AmbientSoundscapeManager {
           );
         }
 
+        this.masterSumGain = this.audioCtx.createGain();
+        this.masterSumGain.gain.value = 1.0;
+
         this.masterGain.connect(this.eqBass);
         this.eqBass.connect(this.eqMid);
         this.eqMid.connect(this.eqTreble);
 
         // Dry path
         this.eqTreble.connect(this.dryGain);
-        this.dryGain.connect(this.audioCtx.destination);
+        this.dryGain.connect(this.masterSumGain);
 
         // Reverb wet path
         this.eqTreble.connect(this.convolver);
         this.convolver.connect(this.wetGain);
-        this.wetGain.connect(this.audioCtx.destination);
+        this.wetGain.connect(this.masterSumGain);
+
+        this.updateOutputRouting();
 
         // Tap for real-time visualizer
         if (this.analyser && this.masterGain.connect) {
@@ -379,9 +387,119 @@ export class AmbientSoundscapeManager {
     } catch {
       // Fallback on limitation
     }
-    if (this.audioCtx.destination) {
-      this.masterGain.connect(this.audioCtx.destination);
+    this.masterSumGain = this.masterGain;
+    this.updateOutputRouting();
+  }
+
+  setBinauralCrossfeed(enabled) {
+    this.binauralCrossfeed = Boolean(enabled);
+    this.updateOutputRouting();
+    return this.binauralCrossfeed;
+  }
+
+  isBinauralCrossfeed() {
+    return Boolean(this.binauralCrossfeed);
+  }
+
+  updateOutputRouting() {
+    const targetSource = this.masterSumGain || this.masterGain;
+    if (!this.audioCtx || !targetSource || !this.audioCtx.destination) return;
+
+    try {
+      targetSource.disconnect();
+    } catch {}
+
+    if (this.crossfeedNodes) {
+      try {
+        this.crossfeedNodes.merger.disconnect();
+      } catch {}
+      this.crossfeedNodes = null;
     }
+
+    if (
+      this.binauralCrossfeed &&
+      typeof this.audioCtx.createChannelSplitter === "function" &&
+      typeof this.audioCtx.createChannelMerger === "function" &&
+      typeof this.audioCtx.createDelay === "function" &&
+      typeof this.audioCtx.createBiquadFilter === "function"
+    ) {
+      try {
+        const splitter = this.audioCtx.createChannelSplitter(2);
+        const merger = this.audioCtx.createChannelMerger(2);
+
+        // Direct paths
+        const directL = this.audioCtx.createGain();
+        directL.gain.value = 0.95;
+        const directR = this.audioCtx.createGain();
+        directR.gain.value = 0.95;
+
+        // Head shadow lowpass filter (~720 Hz)
+        const filterL = this.audioCtx.createBiquadFilter();
+        filterL.type = "lowpass";
+        filterL.frequency.value = 720;
+        filterL.Q.value = 0.7;
+
+        const filterR = this.audioCtx.createBiquadFilter();
+        filterR.type = "lowpass";
+        filterR.frequency.value = 720;
+        filterR.Q.value = 0.7;
+
+        // Interaural micro-delay (~0.32 ms)
+        const delayL = this.audioCtx.createDelay(0.01);
+        delayL.delayTime.value = 0.00032;
+
+        const delayR = this.audioCtx.createDelay(0.01);
+        delayR.delayTime.value = 0.00032;
+
+        // Attenuated crossfeed gains (-4.8 dB ≈ 0.58)
+        const crossGainL = this.audioCtx.createGain();
+        crossGainL.gain.value = 0.58;
+
+        const crossGainR = this.audioCtx.createGain();
+        crossGainR.gain.value = 0.58;
+
+        targetSource.connect(splitter);
+
+        // Left channel splits into direct Left output and delayed crossfeed to Right ear
+        splitter.connect(directL, 0);
+        directL.connect(merger, 0, 0);
+
+        splitter.connect(filterL, 0);
+        filterL.connect(delayL);
+        delayL.connect(crossGainL);
+        crossGainL.connect(merger, 0, 1);
+
+        // Right channel splits into direct Right output and delayed crossfeed to Left ear
+        splitter.connect(directR, 1);
+        directR.connect(merger, 0, 1);
+
+        splitter.connect(filterR, 1);
+        filterR.connect(delayR);
+        delayR.connect(crossGainR);
+        crossGainR.connect(merger, 0, 0);
+
+        merger.connect(this.audioCtx.destination);
+        this.crossfeedNodes = {
+          splitter,
+          merger,
+          directL,
+          directR,
+          filterL,
+          filterR,
+          delayL,
+          delayR,
+          crossGainL,
+          crossGainR,
+        };
+        return;
+      } catch {
+        // Fallback to direct routing if any node creation fails
+      }
+    }
+
+    try {
+      targetSource.connect(this.audioCtx.destination);
+    } catch {}
   }
 
   setMasterEQ({ bass = 0, mid = 0, treble = 0 }) {
