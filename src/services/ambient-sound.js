@@ -280,6 +280,7 @@ export class AmbientSoundscapeManager {
     this.atmosphereMode = "neutral";
     this.tidalSurge = true;
     this.distanceDamping = true;
+    this.stageRotation = 0;
     this.trackCoordinates = {};
     this.currentSpatialScenario = "cabin_realism";
     this.sleepTimerRemainingSec = 0;
@@ -1216,7 +1217,8 @@ export class AmbientSoundscapeManager {
     const track = this.nodes.get(name);
     if (!track || !this.audioCtx || !track.panner) return true;
     track.pan = clamped;
-    track.panner.pan.setValueAtTime(clamped, this.audioCtx.currentTime);
+    const effPan = this.getEffectiveTrackPan(name);
+    track.panner.pan.setValueAtTime(effPan, this.audioCtx.currentTime);
     return true;
   }
 
@@ -1263,7 +1265,7 @@ export class AmbientSoundscapeManager {
       for (const [name, track] of this.nodes.entries()) {
         if (track && track.distanceFilter && track.distanceFilter.frequency) {
           const coords = this.getTrackCoordinates(name);
-          const cutoff = this.calculateDistanceCutoff(coords.y);
+          const cutoff = this.calculateEffectiveCutoff(name, coords.y);
           track.distanceFilter.frequency.setValueAtTime(cutoff, this.audioCtx.currentTime);
         }
       }
@@ -1275,6 +1277,48 @@ export class AmbientSoundscapeManager {
     return this.distanceDamping;
   }
 
+  getStageRotation() {
+    return this.stageRotation;
+  }
+
+  setStageRotation(rotRad) {
+    this.stageRotation = Number(rotRad) || 0;
+    if (this.audioCtx) {
+      for (const [name, track] of this.nodes.entries()) {
+        const effPan = this.getEffectiveTrackPan(name);
+        if (track && track.panner && track.panner.pan?.setValueAtTime) {
+          track.panner.pan.setValueAtTime(effPan, this.audioCtx.currentTime);
+        }
+        if (track && track.distanceFilter && track.distanceFilter.frequency?.setValueAtTime) {
+          const coords = this.getTrackCoordinates(name);
+          const cutoff = this.calculateEffectiveCutoff(name, coords.y);
+          track.distanceFilter.frequency.setValueAtTime(cutoff, this.audioCtx.currentTime);
+        }
+      }
+    }
+    return this.stageRotation;
+  }
+
+  getEffectiveTrackPan(name) {
+    const pan = this.getTrackPan(name);
+    if (!this.stageRotation) return pan;
+    const baseAngle = (pan * Math.PI) / 2.5;
+    const rotatedAngle = baseAngle + this.stageRotation;
+    return Math.max(-1, Math.min(1, Math.round(Math.sin(rotatedAngle) * 1000) / 1000));
+  }
+
+  calculateEffectiveCutoff(name, y = 0.5) {
+    let cutoff = this.calculateDistanceCutoff(y);
+    if (!this.stageRotation) return cutoff;
+    const pan = this.getTrackPan(name);
+    const baseAngle = (pan * Math.PI) / 2.5;
+    const rotatedAngle = baseAngle + this.stageRotation;
+    if (Math.cos(rotatedAngle) < 0) {
+      cutoff = Math.min(cutoff, 5800);
+    }
+    return cutoff;
+  }
+
   setTrackCoordinates(name, { x = 0, y = 0.5 } = {}) {
     const clampedX = Math.max(-1, Math.min(1, Number(x) || 0));
     const clampedY = Math.max(0, Math.min(1, Number(y ?? 0.5)));
@@ -1283,7 +1327,7 @@ export class AmbientSoundscapeManager {
 
     const track = this.nodes.get(name);
     if (track && track.distanceFilter && this.audioCtx && track.distanceFilter.frequency) {
-      const cutoff = this.calculateDistanceCutoff(clampedY);
+      const cutoff = this.calculateEffectiveCutoff(name, clampedY);
       track.distanceFilter.frequency.setValueAtTime(cutoff, this.audioCtx.currentTime);
     }
 
@@ -1313,7 +1357,7 @@ export class AmbientSoundscapeManager {
     let totalVol = 0;
     for (const name of activeTracks) {
       const vol = this.getTrackVolume(name);
-      const pan = this.getTrackPan(name);
+      const pan = this.getEffectiveTrackPan(name);
       if (vol > 0.001) {
         weightedPan += pan * vol;
         totalVol += vol;

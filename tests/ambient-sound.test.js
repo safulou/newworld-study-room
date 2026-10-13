@@ -613,4 +613,43 @@ describe("AmbientSoundscapeManager", () => {
     expect(createdOscillators[0].type).toBe("sine");
     expect(mockCtx.createBiquadFilter).toHaveBeenCalled();
   });
+
+  it("manages soundstage compass rotation and computes effective pan and psychoacoustic pinna shadow cutoff", () => {
+    const manager = new AmbientSoundscapeManager();
+    expect(manager.getStageRotation()).toBe(0);
+
+    // Initial position: center
+    manager.setTrackPan("rain", 0);
+    manager.trackCoordinates["rain"] = { x: 0, y: 0.5 };
+    expect(manager.getEffectiveTrackPan("rain")).toBe(0);
+    expect(manager.calculateEffectiveCutoff("rain", 0.5)).toBe(11300);
+
+    // Rotate soundstage by +90 degrees (+PI/2, East)
+    manager.setStageRotation(Math.PI / 2);
+    expect(manager.getStageRotation()).toBeCloseTo(Math.PI / 2);
+
+    // Track at 0 base angle + PI/2 = PI/2, sin(PI/2) = 1.0 (Right side)
+    expect(manager.getEffectiveTrackPan("rain")).toBeCloseTo(1.0);
+    // cos(PI/2) is ~0, not negative yet
+    expect(manager.calculateEffectiveCutoff("rain", 0.5)).toBe(11300);
+
+    // Rotate soundstage to South (PI, 180 degrees)
+    manager.setStageRotation(Math.PI);
+    // Track at 0 base angle + PI = PI. cos(PI) = -1 < 0 (behind listener).
+    // Cutoff should be attenuated by pinna shadow to at most 5800 Hz.
+    expect(manager.calculateEffectiveCutoff("rain", 0.5)).toBeLessThanOrEqual(5800);
+
+    // Mock active audioCtx node update
+    const mockPanner = { pan: { setValueAtTime: vi.fn() } };
+    const mockFilter = { frequency: { setValueAtTime: vi.fn() } };
+    manager.audioCtx = { currentTime: 42 };
+    manager.nodes.set("rain", {
+      panner: mockPanner,
+      distanceFilter: mockFilter,
+    });
+
+    manager.setStageRotation(0);
+    expect(mockPanner.pan.setValueAtTime).toHaveBeenCalledWith(0, 42);
+    expect(mockFilter.frequency.setValueAtTime).toHaveBeenCalledWith(11300, 42);
+  });
 });

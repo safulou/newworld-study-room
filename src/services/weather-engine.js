@@ -75,13 +75,24 @@ export class WeatherEngine {
         pulse: Math.random() * Math.PI * 2,
         pulseSpeed: 0.03 + Math.random() * 0.04,
       }));
+    } else if (this.mode === "fireflies") {
+      const count = Math.round(18 * multiplier);
+      this.particles = Array.from({ length: count }, () => ({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        radius: 1.1 + Math.random() * 1.0,
+        pulse: Math.random() * Math.PI * 2,
+        pulseSpeed: 0.035 + Math.random() * 0.03,
+        wanderAngle: Math.random() * Math.PI * 2,
+        speed: 0.25 + Math.random() * 0.35,
+      }));
     } else {
       this.particles = [];
     }
   }
 
   setMode(mode) {
-    const validModes = ["none", "rain", "snow", "leaves", "clear"];
+    const validModes = ["none", "rain", "snow", "leaves", "clear", "fireflies"];
     const targetMode = validModes.includes(mode) ? mode : "none";
     if (this.mode === targetMode) return;
 
@@ -220,6 +231,42 @@ export class WeatherEngine {
         ctx.fillStyle = `rgba(255, 224, 163, ${alpha})`;
         ctx.beginPath();
         ctx.arc(dust.x, dust.y, dust.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (this.mode === "fireflies") {
+      for (const fly of this.particles) {
+        fly.pulse += fly.pulseSpeed;
+        fly.wanderAngle += (Math.random() - 0.5) * 0.2;
+        fly.x += Math.cos(fly.wanderAngle) * fly.speed + this.wind * 0.5;
+        fly.y += Math.sin(fly.wanderAngle) * (fly.speed * 0.7) - 0.08;
+
+        if (fly.x < -6) fly.x = w + 6;
+        if (fly.x > w + 6) fly.x = -6;
+        if (fly.y < -6) fly.y = h + 6;
+        if (fly.y > h + 6) fly.y = -6;
+
+        // Bioluminescent blinking cycle
+        const glow = Math.max(0, Math.sin(fly.pulse));
+        const alpha = 0.15 + glow * 0.8;
+
+        // Soft outer glowing aura
+        const auraRadius = fly.radius * 3.5;
+        if (typeof ctx.createRadialGradient === "function") {
+          const auraGrad = ctx.createRadialGradient(fly.x, fly.y, 0, fly.x, fly.y, auraRadius);
+          auraGrad.addColorStop(0, `rgba(195, 255, 100, ${alpha * 0.65})`);
+          auraGrad.addColorStop(1, "rgba(160, 240, 80, 0)");
+          ctx.fillStyle = auraGrad;
+        } else {
+          ctx.fillStyle = `rgba(195, 255, 100, ${alpha * 0.5})`;
+        }
+        ctx.beginPath();
+        ctx.arc(fly.x, fly.y, auraRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Warm bright core
+        ctx.fillStyle = `rgba(240, 255, 175, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(fly.x, fly.y, fly.radius, 0, Math.PI * 2);
         ctx.fill();
       }
     }

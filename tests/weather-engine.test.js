@@ -19,6 +19,9 @@ describe("WeatherEngine Service", () => {
       translate: vi.fn(),
       rotate: vi.fn(),
       ellipse: vi.fn(),
+      createRadialGradient: vi.fn().mockReturnValue({
+        addColorStop: vi.fn(),
+      }),
       lineWidth: 1,
       lineCap: "round",
       strokeStyle: "",
@@ -87,6 +90,18 @@ describe("WeatherEngine Service", () => {
     engine.setMode("clear");
     expect(engine.mode).toBe("clear");
     expect(engine.particles.length).toBe(12);
+
+    engine.renderFrame();
+    expect(mockCtx.arc).toHaveBeenCalled();
+    expect(mockCtx.fill).toHaveBeenCalled();
+    engine.stop();
+  });
+
+  it("switches to 'fireflies' mode and animates bioluminescent particles", () => {
+    const engine = new WeatherEngine(canvas);
+    engine.setMode("fireflies");
+    expect(engine.mode).toBe("fireflies");
+    expect(engine.particles.length).toBe(18);
 
     engine.renderFrame();
     expect(mockCtx.arc).toHaveBeenCalled();

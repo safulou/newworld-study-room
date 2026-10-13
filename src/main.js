@@ -299,6 +299,7 @@ const elements = {
   btnCloseSoundstage: $("#btnCloseSoundstage"),
   soundstageCanvas: $("#soundstageCanvas"),
   soundstagePresetPills: [...document.querySelectorAll(".soundstage-preset-pill")],
+  soundstageRotButtons: [...document.querySelectorAll(".soundstage-rot-btn")],
   btnToggleDistanceDamping: $("#btnToggleDistanceDamping"),
   btnSaveSoundstagePreset: $("#btnSaveSoundstagePreset"),
   btnGiftBookmarkToPeers: $("#btnGiftBookmarkToPeers"),
@@ -1473,6 +1474,8 @@ function syncWeatherAtmosphere() {
   // Auto weather derivation based on soundscape and day/night
   if (ambientSound.tracks && "rain" in ambientSound.tracks) {
     weatherEngine.setMode("rain");
+  } else if (ambientSound.tracks && "crickets" in ambientSound.tracks) {
+    weatherEngine.setMode("fireflies");
   } else if (ambientSound.tracks && ("wind" in ambientSound.tracks || "brown_noise" in ambientSound.tracks)) {
     weatherEngine.setMode("leaves");
   } else if (isNight) {
@@ -3016,6 +3019,29 @@ function bindSoundstageModal() {
       ctx.stroke();
     }
 
+    // Rotating Compass Dial on Listener
+    const stageRot = ambientSound.getStageRotation();
+    ctx.save();
+    ctx.translate(centerX, listenerY);
+    ctx.rotate(stageRot);
+    ctx.strokeStyle = "rgba(245, 158, 11, 0.4)";
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([3, 4]);
+    ctx.beginPath();
+    ctx.arc(0, 0, 46, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Cardinal direction markers
+    ctx.font = "bold 9px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillStyle = "#f59e0b";
+    ctx.fillText("N", 0, -50);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+    ctx.fillText("E", 54, 3);
+    ctx.fillText("S", 0, 58);
+    ctx.fillText("W", -54, 3);
+    ctx.restore();
+
     ctx.textAlign = "center";
     ctx.font = "28px sans-serif";
     ctx.fillText("🎧", centerX, listenerY + 6);
@@ -3028,7 +3054,7 @@ function bindSoundstageModal() {
 
     tracksToDraw.forEach((trackKey) => {
       const coords = ambientSound.getTrackCoordinates(trackKey);
-      const angle = (coords.x * Math.PI) / 2.5;
+      const angle = (coords.x * Math.PI) / 2.5 + stageRot;
       const radius = 80 + (1 - coords.y) * 220;
       const emitterX = centerX + Math.sin(angle) * radius;
       const emitterY = listenerY - Math.cos(angle) * radius;
@@ -3084,7 +3110,7 @@ function bindSoundstageModal() {
     // 4. Drag Tether Beam & HUD Readout Badge
     if (draggingTrack) {
       const coords = ambientSound.getTrackCoordinates(draggingTrack);
-      const angle = (coords.x * Math.PI) / 2.5;
+      const angle = (coords.x * Math.PI) / 2.5 + stageRot;
       const radius = 80 + (1 - coords.y) * 220;
       const emitterX = centerX + Math.sin(angle) * radius;
       const emitterY = listenerY - Math.cos(angle) * radius;
@@ -3100,11 +3126,13 @@ function bindSoundstageModal() {
       ctx.setLineDash([]);
 
       // HUD readout badge
-      const panDeg = Math.round(coords.x * 90);
+      const effPan = ambientSound.getEffectiveTrackPan(draggingTrack);
+      const panDeg = Math.round(effPan * 90);
       const panText = panDeg > 0 ? `R ${panDeg}°` : panDeg < 0 ? `L ${Math.abs(panDeg)}°` : "C 0°";
       const distPct = Math.round(coords.y * 100);
-      const cutoffHz = Math.round(ambientSound.calculateDistanceCutoff(coords.y));
-      const hudText = `方位 ${panText} · 距離 ${distPct}% · 截止 ${cutoffHz}Hz`;
+      const cutoffHz = Math.round(ambientSound.calculateEffectiveCutoff(draggingTrack, coords.y));
+      const behindNote = Math.cos((coords.x * Math.PI) / 2.5 + stageRot) < 0 ? " · 背向遮蔽" : "";
+      const hudText = `方位 ${panText} · 距離 ${distPct}% · 截止 ${cutoffHz}Hz${behindNote}`;
 
       ctx.font = "bold 11px ui-sans-serif, system-ui, sans-serif";
       const textWidth = ctx.measureText(hudText).width;
@@ -3145,10 +3173,11 @@ function bindSoundstageModal() {
     const listenerY = canvas.height - 55;
     const activeTracks = ambientSound.getActiveTracks();
     const tracksToCheck = activeTracks.length ? activeTracks : ["rain", "campfire", "wind", "ocean_waves"];
+    const stageRot = ambientSound.getStageRotation ? ambientSound.getStageRotation() : 0;
 
     for (const trackKey of tracksToCheck) {
       const coords = ambientSound.getTrackCoordinates(trackKey);
-      const angle = (coords.x * Math.PI) / 2.5;
+      const angle = (coords.x * Math.PI) / 2.5 + stageRot;
       const radius = 80 + (1 - coords.y) * 220;
       const emitterX = centerX + Math.sin(angle) * radius;
       const emitterY = listenerY - Math.cos(angle) * radius;
@@ -3163,8 +3192,12 @@ function bindSoundstageModal() {
     const listenerY = canvas.height - 55;
     const dx = cx - centerX;
     const dy = listenerY - cy;
+    const stageRot = ambientSound.getStageRotation ? ambientSound.getStageRotation() : 0;
 
-    const angle = Math.atan2(dx, dy);
+    let angle = Math.atan2(dx, dy) - stageRot;
+    while (angle > Math.PI) angle -= Math.PI * 2;
+    while (angle < -Math.PI) angle += Math.PI * 2;
+
     const pan = Math.max(-1, Math.min(1, angle / (Math.PI / 2.5)));
     const radius = Math.hypot(dx, dy);
     const dist = Math.max(0, Math.min(1, 1 - (radius - 80) / 220));
@@ -3212,8 +3245,25 @@ function bindSoundstageModal() {
   canvas.addEventListener("pointerup", onPointerUp);
   canvas.addEventListener("pointercancel", onPointerUp);
 
+  elements.soundstageRotButtons?.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const rot = parseFloat(btn.dataset.rotation || "0");
+      ambientSound.setStageRotation(rot);
+      elements.soundstageRotButtons.forEach((b) => b.classList.toggle("active", b === btn));
+      const dominantPan = ambientSound.getDominantTrackPan();
+      viewer?.setAcousticGaze?.(dominantPan);
+      renderSoundstage();
+      showToast(`🧭 聲學空間轉向：${btn.textContent.trim()}`);
+    });
+  });
+
   elements.btnOpenSoundstage?.addEventListener("click", () => {
     elements.soundstageModal?.showModal();
+    const currentRot = ambientSound.getStageRotation ? ambientSound.getStageRotation() : 0;
+    elements.soundstageRotButtons?.forEach((btn) => {
+      const rot = parseFloat(btn.dataset.rotation || "0");
+      btn.classList.toggle("active", Math.abs(rot - currentRot) < 0.05);
+    });
     renderSoundstage();
     startSoundstageAnimation();
   });
@@ -3664,6 +3714,7 @@ function bindAtmosphere() {
         snow: "❄️ 冬日落雪",
         leaves: "🍂 飄零落葉",
         clear: "🌌 晴空星塵",
+        fireflies: "✨ 仲夏螢火",
       };
       showToast(`窗外景緻已切換為：${names[mode] || mode}`);
     });
@@ -3672,7 +3723,7 @@ function bindAtmosphere() {
   // Clicking window pane cycles weather mode
   elements.cabinWindow?.addEventListener("click", (e) => {
     if (e.target.closest("#windowCelestial")) return;
-    const weatherModes = ["auto", "rain", "snow", "leaves", "clear"];
+    const weatherModes = ["auto", "rain", "snow", "leaves", "clear", "fireflies"];
     const current = store.get().windowWeather || "auto";
     const nextIdx = (weatherModes.indexOf(current) + 1) % weatherModes.length;
     const next = weatherModes[nextIdx];
@@ -3684,6 +3735,7 @@ function bindAtmosphere() {
       snow: "❄️ 冬日落雪",
       leaves: "🍂 飄零落葉",
       clear: "🌌 晴空星塵",
+      fireflies: "✨ 仲夏螢火",
     };
     showToast(`窗外景緻已切換為：${names[next] || next}`);
   });

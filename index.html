@@ -465,6 +465,7 @@
               <button class="weather-chip" type="button" data-weather="snow">❄️ 落雪</button>
               <button class="weather-chip" type="button" data-weather="leaves">🍂 飄葉</button>
               <button class="weather-chip" type="button" data-weather="clear">🌌 晴空</button>
+              <button class="weather-chip" type="button" data-weather="fireflies">✨ 螢火</button>
             </div>
             <div class="ambient-chips">
               <button class="ambient-chip" type="button" data-sound="rain" aria-pressed="false">
@@ -1220,6 +1221,7 @@
                 <option value="snow">❄️ 冬日落雪</option>
                 <option value="leaves">🍂 飄零落葉</option>
                 <option value="clear">🌌 晴空星塵</option>
+                <option value="fireflies">✨ 仲夏螢火</option>
               </select>
             </label>
             <label class="field">
@@ -1846,6 +1848,15 @@
           >
             🍃 空氣阻尼：開
           </button>
+        </div>
+        <div class="soundstage-rotation-row">
+          <span>🧭 舞台羅盤方位：</span>
+          <button type="button" class="soundstage-rot-btn active" data-rot="0" title="正立朝向 0°">0° 北 (正面)</button>
+          <button type="button" class="soundstage-rot-btn" data-rot="1.5708" title="右轉 90°">+90° 東</button>
+          <button type="button" class="soundstage-rot-btn" data-rot="3.1416" title="反向背轉 180°">
+            180° 南 (背向)
+          </button>
+          <button type="button" class="soundstage-rot-btn" data-rot="-1.5708" title="左轉 -90°">-90° 西</button>
         </div>
         <div class="soundstage-radar-wrap">
           <canvas id="soundstageCanvas" width="560" height="420" class="soundstage-canvas"></canvas>

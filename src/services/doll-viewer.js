@@ -499,6 +499,7 @@ export class DollViewer {
     lensRing.position.set(0, 0, 0.32);
     const lensGlass = new THREE.Mesh(new THREE.CircleGeometry(0.08, 18), glassLensMat);
     lensGlass.position.set(0, 0, 0.325);
+    this.telescopeLens = lensGlass;
     const eyepiece = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.12, 12), brassMat);
     eyepiece.position.set(0, 0, -0.36);
     eyepiece.rotation.x = Math.PI / 2;
@@ -856,6 +857,7 @@ export class DollViewer {
       type: "stargaze",
       startTime: performance.now(),
       duration,
+      hasTelescope: Boolean(this.telescopeGroup?.visible),
     };
     this.lastFaceMode = null;
     this.triggerBounce();
@@ -1431,14 +1433,29 @@ export class DollViewer {
         }
       } else if (emote.type === "stargaze") {
         const starSway = Math.sin(elapsedEmote * 3) * 0.03;
-        if (this.arms && this.arms.length === 2) {
-          // Dreamy stargazing posture: one hand gesturing toward the stars, one hand near chest
-          this.arms[0].rotation.set(0.55 + starSway, 0.2, -0.6);
-          this.arms[1].rotation.set(0.85, -0.35, 0.45 + starSway);
-        }
-        if (this.head) {
-          this.head.rotation.x = -0.28 + starSway;
-          this.head.rotation.z = Math.sin(elapsedEmote * 2.5) * 0.03;
+        if (emote.hasTelescope) {
+          // Telescope-focused astronomical viewing pose:
+          // Turning toward eyepiece with right hand on focus ring
+          if (this.arms && this.arms.length === 2) {
+            this.arms[0].rotation.set(0.68, 0.42, -0.32 + starSway);
+            this.arms[1].rotation.set(0.32, -0.18, 0.42);
+          }
+          if (this.head) {
+            this.head.rotation.x = -0.22 + starSway;
+            this.head.rotation.y = 0.25;
+            this.head.rotation.z = -0.06;
+          }
+        } else {
+          // Open-air starry gaze pose
+          if (this.arms && this.arms.length === 2) {
+            this.arms[0].rotation.set(0.55 + starSway, 0.2, -0.6);
+            this.arms[1].rotation.set(0.85, -0.35, 0.45 + starSway);
+          }
+          if (this.head) {
+            this.head.rotation.x = -0.28 + starSway;
+            this.head.rotation.y = 0;
+            this.head.rotation.z = Math.sin(elapsedEmote * 2.5) * 0.03;
+          }
         }
       }
     } else if (this.celebrationStartTime && performance.now() - this.celebrationStartTime < 6000) {
@@ -1484,7 +1501,16 @@ export class DollViewer {
       }
       if (this.head) {
         this.head.rotation.x = 0;
+        this.head.rotation.y = 0;
         this.head.rotation.z = this.acousticGazeTilt || 0;
+      }
+    }
+
+    if (this.telescopeLens && this.telescopeGroup?.visible) {
+      const isStargaze = this.currentEmote?.type === "stargaze";
+      const lensColor = isStargaze ? 0xbbf0ff : 0x90caf9;
+      if (this.telescopeLens.material?.color?.setHex) {
+        this.telescopeLens.material.color.setHex(lensColor);
       }
     }
 

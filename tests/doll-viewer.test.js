@@ -348,11 +348,12 @@ describe("drawDollFace", () => {
     expect(fakeViewer.telescopeGroup.visible).toBe(false);
   });
 
-  it("triggers stargaze micro-emote with duration and bounce", () => {
+  it("triggers stargaze micro-emote with duration and bounce, detecting telescope", () => {
     const fakeViewer = {
       currentEmote: null,
       lastFaceMode: "open",
       triggerBounce: vi.fn(),
+      telescopeGroup: { visible: false },
     };
     fakeViewer.triggerStargaze = DollViewer.prototype.triggerStargaze.bind(fakeViewer);
 
@@ -360,7 +361,14 @@ describe("drawDollFace", () => {
     expect(fakeViewer.currentEmote).toBeDefined();
     expect(fakeViewer.currentEmote.type).toBe("stargaze");
     expect(fakeViewer.currentEmote.duration).toBe(3200);
+    expect(fakeViewer.currentEmote.hasTelescope).toBe(false);
     expect(fakeViewer.lastFaceMode).toBeNull();
     expect(fakeViewer.triggerBounce).toHaveBeenCalled();
+
+    // With visible telescope
+    fakeViewer.telescopeGroup.visible = true;
+    fakeViewer.triggerStargaze({ duration: 4000 });
+    expect(fakeViewer.currentEmote.hasTelescope).toBe(true);
+    expect(fakeViewer.currentEmote.duration).toBe(4000);
   });
 });
