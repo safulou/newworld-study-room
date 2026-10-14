@@ -7,6 +7,7 @@ import {
   decodeSoundscapeCode,
   ACOUSTIC_PRESETS,
   DISTANCE_MODELS,
+  SURFACE_MATERIALS,
   createProceduralImpulseResponse,
 } from "../src/services/ambient-sound.js";
 
@@ -678,6 +679,7 @@ describe("AmbientSoundscapeManager", () => {
     manager.audioCtx = mockCtx;
     const mockSumGain = { disconnect: vi.fn(), connect: vi.fn() };
     manager.masterSumGain = mockSumGain;
+    manager.earlyReflections = false;
 
     manager.setBinauralCrossfeed(true);
     expect(mockCtx.createChannelSplitter).toHaveBeenCalledWith(2);
@@ -827,6 +829,109 @@ describe("AmbientSoundscapeManager", () => {
 
       manager.setDistanceModel("deep_space");
       expect(mockFilter.frequency.setValueAtTime).toHaveBeenCalledWith(10800, 25);
+    });
+  });
+
+  describe("Early Reflection Room Simulator & Surface Materials", () => {
+    it("exports SURFACE_MATERIALS with wood, fabric, and stone", () => {
+      expect(SURFACE_MATERIALS.wood).toBeDefined();
+      expect(SURFACE_MATERIALS.fabric).toBeDefined();
+      expect(SURFACE_MATERIALS.stone).toBeDefined();
+      expect(SURFACE_MATERIALS.wood.cutoff).toBe(3400);
+      expect(SURFACE_MATERIALS.fabric.cutoff).toBe(2100);
+      expect(SURFACE_MATERIALS.stone.cutoff).toBe(5600);
+    });
+
+    it("defaults to earlyReflections true and surfaceMaterial wood, and allows setting valid materials", () => {
+      const manager = new AmbientSoundscapeManager();
+      expect(manager.isEarlyReflections()).toBe(true);
+      expect(manager.getSurfaceMaterial()).toBe("wood");
+
+      manager.setEarlyReflections(false);
+      expect(manager.isEarlyReflections()).toBe(false);
+
+      manager.setSurfaceMaterial("stone");
+      expect(manager.getSurfaceMaterial()).toBe("stone");
+
+      manager.setSurfaceMaterial("fabric");
+      expect(manager.getSurfaceMaterial()).toBe("fabric");
+
+      // Invalid material should be ignored
+      manager.setSurfaceMaterial("invalid_material");
+      expect(manager.getSurfaceMaterial()).toBe("fabric");
+    });
+
+    it("constructs and updates early reflection audio nodes in updateOutputRouting", () => {
+      const manager = new AmbientSoundscapeManager();
+      const mockSplitter = { connect: vi.fn(), disconnect: vi.fn() };
+      const mockMerger = { connect: vi.fn(), disconnect: vi.fn() };
+      const createdGains = [];
+      const createdDelays = [];
+      const createdFilters = [];
+
+      const mockCtx = {
+        currentTime: 75,
+        destination: {},
+        createChannelSplitter: vi.fn(() => mockSplitter),
+        createChannelMerger: vi.fn(() => mockMerger),
+        createGain: vi.fn(() => {
+          const g = {
+            gain: { value: 1, setValueAtTime: vi.fn() },
+            connect: vi.fn(),
+            disconnect: vi.fn(),
+          };
+          createdGains.push(g);
+          return g;
+        }),
+        createDelay: vi.fn(() => {
+          const d = {
+            delayTime: { value: 0, setValueAtTime: vi.fn() },
+            connect: vi.fn(),
+            disconnect: vi.fn(),
+          };
+          createdDelays.push(d);
+          return d;
+        }),
+        createBiquadFilter: vi.fn(() => {
+          const f = {
+            type: "",
+            frequency: { value: 0, setValueAtTime: vi.fn() },
+            Q: { value: 0 },
+            connect: vi.fn(),
+            disconnect: vi.fn(),
+          };
+          createdFilters.push(f);
+          return f;
+        }),
+      };
+      manager.audioCtx = mockCtx;
+      const mockSumGain = { disconnect: vi.fn(), connect: vi.fn() };
+      manager.masterSumGain = mockSumGain;
+
+      // Ensure clean bypass on other stages for focused testing
+      manager.stereoWidth = 1.0;
+      manager.binauralCrossfeed = false;
+      manager.earlyReflections = true;
+      manager.surfaceMaterial = "wood";
+
+      manager.updateOutputRouting();
+
+      expect(mockCtx.createChannelSplitter).toHaveBeenCalledWith(2);
+      expect(mockCtx.createChannelMerger).toHaveBeenCalledWith(2);
+      // 4 gains: directL, directR, reflectGainL, reflectGainR
+      expect(createdGains.length).toBe(4);
+      expect(createdDelays.length).toBe(2);
+      expect(createdFilters.length).toBe(2);
+
+      expect(createdFilters[0].frequency.value).toBe(3400); // wood cutoff
+      expect(createdDelays[0].delayTime.value).toBe(0.015); // wood delayL
+      expect(createdGains[2].gain.value).toBe(0.28); // wood gain
+
+      // Dynamic update without reconnecting when nodes exist
+      manager.setSurfaceMaterial("stone");
+      expect(createdFilters[0].frequency.setValueAtTime).toHaveBeenCalledWith(5600, 75);
+      expect(createdDelays[0].delayTime.setValueAtTime).toHaveBeenCalledWith(0.012, 75);
+      expect(createdGains[2].gain.setValueAtTime).toHaveBeenCalledWith(0.38, 75);
     });
   });
 });

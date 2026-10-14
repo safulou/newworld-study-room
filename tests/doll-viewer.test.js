@@ -455,4 +455,47 @@ describe("drawDollFace", () => {
     expect(fakeViewer.lastFaceMode).toBeNull();
     expect(fakeViewer.triggerBounce).toHaveBeenCalled();
   });
+
+  it("triggers windchime micro-emote with windchimeGroup visibility setup, duration, and bounce", () => {
+    const fakeViewer = {
+      currentEmote: null,
+      lastFaceMode: "open",
+      triggerBounce: vi.fn(),
+      windchimeGroup: { visible: false },
+    };
+    fakeViewer.triggerWindChime = DollViewer.prototype.triggerWindChime.bind(fakeViewer);
+
+    fakeViewer.triggerWindChime({ duration: 2500 });
+    expect(fakeViewer.currentEmote).toBeDefined();
+    expect(fakeViewer.currentEmote.type).toBe("windchime");
+    expect(fakeViewer.currentEmote.duration).toBe(2500);
+    expect(fakeViewer.windchimeGroup.visible).toBe(true);
+    expect(fakeViewer.tempChimeVisible).toBe(true);
+    expect(fakeViewer.lastFaceMode).toBeNull();
+    expect(fakeViewer.triggerBounce).toHaveBeenCalled();
+  });
+
+  it("updates windchimeGroup visibility in setAccessories", () => {
+    const fakeViewer = {
+      glassesGroup: { visible: false },
+      crownGroup: { visible: false },
+      coffeeGroup: { visible: false },
+      catGroup: { visible: false },
+      telescopeGroup: { visible: false },
+      lanternGroup: { visible: false },
+      lanternLight: { intensity: 0 },
+      candlestickGroup: { visible: false },
+      candleLight: { intensity: 0 },
+      windchimeGroup: { visible: false },
+    };
+    fakeViewer.setAccessories = DollViewer.prototype.setAccessories.bind(fakeViewer);
+
+    fakeViewer.setAccessories({ windchime: true });
+    expect(fakeViewer.windchimeGroup.visible).toBe(true);
+    expect(fakeViewer.accessories.windchime).toBe(true);
+
+    fakeViewer.setAccessories({ windchime: false });
+    expect(fakeViewer.windchimeGroup.visible).toBe(false);
+    expect(fakeViewer.accessories.windchime).toBe(false);
+  });
 });

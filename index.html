@@ -146,7 +146,8 @@
             </div>
             <div class="garden-rainbow" id="gardenRainbow" aria-hidden="true"></div>
             <div class="garden-mist-container" id="gardenMistContainer" aria-hidden="true"></div>
-            <span class="garden-ground" aria-hidden="true"></span>
+            <div class="garden-petal-container" id="gardenPetalContainer" aria-hidden="true"></div>
+            <span class="garden-ground" id="gardenGround" aria-hidden="true"></span>
             <span class="garden-status" id="gardenStatus" aria-live="polite">玫瑰 · 種子</span>
             <div class="garden-action-btns">
               <button
@@ -812,6 +813,16 @@
               >
                 <i data-lucide="flame"></i>
                 <span>燭台</span>
+              </button>
+              <button
+                class="accessory-chip"
+                type="button"
+                data-accessory="windchime"
+                aria-pressed="false"
+                title="和風清夏風鈴"
+              >
+                <i data-lucide="bell"></i>
+                <span>風鈴</span>
               </button>
             </div>
             <div class="generation-card">
@@ -1905,6 +1916,14 @@
           >
             🎧 雙耳舒壓外放：關
           </button>
+          <button
+            type="button"
+            class="soundstage-preset-pill"
+            id="btnToggleEarlyReflections"
+            title="啟用室內第一波早期反射自然聲學模擬，模擬牆壁反彈微回響，豐富空間殘響層次"
+          >
+            🏛️ 早期反射：關
+          </button>
         </div>
         <div class="soundstage-rotation-row" role="group" aria-label="聲學舞台羅盤方位">
           <span>🧭 舞台羅盤方位：</span>
@@ -1961,6 +1980,35 @@
               title="深邃遼闊：遠距強烈衰減與深沉悶音，空間感深遠"
             >
               🌌 深邃遼闊
+            </button>
+          </div>
+        </div>
+        <div class="soundstage-surface-row" role="group" aria-label="反射牆面材質">
+          <span class="surface-label">🧱 反射牆面材質：</span>
+          <div class="surface-chips" id="surfaceChips">
+            <button
+              type="button"
+              class="surface-chip active"
+              data-surface="wood"
+              title="原木壁板：溫潤木質反射，中高頻平滑吸收 (3.4kHz)"
+            >
+              🪵 原木壁板
+            </button>
+            <button
+              type="button"
+              class="surface-chip"
+              data-surface="fabric"
+              title="厚織布簾：高度吸音，保留醇厚低頻，高頻顯著阻尼 (2.1kHz)"
+            >
+              🧶 厚織布簾
+            </button>
+            <button
+              type="button"
+              class="surface-chip"
+              data-surface="stone"
+              title="岩石石壁：通透硬質反射，高頻泛音明亮豐富 (5.6kHz)"
+            >
+              🪨 岩石石壁
             </button>
           </div>
         </div>

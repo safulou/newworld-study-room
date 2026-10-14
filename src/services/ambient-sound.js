@@ -228,6 +228,36 @@ export const DISTANCE_MODELS = {
   },
 };
 
+export const SURFACE_MATERIALS = {
+  wood: {
+    id: "wood",
+    name: "原木壁板",
+    desc: "溫潤柔和木質漫反射，平衡吸收極高頻",
+    cutoff: 3400,
+    delayL: 0.015,
+    delayR: 0.023,
+    gain: 0.28,
+  },
+  fabric: {
+    id: "fabric",
+    name: "厚織布簾",
+    desc: "強力吸收中高頻，空間感乾淨純粹安靜",
+    cutoff: 2100,
+    delayL: 0.019,
+    delayR: 0.027,
+    gain: 0.18,
+  },
+  stone: {
+    id: "stone",
+    name: "岩石石壁",
+    desc: "剛性反射，明亮清亮回聲，空間感空靈廣闊",
+    cutoff: 5600,
+    delayL: 0.012,
+    delayR: 0.018,
+    gain: 0.38,
+  },
+};
+
 export const ACOUSTIC_PRESETS = {
   bypass: {
     id: "bypass",
@@ -313,6 +343,9 @@ export class AmbientSoundscapeManager {
     this.crossfeedNodes = null;
     this.stereoWidth = 1.0;
     this.stereoWidthNodes = null;
+    this.earlyReflections = true;
+    this.surfaceMaterial = "wood";
+    this.earlyReflectionNodes = null;
     this.sleepTimerRemainingSec = 0;
     this.sleepTimerDurationSec = 0;
     this.sleepTimerInterval = null;
@@ -428,6 +461,55 @@ export class AmbientSoundscapeManager {
     return Boolean(this.binauralCrossfeed);
   }
 
+  setEarlyReflections(enabled) {
+    this.earlyReflections = Boolean(enabled);
+    this.updateOutputRouting();
+    return this.earlyReflections;
+  }
+
+  isEarlyReflections() {
+    return Boolean(this.earlyReflections);
+  }
+
+  setSurfaceMaterial(material) {
+    if (!SURFACE_MATERIALS[material]) return this.surfaceMaterial;
+    this.surfaceMaterial = material;
+    const config = SURFACE_MATERIALS[material];
+
+    if (this.earlyReflectionNodes && this.audioCtx) {
+      const now = this.audioCtx.currentTime;
+      try {
+        if (this.earlyReflectionNodes.filterL?.frequency?.setValueAtTime) {
+          this.earlyReflectionNodes.filterL.frequency.setValueAtTime(config.cutoff, now);
+        }
+        if (this.earlyReflectionNodes.filterR?.frequency?.setValueAtTime) {
+          this.earlyReflectionNodes.filterR.frequency.setValueAtTime(config.cutoff, now);
+        }
+        if (this.earlyReflectionNodes.delayL?.delayTime?.setValueAtTime) {
+          this.earlyReflectionNodes.delayL.delayTime.setValueAtTime(config.delayL, now);
+        }
+        if (this.earlyReflectionNodes.delayR?.delayTime?.setValueAtTime) {
+          this.earlyReflectionNodes.delayR.delayTime.setValueAtTime(config.delayR, now);
+        }
+        if (this.earlyReflectionNodes.reflectGainL?.gain?.setValueAtTime) {
+          this.earlyReflectionNodes.reflectGainL.gain.setValueAtTime(config.gain, now);
+        }
+        if (this.earlyReflectionNodes.reflectGainR?.gain?.setValueAtTime) {
+          this.earlyReflectionNodes.reflectGainR.gain.setValueAtTime(config.gain, now);
+        }
+      } catch {
+        this.updateOutputRouting();
+      }
+    } else {
+      this.updateOutputRouting();
+    }
+    return this.surfaceMaterial;
+  }
+
+  getSurfaceMaterial() {
+    return this.surfaceMaterial;
+  }
+
   setStereoWidth(widthFactor) {
     const clamped = Math.max(0, Math.min(2, Number(widthFactor ?? 1.0) || 0));
     this.stereoWidth = clamped;
@@ -474,6 +556,13 @@ export class AmbientSoundscapeManager {
         this.crossfeedNodes.merger.disconnect();
       } catch {}
       this.crossfeedNodes = null;
+    }
+
+    if (this.earlyReflectionNodes) {
+      try {
+        this.earlyReflectionNodes.merger.disconnect();
+      } catch {}
+      this.earlyReflectionNodes = null;
     }
 
     let currentOut = targetSource;
@@ -605,6 +694,89 @@ export class AmbientSoundscapeManager {
         currentOut = merger;
       } catch {
         // Fallback to direct routing if any node creation fails
+      }
+    }
+
+    // 3. Early Reflection Room Simulator Stage (Surface Absorption & Wall Bounce)
+    if (
+      this.earlyReflections &&
+      typeof this.audioCtx.createChannelSplitter === "function" &&
+      typeof this.audioCtx.createChannelMerger === "function" &&
+      typeof this.audioCtx.createDelay === "function" &&
+      typeof this.audioCtx.createBiquadFilter === "function"
+    ) {
+      try {
+        const material = SURFACE_MATERIALS[this.surfaceMaterial] || SURFACE_MATERIALS.wood;
+        const splitter = this.audioCtx.createChannelSplitter(2);
+        const merger = this.audioCtx.createChannelMerger(2);
+
+        // Direct path
+        const directL = this.audioCtx.createGain();
+        directL.gain.value = 1.0;
+        const directR = this.audioCtx.createGain();
+        directR.gain.value = 1.0;
+
+        // Reflection filters (wall material absorption)
+        const filterL = this.audioCtx.createBiquadFilter();
+        filterL.type = "lowpass";
+        filterL.frequency.value = material.cutoff;
+        filterL.Q.value = 0.7;
+
+        const filterR = this.audioCtx.createBiquadFilter();
+        filterR.type = "lowpass";
+        filterR.frequency.value = material.cutoff;
+        filterR.Q.value = 0.7;
+
+        // Wall reflection micro-delays (12ms ~ 28ms)
+        const delayL = this.audioCtx.createDelay(0.1);
+        delayL.delayTime.value = material.delayL;
+
+        const delayR = this.audioCtx.createDelay(0.1);
+        delayR.delayTime.value = material.delayR;
+
+        // Reflected cross-feed gains
+        const reflectGainL = this.audioCtx.createGain();
+        reflectGainL.gain.value = material.gain;
+
+        const reflectGainR = this.audioCtx.createGain();
+        reflectGainR.gain.value = material.gain;
+
+        currentOut.connect(splitter);
+
+        // Direct signal passed straight through
+        splitter.connect(directL, 0);
+        directL.connect(merger, 0, 0);
+
+        splitter.connect(directR, 1);
+        directR.connect(merger, 0, 1);
+
+        // Left ear early wall bounce crosses to Right
+        splitter.connect(filterL, 0);
+        filterL.connect(delayL);
+        delayL.connect(reflectGainL);
+        reflectGainL.connect(merger, 0, 1);
+
+        // Right ear early wall bounce crosses to Left
+        splitter.connect(filterR, 1);
+        filterR.connect(delayR);
+        delayR.connect(reflectGainR);
+        reflectGainR.connect(merger, 0, 0);
+
+        this.earlyReflectionNodes = {
+          splitter,
+          merger,
+          directL,
+          directR,
+          filterL,
+          filterR,
+          delayL,
+          delayR,
+          reflectGainL,
+          reflectGainR,
+        };
+        currentOut = merger;
+      } catch {
+        // Fallback on error
       }
     }
 

@@ -1017,4 +1017,110 @@ export class CompanionSoundManager {
     noiseSource.start(now);
     noiseSource.stop(now + dur + 0.05);
   }
+
+  /**
+   * Play an ethereal Japanese glass/brass wind chime ASMR sound
+   * Synthesizes crystalline bell overtones (pentatonic scale C7, E7, G7, B7) + soft bamboo clapper transient
+   */
+  playWindChimeSound() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // 1. Soft wooden clapper transient tap
+    const clapperOsc = ctx.createOscillator();
+    const clapperGain = ctx.createGain();
+    clapperOsc.type = "sine";
+    clapperOsc.frequency.setValueAtTime(380, now);
+    clapperOsc.frequency.exponentialRampToValueAtTime(160, now + 0.04);
+    clapperGain.gain.setValueAtTime(0.0001, now);
+    clapperGain.gain.linearRampToValueAtTime(0.12 * this.volume, now + 0.003);
+    clapperGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+    clapperOsc.connect(clapperGain);
+    clapperGain.connect(ctx.destination);
+    clapperOsc.start(now);
+    clapperOsc.stop(now + 0.06);
+
+    // 2. Chime bell notes with crystal decay
+    const notes = [
+      { freq: 2093.0, delay: 0.002, dur: 2.1, gain: 0.12 }, // C7
+      { freq: 2637.02, delay: 0.016, dur: 1.9, gain: 0.1 }, // E7
+      { freq: 3135.96, delay: 0.034, dur: 2.3, gain: 0.09 }, // G7
+      { freq: 3951.07, delay: 0.052, dur: 1.7, gain: 0.07 }, // B7
+    ];
+
+    notes.forEach(({ freq, delay, dur, gain: noteVol }) => {
+      // Main pure sine bell
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + delay);
+
+      // Micro inharmonic shimmer overtone (+1.4Hz slight detune)
+      const shimmerOsc = ctx.createOscillator();
+      const shimmerGain = ctx.createGain();
+      shimmerOsc.type = "sine";
+      shimmerOsc.frequency.setValueAtTime(freq * 1.002, now + delay);
+
+      const peak = noteVol * this.volume;
+      gain.gain.setValueAtTime(0.0001, now + delay);
+      gain.gain.linearRampToValueAtTime(peak, now + delay + 0.004);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
+
+      shimmerGain.gain.setValueAtTime(0.0001, now + delay);
+      shimmerGain.gain.linearRampToValueAtTime(peak * 0.4, now + delay + 0.006);
+      shimmerGain.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur * 0.8);
+
+      osc.connect(gain);
+      shimmerOsc.connect(shimmerGain);
+      gain.connect(ctx.destination);
+      shimmerGain.connect(ctx.destination);
+
+      osc.start(now + delay);
+      shimmerOsc.start(now + delay);
+      osc.stop(now + delay + dur + 0.05);
+      shimmerOsc.stop(now + delay + dur + 0.05);
+    });
+  }
+
+  /**
+   * Play gentle botanical leaf/petal friction rustle ASMR
+   * Soft swept bandpass noise (850Hz -> 1450Hz -> 720Hz) simulating touching real foliage
+   */
+  playLeafFrictionSound(duration = 0.22) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const dur = Math.max(0.12, duration);
+
+    const bufferSize = Math.floor(ctx.sampleRate * dur);
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.28;
+    }
+
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.Q.setValueAtTime(3.2, now);
+    filter.frequency.setValueAtTime(850, now);
+    filter.frequency.linearRampToValueAtTime(1450, now + dur * 0.4);
+    filter.frequency.exponentialRampToValueAtTime(720, now + dur);
+
+    const gain = ctx.createGain();
+    const peak = 0.14 * this.volume;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(peak, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+    noiseSource.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    noiseSource.start(now);
+    noiseSource.stop(now + dur + 0.04);
+  }
 }

@@ -303,14 +303,18 @@ const elements = {
   btnToggleSoundstageGyro: $("#btnToggleSoundstageGyro"),
   btnToggleDistanceDamping: $("#btnToggleDistanceDamping"),
   btnToggleBinauralCrossfeed: $("#btnToggleBinauralCrossfeed"),
+  btnToggleEarlyReflections: $("#btnToggleEarlyReflections"),
   stereoWidthSlider: $("#stereoWidthSlider"),
   stereoWidthBadge: $("#stereoWidthBadge"),
   distanceModelChips: [...document.querySelectorAll(".distance-model-chip")],
+  surfaceChips: [...document.querySelectorAll(".surface-chip")],
   gardenDewDrops: $("#gardenDewDrops"),
   gardenButterfly: $("#gardenButterfly"),
   btnSprayGarden: $("#btnSprayGarden"),
   gardenRainbow: $("#gardenRainbow"),
   gardenMistContainer: $("#gardenMistContainer"),
+  gardenPetalContainer: $("#gardenPetalContainer"),
+  gardenGround: $("#gardenGround"),
   btnSaveSoundstagePreset: $("#btnSaveSoundstagePreset"),
   btnGiftBookmarkToPeers: $("#btnGiftBookmarkToPeers"),
   photoInput: $("#photoInput"),
@@ -1862,6 +1866,7 @@ const lastAffinityInteractionTime = {
   pet: 0,
   peer: 0,
   mist: 0,
+  leaf: 0,
 };
 
 function updateAffinityUI() {
@@ -2633,6 +2638,8 @@ function syncAcousticUI() {
     btn.classList.toggle("active", btn.dataset.acoustic === reverb.preset);
   });
   syncBinauralCrossfeedUI(ambientSound.isBinauralCrossfeed());
+  syncEarlyReflectionsUI(ambientSound.isEarlyReflections());
+  syncSurfaceMaterialUI(ambientSound.getSurfaceMaterial());
   syncStereoWidthUI(ambientSound.getStereoWidth());
   syncDistanceModelUI(ambientSound.getDistanceModel?.());
   viewer?.setAcousticGaze?.(ambientSound.getDominantTrackPan());
@@ -2651,6 +2658,21 @@ function syncBinauralCrossfeedUI(active) {
   if (!elements.btnToggleBinauralCrossfeed) return;
   elements.btnToggleBinauralCrossfeed.classList.toggle("active", Boolean(active));
   elements.btnToggleBinauralCrossfeed.textContent = active ? "🎧 雙耳舒壓外放：開" : "🎧 雙耳舒壓外放：關";
+}
+
+function syncEarlyReflectionsUI(active) {
+  if (!elements.btnToggleEarlyReflections) return;
+  elements.btnToggleEarlyReflections.classList.toggle("active", Boolean(active));
+  elements.btnToggleEarlyReflections.textContent = active ? "🏛️ 早期反射：開" : "🏛️ 早期反射：關";
+}
+
+function syncSurfaceMaterialUI(material) {
+  const currentMaterial = material || "wood";
+  elements.surfaceChips?.forEach((chip) => {
+    const isTarget = chip.dataset.surface === currentMaterial;
+    chip.classList.toggle("active", isTarget);
+    chip.setAttribute("aria-pressed", String(isTarget));
+  });
 }
 
 function syncStereoWidthUI(widthValue) {
@@ -3092,6 +3114,42 @@ function bindSoundstageModal() {
     ctx.textAlign = "center";
     ctx.fillText(`衰減模型：${contourTheme.label}`, centerX, 22);
 
+    // 1b. Early Reflection Virtual Room Boundaries
+    const isEarlyReflect = ambientSound.isEarlyReflections?.();
+    const surfaceMat = ambientSound.getSurfaceMaterial?.() || "wood";
+    if (isEarlyReflect) {
+      const wallMargin = 16;
+      const wallLeft = wallMargin;
+      const wallRight = width - wallMargin;
+      const wallTop = wallMargin;
+      const wallBottom = listenerY + 36;
+
+      const wallColor =
+        surfaceMat === "fabric"
+          ? "rgba(167, 139, 250, 0.45)"
+          : surfaceMat === "stone"
+            ? "rgba(56, 189, 248, 0.5)"
+            : "rgba(245, 158, 11, 0.45)";
+      const wallLabel =
+        surfaceMat === "fabric"
+          ? "🧶 厚織吸音簾壁 (2.1kHz)"
+          : surfaceMat === "stone"
+            ? "🪨 岩石反射壁 (5.6kHz)"
+            : "🪵 原木反射壁板 (3.4kHz)";
+
+      ctx.save();
+      ctx.strokeStyle = wallColor;
+      ctx.lineWidth = 1.4;
+      ctx.setLineDash([5, 5]);
+      ctx.strokeRect(wallLeft, wallTop, wallRight - wallLeft, wallBottom - wallTop);
+
+      ctx.font = "10px ui-sans-serif, system-ui, sans-serif";
+      ctx.fillStyle = wallColor;
+      ctx.textAlign = "right";
+      ctx.fillText(`🏛️ 早期反射界限 · ${wallLabel}`, wallRight - 10, 22);
+      ctx.restore();
+    }
+
     // Radial guide lines
     [-0.8, -0.4, 0, 0.4, 0.8].forEach((pan) => {
       ctx.strokeStyle = pan === 0 ? "rgba(105, 200, 189, 0.3)" : "rgba(255, 255, 255, 0.08)";
@@ -3202,6 +3260,37 @@ function bindSoundstageModal() {
           ctx.beginPath();
           ctx.arc(px, py, particleRadius, 0, Math.PI * 2);
           ctx.fill();
+        }
+
+        // Early reflection acoustic bounce rays
+        if (isEarlyReflect) {
+          const bounceColor =
+            surfaceMat === "fabric"
+              ? "rgba(167, 139, 250, 0.28)"
+              : surfaceMat === "stone"
+                ? "rgba(56, 189, 248, 0.32)"
+                : "rgba(245, 158, 11, 0.3)";
+
+          const wallMargin = 16;
+          const bounceY_L = (emitterY + listenerY) / 2;
+          const bounceY_R = (emitterY + listenerY) / 2;
+
+          ctx.save();
+          ctx.strokeStyle = bounceColor;
+          ctx.lineWidth = 1;
+          ctx.setLineDash([3, 4]);
+          ctx.beginPath();
+          ctx.moveTo(emitterX, emitterY);
+          ctx.lineTo(wallMargin, bounceY_L);
+          ctx.lineTo(centerX, listenerY);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(emitterX, emitterY);
+          ctx.lineTo(width - wallMargin, bounceY_R);
+          ctx.lineTo(centerX, listenerY);
+          ctx.stroke();
+          ctx.restore();
         }
       }
 
@@ -3517,6 +3606,17 @@ function bindSoundstageModal() {
     );
   });
 
+  elements.btnToggleEarlyReflections?.addEventListener("click", () => {
+    const currentState = ambientSound.isEarlyReflections();
+    const newState = ambientSound.setEarlyReflections(!currentState);
+    store.update({ earlyReflections: newState });
+    syncEarlyReflectionsUI(newState);
+    renderSoundstage();
+    showToast(
+      newState ? "🏛️ 已開啟早期反射自然聲學模擬（牆壁回響層次，加深空間立體感）" : "🏛️ 已關閉早期反射自然聲學模擬",
+    );
+  });
+
   elements.stereoWidthSlider?.addEventListener("input", (e) => {
     const w = Number(e.target.value);
     ambientSound.setStereoWidth(w);
@@ -3538,6 +3638,23 @@ function bindSoundstageModal() {
         deep_space: "🌌 深邃遼闊（遠距強烈悶音衰減）",
       };
       showToast(`已切換空間衰減模式：${labels[model] || model}`);
+    });
+  });
+
+  elements.surfaceChips?.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const surface = chip.dataset.surface;
+      if (!surface) return;
+      ambientSound.setSurfaceMaterial(surface);
+      store.update({ surfaceMaterial: surface });
+      syncSurfaceMaterialUI(surface);
+      renderSoundstage();
+      const labels = {
+        wood: "🪵 原木壁板（溫潤平滑吸收，3.4kHz）",
+        fabric: "🧶 厚織布簾（高吸音阻尼，2.1kHz）",
+        stone: "🪨 岩石石壁（明亮硬質反射，5.6kHz）",
+      };
+      showToast(`已切換反射牆面材質：${labels[surface] || surface}`);
     });
   });
 
@@ -4026,6 +4143,7 @@ function bindAccessories() {
         telescope: "觀星黃銅望遠鏡",
         lantern: "夏夜螢火微光瓶",
         candlestick: "古典黃銅燭台",
+        windchime: "和風清夏風鈴",
       };
       showToast(`${next[acc] ? "已為玩偶佩戴" : "已卸下"}${labels[acc] || acc}。`);
     });
@@ -6266,10 +6384,110 @@ function bindHerbarium() {
     }
   });
 
+  function spawnGardenPetal(options = {}) {
+    const container = elements.gardenPetalContainer;
+    if (!container) return;
+    if (container.children.length >= 6) return;
+
+    const currentPlant = store.get().plant || "rose";
+    const weather = store.get().windowWeather;
+
+    let petalBg = "linear-gradient(135deg, #fbcfe8, #f43f5e)";
+    let petalGlow = "rgba(244, 63, 94, 0.35)";
+    let petalRadius = "80% 20% 80% 20%";
+    let petalWidth = 10;
+    let petalHeight = 14;
+
+    if (weather === "snow") {
+      petalBg = "linear-gradient(135deg, #ffffff, #93c5fd)";
+      petalGlow = "rgba(147, 197, 253, 0.4)";
+      petalRadius = "50%";
+      petalWidth = 8;
+      petalHeight = 8;
+    } else if (currentPlant === "succulent" || currentPlant === "pine") {
+      petalBg = "linear-gradient(135deg, #a7f3d0, #10b981)";
+      petalGlow = "rgba(16, 185, 129, 0.35)";
+      petalRadius = "70% 30% 70% 30%";
+      petalWidth = 9;
+      petalHeight = 13;
+    } else if (currentPlant === "cactus") {
+      petalBg = "linear-gradient(135deg, #fef08a, #eab308)";
+      petalGlow = "rgba(234, 179, 8, 0.35)";
+      petalRadius = "50% 50% 20% 20%";
+      petalWidth = 8;
+      petalHeight = 12;
+    } else if (currentPlant === "tulip") {
+      petalBg = "linear-gradient(135deg, #fed7aa, #f97316)";
+      petalGlow = "rgba(249, 115, 22, 0.35)";
+      petalRadius = "85% 15% 85% 15%";
+      petalWidth = 11;
+      petalHeight = 15;
+    }
+
+    const petal = document.createElement("span");
+    petal.className = "garden-petal-drift";
+    petal.title = "點擊撫觸拾取落葉落英";
+
+    const startX = options.x ?? 15 + Math.random() * 65;
+    const startY = options.y ?? -15 - Math.random() * 10;
+    const endX = startX + (Math.random() - 0.5) * 45;
+    const endY = 85 + Math.random() * 35;
+    const fallDuration = 4.8 + Math.random() * 2.4;
+    const rotStart = (Math.random() - 0.5) * 90;
+    const rotEnd = (Math.random() > 0.5 ? 1 : -1) * (180 + Math.random() * 180);
+
+    petal.style.setProperty("--petal-w", `${petalWidth}px`);
+    petal.style.setProperty("--petal-h", `${petalHeight}px`);
+    petal.style.setProperty("--petal-radius", petalRadius);
+    petal.style.setProperty("--petal-bg", petalBg);
+    petal.style.setProperty("--petal-glow", petalGlow);
+    petal.style.setProperty("--start-x", `${startX}px`);
+    petal.style.setProperty("--start-y", `${startY}px`);
+    petal.style.setProperty("--end-x", `${endX}px`);
+    petal.style.setProperty("--end-y", `${endY}px`);
+    petal.style.setProperty("--fall-duration", `${fallDuration}s`);
+    petal.style.setProperty("--rot-start", `${rotStart}deg`);
+    petal.style.setProperty("--rot-end", `${rotEnd}deg`);
+
+    petal.addEventListener("click", (e) => {
+      e.stopPropagation();
+      petal.classList.add("collected");
+      companionSound.playLeafFrictionSound();
+      spawnZenSpark("🍃 拾取草木落英", e.clientX, e.clientY);
+      const now = Date.now();
+      if (now - lastAffinityInteractionTime.leaf > 2500) {
+        lastAffinityInteractionTime.leaf = now;
+        addAffinityExp(1, "拾取花園落英");
+      }
+      setTimeout(() => petal.remove(), 450);
+    });
+
+    container.append(petal);
+    setTimeout(
+      () => {
+        if (petal.parentNode) petal.remove();
+      },
+      (fallDuration + 0.5) * 1000,
+    );
+  }
+
   elements.btnSprayGarden?.addEventListener("click", (e) => {
     e.stopPropagation();
     companionSound.playWaterMistSound();
     spawnZenSpark("💦 細霧滋潤", e.clientX, e.clientY);
+
+    elements.gardenGround?.classList.add("hydrated");
+    setTimeout(() => {
+      const weather = store.get().windowWeather;
+      const isDewWeather = weather === "rain" || weather === "snow" || weather === "fireflies";
+      if (!isDewWeather) {
+        elements.gardenGround?.classList.remove("hydrated");
+      }
+    }, 7000);
+
+    for (let i = 0; i < 2; i++) {
+      setTimeout(() => spawnGardenPetal(), 300 + i * 400);
+    }
 
     if (elements.gardenMistContainer) {
       for (let i = 0; i < 9; i++) {
@@ -6323,6 +6541,7 @@ function bindHerbarium() {
     }
     companionSound.playDewDropSound();
     spawnZenSpark("💧 晶瑩晨露", e.clientX, e.clientY);
+    spawnGardenPetal();
     const gardenDew = elements.gardenDewDrops;
     if (gardenDew) {
       gardenDew.style.animation = "none";
@@ -6487,6 +6706,16 @@ async function startViewer() {
         ];
         const quote = candleQuotes[Math.floor(Math.random() * candleQuotes.length)];
         showCompanionBubble(quote, 3400);
+      } else if (emoteType === "windchime") {
+        companionSound.playWindChimeSound();
+        spawnStarlightParticles();
+        const chimeQuotes = [
+          "叮鈴～叮鈴... 和風微風拂過風鈴，帶來夏日清涼的心流！🎐✨",
+          "清脆靈動的風鈴聲，為你滌淨雜念，靜心凝神入定！🎐🍃",
+          "微風拂響琉璃風鈴～深呼吸，讓心靈如晴空般澄澈透徹！🌸🕊️",
+        ];
+        const quote = chimeQuotes[Math.floor(Math.random() * chimeQuotes.length)];
+        showCompanionBubble(quote, 3400);
       } else {
         companionSound.playAffirmativeNod();
         const nodQuotes = [
@@ -6620,6 +6849,14 @@ function init() {
   const initialDistanceModel = store.get().distanceModel || "realistic";
   ambientSound.setDistanceModel(initialDistanceModel);
   syncDistanceModelUI(initialDistanceModel);
+
+  const initialEarlyReflections = Boolean(store.get().earlyReflections);
+  ambientSound.setEarlyReflections(initialEarlyReflections);
+  syncEarlyReflectionsUI(initialEarlyReflections);
+
+  const initialSurfaceMaterial = store.get().surfaceMaterial || "wood";
+  ambientSound.setSurfaceMaterial(initialSurfaceMaterial);
+  syncSurfaceMaterialUI(initialSurfaceMaterial);
 
   const autoAtm = store.get().autoAtmosphereSync !== false;
   ambientSound.setAutoAtmosphereSync(autoAtm);

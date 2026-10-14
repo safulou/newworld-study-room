@@ -49,6 +49,7 @@ const profileDefaults = {
     telescope: false,
     lantern: false,
     candlestick: false,
+    windchime: false,
   },
   ambientMode: "auto",
   desktopNotifications: false,
@@ -81,6 +82,8 @@ const profileDefaults = {
   binauralCrossfeed: false,
   stereoWidth: 1.0,
   distanceModel: "realistic",
+  earlyReflections: true,
+  surfaceMaterial: "wood",
 };
 
 export const AFFINITY_RANKS = [
@@ -213,6 +216,7 @@ function sanitizeProfile(value = {}) {
     telescope: Boolean(value.accessories?.telescope),
     lantern: Boolean(value.accessories?.lantern),
     candlestick: Boolean(value.accessories?.candlestick),
+    windchime: Boolean(value.accessories?.windchime),
   };
   const ambientMode = ["auto", "day", "dusk", "night"].includes(value.ambientMode) ? value.ambientMode : "auto";
   const heatmapTheme = ["emerald", "amber", "cyber", "ocean"].includes(value.heatmapTheme)
@@ -374,6 +378,11 @@ function sanitizeProfile(value = {}) {
     distanceModel: ["intimate", "realistic", "deep_space"].includes(value.distanceModel)
       ? value.distanceModel
       : profileDefaults.distanceModel,
+    earlyReflections:
+      value.earlyReflections !== undefined ? Boolean(value.earlyReflections) : profileDefaults.earlyReflections,
+    surfaceMaterial: ["wood", "fabric", "stone"].includes(value.surfaceMaterial)
+      ? value.surfaceMaterial
+      : profileDefaults.surfaceMaterial,
   };
 }
 

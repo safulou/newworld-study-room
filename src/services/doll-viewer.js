@@ -671,6 +671,66 @@ export class DollViewer {
     this.candlestickGroup.add(basePlate, candleStem, dripPan, waxBody, wick, flameMesh, this.candleLight);
     this.candlestickGroup.visible = false;
 
+    // 8. Japanese Summer Wind Chime with Glass Bell & Paper Tanzaku ("windchime")
+    this.windchimeGroup = new THREE.Group();
+    this.windchimeGroup.position.set(0.82, -0.96, 0.45);
+
+    const woodChimeMat = new THREE.MeshStandardMaterial({
+      color: 0x452817,
+      roughness: 0.7,
+    });
+    const brassChimeMat = new THREE.MeshStandardMaterial({
+      color: 0xcca04e,
+      metalness: 0.8,
+      roughness: 0.3,
+    });
+    const glassBellMat = new THREE.MeshPhysicalMaterial({
+      color: 0x7dd3fc,
+      transparent: true,
+      opacity: 0.82,
+      roughness: 0.1,
+      metalness: 0.1,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.1,
+    });
+    const tanzakuMat = new THREE.MeshStandardMaterial({
+      color: 0xfef2f2,
+      roughness: 0.8,
+      side: THREE.DoubleSide,
+    });
+    const stringMat = new THREE.MeshBasicMaterial({ color: 0xe2e8f0 });
+
+    const chimeBase = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 0.024, 16), woodChimeMat);
+    const chimePole = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.012, 0.52, 12), brassChimeMat);
+    chimePole.position.set(0, 0.26, 0);
+
+    const chimeArm = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.14, 8), brassChimeMat);
+    chimeArm.position.set(-0.06, 0.51, 0);
+    chimeArm.rotation.z = Math.PI / 2;
+
+    this.chimePivot = new THREE.Group();
+    this.chimePivot.position.set(-0.12, 0.51, 0);
+
+    const chimeString = new THREE.Mesh(new THREE.CylinderGeometry(0.002, 0.002, 0.11, 6), stringMat);
+    chimeString.position.y = -0.055;
+
+    this.chimeBell = new THREE.Mesh(
+      new THREE.SphereGeometry(0.045, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.65),
+      glassBellMat,
+    );
+    this.chimeBell.position.y = -0.11;
+    this.chimeBell.rotation.x = Math.PI;
+
+    this.chimeClapper = new THREE.Mesh(new THREE.SphereGeometry(0.012, 10, 8), brassChimeMat);
+    this.chimeClapper.position.y = -0.13;
+
+    this.chimeTanzaku = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.15, 0.002), tanzakuMat);
+    this.chimeTanzaku.position.set(0, -0.22, 0);
+
+    this.chimePivot.add(chimeString, this.chimeBell, this.chimeClapper, this.chimeTanzaku);
+    this.windchimeGroup.add(chimeBase, chimePole, chimeArm, this.chimePivot);
+    this.windchimeGroup.visible = false;
+
     this.customAccessories.add(
       this.glassesGroup,
       this.crownGroup,
@@ -679,6 +739,7 @@ export class DollViewer {
       this.telescopeGroup,
       this.lanternGroup,
       this.candlestickGroup,
+      this.windchimeGroup,
     );
     this.doll.add(this.customAccessories);
 
@@ -891,7 +952,7 @@ export class DollViewer {
             const emoteChoices =
               this.timerState === "focusing"
                 ? ["wave", "nod", "wish", "stargaze", "pageturn"]
-                : ["wave", "nod", "wish", "stargaze", "coffeesip", "petcat", "blowcandle"];
+                : ["wave", "nod", "wish", "stargaze", "coffeesip", "petcat", "blowcandle", "windchime"];
             const emoteType = emoteChoices[Math.floor(Math.random() * emoteChoices.length)];
             if (emoteType === "wave") {
               this.triggerWave();
@@ -907,6 +968,8 @@ export class DollViewer {
               this.triggerPetCat();
             } else if (emoteType === "blowcandle") {
               this.triggerBlowCandle();
+            } else if (emoteType === "windchime") {
+              this.triggerWindChime();
             } else {
               this.triggerStargaze();
             }
@@ -1084,6 +1147,20 @@ export class DollViewer {
     }
     this.currentEmote = {
       type: "blowcandle",
+      startTime: performance.now(),
+      duration: Math.max(800, duration),
+    };
+    this.lastFaceMode = null;
+    this.triggerBounce();
+  }
+
+  triggerWindChime({ duration = 2500 } = {}) {
+    if (!this.windchimeGroup?.visible) {
+      if (this.windchimeGroup) this.windchimeGroup.visible = true;
+      this.tempChimeVisible = true;
+    }
+    this.currentEmote = {
+      type: "windchime",
       startTime: performance.now(),
       duration: Math.max(800, duration),
     };
@@ -1303,8 +1380,9 @@ export class DollViewer {
     telescope = false,
     lantern = false,
     candlestick = false,
+    windchime = false,
   } = {}) {
-    this.accessories = { glasses, crown, coffee, cat, telescope, lantern, candlestick };
+    this.accessories = { glasses, crown, coffee, cat, telescope, lantern, candlestick, windchime };
     if (this.glassesGroup) this.glassesGroup.visible = Boolean(glasses);
     if (this.crownGroup) this.crownGroup.visible = Boolean(crown);
     if (this.coffeeGroup) this.coffeeGroup.visible = Boolean(coffee);
@@ -1314,6 +1392,7 @@ export class DollViewer {
     if (this.lanternLight) this.lanternLight.intensity = lantern ? 0.85 : 0;
     if (this.candlestickGroup) this.candlestickGroup.visible = Boolean(candlestick);
     if (this.candleLight) this.candleLight.intensity = candlestick ? 0.9 : 0;
+    if (this.windchimeGroup) this.windchimeGroup.visible = Boolean(windchime);
   }
 
   setAffinityAura(auraType = "none") {
@@ -1782,6 +1861,28 @@ export class DollViewer {
         if (this.candleLight) {
           this.candleLight.intensity = Math.max(0.15, 0.9 - curve * 0.7);
         }
+      } else if (emote.type === "windchime") {
+        const progress = Math.min(1, elapsedEmote / (emote.duration / 1000));
+        const p = Math.sin(progress * Math.PI);
+        const curve = p * p * (3 - 2 * p);
+        if (this.arms && this.arms.length === 2) {
+          this.arms[0].rotation.set(0.18 * curve, 0.1 * curve, -0.36);
+          this.arms[1].rotation.set(0.78 * curve, 0.35 * curve, 0.18 * curve);
+        }
+        if (this.head) {
+          this.head.rotation.x = 0.12 * curve;
+          this.head.rotation.y = 0.35 * curve;
+          this.head.rotation.z = 0.04 * curve;
+        }
+        if (this.chimePivot) {
+          const swingDecay = Math.exp(-progress * 3.2);
+          const chimeSwing = Math.sin(progress * Math.PI * 6.5) * 0.42 * swingDecay;
+          this.chimePivot.rotation.z = chimeSwing;
+        }
+        if (this.chimeTanzaku) {
+          const tanzakuFlutter = Math.sin(progress * Math.PI * 8.2) * 0.32 * Math.exp(-progress * 2.8);
+          this.chimeTanzaku.rotation.x = tanzakuFlutter;
+        }
       }
     } else if (this.celebrationStartTime && performance.now() - this.celebrationStartTime < 6000) {
       const wave = Math.sin(elapsed * 9) * 0.38;
@@ -1898,6 +1999,28 @@ export class DollViewer {
       if (this.candlestickGroup && !this.accessories?.candlestick) {
         this.candlestickGroup.visible = false;
         if (this.candleLight) this.candleLight.intensity = 0;
+      }
+    }
+
+    if (this.windchimeGroup && (!this.currentEmote || this.currentEmote.type !== "windchime")) {
+      if (this.windchimeGroup.visible && !this.reducedMotion) {
+        if (this.chimePivot) {
+          const breezeSway = Math.sin(elapsed * 2.2) * 0.05 + Math.sin(elapsed * 4.6) * 0.02;
+          this.chimePivot.rotation.z = breezeSway;
+        }
+        if (this.chimeTanzaku) {
+          const tanzakuSway = Math.sin(elapsed * 2.6) * 0.09;
+          this.chimeTanzaku.rotation.x = tanzakuSway;
+        }
+      } else if (this.chimePivot) {
+        this.chimePivot.rotation.set(0, 0, 0);
+        if (this.chimeTanzaku) this.chimeTanzaku.rotation.set(0, 0, 0);
+      }
+    }
+    if (this.tempChimeVisible && (!this.currentEmote || this.currentEmote.type !== "windchime")) {
+      this.tempChimeVisible = false;
+      if (this.windchimeGroup && !this.accessories?.windchime) {
+        this.windchimeGroup.visible = false;
       }
     }
 

@@ -73,6 +73,7 @@ describe("room-scoped store", () => {
       telescope: false,
       lantern: false,
       candlestick: false,
+      windchime: false,
     });
   });
 
@@ -468,5 +469,19 @@ describe("room-scoped store", () => {
     expect(store.get().distanceModel).toBe("deep_space");
     store.update({ distanceModel: "invalid_model" });
     expect(store.get().distanceModel).toBe("realistic");
+
+    // earlyReflections & surfaceMaterial
+    expect(store.get().earlyReflections).toBe(true);
+    expect(store.get().surfaceMaterial).toBe("wood");
+
+    store.update({ earlyReflections: false, surfaceMaterial: "stone" });
+    expect(store.get().earlyReflections).toBe(false);
+    expect(store.get().surfaceMaterial).toBe("stone");
+
+    store.update({ surfaceMaterial: "fabric" });
+    expect(store.get().surfaceMaterial).toBe("fabric");
+
+    store.update({ surfaceMaterial: "invalid_surface" });
+    expect(store.get().surfaceMaterial).toBe("wood");
   });
 });

@@ -455,4 +455,76 @@ describe("CompanionSoundManager", () => {
     expect(mockFilter.frequency.setValueAtTime).toHaveBeenCalledWith(4200, 110);
     expect(mockBufferSource.start).toHaveBeenCalledWith(110);
   });
+
+  it("synthesizes multi-tone pentatonic chime bell overtones in playWindChimeSound", () => {
+    expect(() => manager.playWindChimeSound()).not.toThrow();
+
+    const createdOscillators = [];
+    const mockGain = {
+      gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const mockCtx = {
+      currentTime: 120,
+      createOscillator: vi.fn(() => {
+        const osc = {
+          type: "",
+          frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+          connect: vi.fn(),
+          start: vi.fn(),
+          stop: vi.fn(),
+        };
+        createdOscillators.push(osc);
+        return osc;
+      }),
+      createGain: vi.fn(() => mockGain),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playWindChimeSound();
+    // 1 clapper osc + 4 pairs of chime & shimmer oscs = 9 oscillators
+    expect(createdOscillators.length).toBe(9);
+    expect(mockCtx.createOscillator).toHaveBeenCalled();
+    expect(createdOscillators[0].type).toBe("sine");
+    expect(createdOscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(380, 120);
+  });
+
+  it("synthesizes botanical leaf friction rustle in playLeafFrictionSound", () => {
+    expect(() => manager.playLeafFrictionSound()).not.toThrow();
+
+    const mockBufferSource = { buffer: null, connect: vi.fn(), start: vi.fn(), stop: vi.fn() };
+    const mockFilter = {
+      type: "",
+      frequency: {
+        setValueAtTime: vi.fn(),
+        linearRampToValueAtTime: vi.fn(),
+        exponentialRampToValueAtTime: vi.fn(),
+      },
+      Q: { setValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const mockGain = {
+      gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const mockCtx = {
+      currentTime: 130,
+      sampleRate: 44100,
+      createBuffer: vi.fn(() => ({
+        getChannelData: vi.fn(() => new Float32Array(100)),
+      })),
+      createBufferSource: vi.fn(() => mockBufferSource),
+      createBiquadFilter: vi.fn(() => mockFilter),
+      createGain: vi.fn(() => mockGain),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playLeafFrictionSound(0.25);
+    expect(mockCtx.createBufferSource).toHaveBeenCalled();
+    expect(mockFilter.type).toBe("bandpass");
+    expect(mockFilter.frequency.setValueAtTime).toHaveBeenCalledWith(850, 130);
+    expect(mockBufferSource.start).toHaveBeenCalledWith(130);
+  });
 });
