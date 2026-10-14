@@ -144,6 +144,25 @@
                 <span class="pollen-dot pollen-2"></span>
               </div>
             </div>
+            <div
+              class="garden-songbird"
+              id="gardenSongbird"
+              role="button"
+              tabindex="0"
+              aria-label="花園晨光鳴禽"
+              title="點擊聆聽林間清晨鳥鳴與羽翼微振 (+10 EXP)"
+            >
+              <div class="songbird-body">
+                <span class="songbird-head">
+                  <i class="songbird-beak"></i>
+                  <i class="songbird-eye"></i>
+                </span>
+                <span class="songbird-wing"></span>
+                <span class="songbird-tail"></span>
+              </div>
+              <span class="songbird-branch"></span>
+              <span class="songbird-note-bubble" id="songbirdNoteBubble" aria-hidden="true">♪</span>
+            </div>
             <div class="garden-rainbow" id="gardenRainbow" aria-hidden="true"></div>
             <div class="garden-mist-container" id="gardenMistContainer" aria-hidden="true"></div>
             <div class="garden-petal-container" id="gardenPetalContainer" aria-hidden="true"></div>
@@ -823,6 +842,16 @@
               >
                 <i data-lucide="bell"></i>
                 <span>風鈴</span>
+              </button>
+              <button
+                class="accessory-chip"
+                type="button"
+                data-accessory="hourglass"
+                aria-pressed="false"
+                title="復古黃銅沙漏"
+              >
+                <i data-lucide="hourglass"></i>
+                <span>沙漏</span>
               </button>
             </div>
             <div class="generation-card">
@@ -2009,6 +2038,35 @@
               title="岩石石壁：通透硬質反射，高頻泛音明亮豐富 (5.6kHz)"
             >
               🪨 岩石石壁
+            </button>
+          </div>
+        </div>
+        <div class="soundstage-dimension-row" role="group" aria-label="房間物理尺度">
+          <span class="dimension-label">📐 房間物理尺度：</span>
+          <div class="dimension-chips" id="roomDimensionChips">
+            <button
+              type="button"
+              class="dimension-chip"
+              data-dimension="nook"
+              title="隱密書龕 (3m)：緊密私密反射，微延遲 (0.55x)，反射密度高"
+            >
+              📖 隱密書龕 (3m)
+            </button>
+            <button
+              type="button"
+              class="dimension-chip active"
+              data-dimension="studio"
+              title="書齋琴室 (6m)：標準物理尺度 (1.0x)，平衡通透"
+            >
+              🎻 書齋琴室 (6m)
+            </button>
+            <button
+              type="button"
+              class="dimension-chip"
+              data-dimension="hall"
+              title="挑高書殿 (12m)：宏偉悠遠反射，悠長延遲 (2.2x)，空間開闊"
+            >
+              🏛️ 挑高書殿 (12m)
             </button>
           </div>
         </div>

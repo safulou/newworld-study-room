@@ -498,4 +498,48 @@ describe("drawDollFace", () => {
     expect(fakeViewer.windchimeGroup.visible).toBe(false);
     expect(fakeViewer.accessories.windchime).toBe(false);
   });
+
+  it("triggers hourglass micro-emote with hourglassGroup visibility setup, duration, and bounce", () => {
+    const fakeViewer = {
+      currentEmote: null,
+      lastFaceMode: "open",
+      triggerBounce: vi.fn(),
+      hourglassGroup: { visible: false },
+    };
+    fakeViewer.triggerFlipHourglass = DollViewer.prototype.triggerFlipHourglass.bind(fakeViewer);
+
+    fakeViewer.triggerFlipHourglass({ duration: 2400 });
+    expect(fakeViewer.currentEmote).toBeDefined();
+    expect(fakeViewer.currentEmote.type).toBe("hourglass");
+    expect(fakeViewer.currentEmote.duration).toBe(2400);
+    expect(fakeViewer.hourglassGroup.visible).toBe(true);
+    expect(fakeViewer.tempHourglassVisible).toBe(true);
+    expect(fakeViewer.lastFaceMode).toBeNull();
+    expect(fakeViewer.triggerBounce).toHaveBeenCalled();
+  });
+
+  it("updates hourglassGroup visibility in setAccessories", () => {
+    const fakeViewer = {
+      glassesGroup: { visible: false },
+      crownGroup: { visible: false },
+      coffeeGroup: { visible: false },
+      catGroup: { visible: false },
+      telescopeGroup: { visible: false },
+      lanternGroup: { visible: false },
+      lanternLight: { intensity: 0 },
+      candlestickGroup: { visible: false },
+      candleLight: { intensity: 0 },
+      windchimeGroup: { visible: false },
+      hourglassGroup: { visible: false },
+    };
+    fakeViewer.setAccessories = DollViewer.prototype.setAccessories.bind(fakeViewer);
+
+    fakeViewer.setAccessories({ hourglass: true });
+    expect(fakeViewer.hourglassGroup.visible).toBe(true);
+    expect(fakeViewer.accessories.hourglass).toBe(true);
+
+    fakeViewer.setAccessories({ hourglass: false });
+    expect(fakeViewer.hourglassGroup.visible).toBe(false);
+    expect(fakeViewer.accessories.hourglass).toBe(false);
+  });
 });

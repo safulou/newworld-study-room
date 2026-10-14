@@ -731,6 +731,77 @@ export class DollViewer {
     this.windchimeGroup.add(chimeBase, chimePole, chimeArm, this.chimePivot);
     this.windchimeGroup.visible = false;
 
+    // 9. Antique Brass Hourglass ("hourglass")
+    this.hourglassGroup = new THREE.Group();
+    this.hourglassGroup.position.set(-0.82, -0.96, 0.45);
+
+    const brassHourglassMat = new THREE.MeshStandardMaterial({
+      color: 0xd4af37,
+      metalness: 0.85,
+      roughness: 0.28,
+    });
+    const glassBulbMat = new THREE.MeshPhysicalMaterial({
+      color: 0xffffff,
+      transmission: 0.92,
+      roughness: 0.06,
+      ior: 1.5,
+      transparent: true,
+      opacity: 0.85,
+      depthWrite: false,
+    });
+    const sandGrainMat = new THREE.MeshStandardMaterial({
+      color: 0xdfad6b,
+      roughness: 0.9,
+    });
+
+    const hgBase = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.105, 0.02, 16), brassHourglassMat);
+    hgBase.position.y = 0.01;
+    const hgTop = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.095, 0.02, 16), brassHourglassMat);
+    hgTop.position.y = 0.35;
+
+    const pillarGeom = new THREE.CylinderGeometry(0.008, 0.008, 0.32, 8);
+    const pillars = [];
+    for (let i = 0; i < 3; i++) {
+      const angle = (i * Math.PI * 2) / 3;
+      const pillar = new THREE.Mesh(pillarGeom, brassHourglassMat);
+      pillar.position.set(Math.cos(angle) * 0.075, 0.18, Math.sin(angle) * 0.075);
+      pillars.push(pillar);
+    }
+
+    this.hourglassPivot = new THREE.Group();
+    this.hourglassPivot.position.set(0, 0.18, 0);
+
+    const topBulb = new THREE.Mesh(new THREE.ConeGeometry(0.068, 0.13, 16), glassBulbMat);
+    topBulb.position.y = 0.065;
+    topBulb.rotation.x = Math.PI;
+
+    const btmBulb = new THREE.Mesh(new THREE.ConeGeometry(0.068, 0.13, 16), glassBulbMat);
+    btmBulb.position.y = -0.065;
+
+    const waistRing = new THREE.Mesh(new THREE.TorusGeometry(0.018, 0.005, 8, 16), brassHourglassMat);
+    waistRing.rotation.x = Math.PI / 2;
+
+    this.hourglassUpperSand = new THREE.Mesh(new THREE.ConeGeometry(0.052, 0.09, 12), sandGrainMat);
+    this.hourglassUpperSand.position.y = 0.05;
+    this.hourglassUpperSand.rotation.x = Math.PI;
+
+    this.hourglassLowerSand = new THREE.Mesh(new THREE.ConeGeometry(0.054, 0.08, 12), sandGrainMat);
+    this.hourglassLowerSand.position.y = -0.09;
+
+    this.hourglassSandStream = new THREE.Mesh(new THREE.CylinderGeometry(0.0025, 0.0025, 0.12, 6), sandGrainMat);
+    this.hourglassSandStream.position.y = 0;
+
+    this.hourglassPivot.add(
+      topBulb,
+      btmBulb,
+      waistRing,
+      this.hourglassUpperSand,
+      this.hourglassLowerSand,
+      this.hourglassSandStream,
+    );
+    this.hourglassGroup.add(hgBase, hgTop, ...pillars, this.hourglassPivot);
+    this.hourglassGroup.visible = false;
+
     this.customAccessories.add(
       this.glassesGroup,
       this.crownGroup,
@@ -740,6 +811,7 @@ export class DollViewer {
       this.lanternGroup,
       this.candlestickGroup,
       this.windchimeGroup,
+      this.hourglassGroup,
     );
     this.doll.add(this.customAccessories);
 
@@ -951,8 +1023,8 @@ export class DollViewer {
           } else if (this.consecutiveTaps === 2) {
             const emoteChoices =
               this.timerState === "focusing"
-                ? ["wave", "nod", "wish", "stargaze", "pageturn"]
-                : ["wave", "nod", "wish", "stargaze", "coffeesip", "petcat", "blowcandle", "windchime"];
+                ? ["wave", "nod", "wish", "stargaze", "pageturn", "hourglass"]
+                : ["wave", "nod", "wish", "stargaze", "coffeesip", "petcat", "blowcandle", "windchime", "hourglass"];
             const emoteType = emoteChoices[Math.floor(Math.random() * emoteChoices.length)];
             if (emoteType === "wave") {
               this.triggerWave();
@@ -970,6 +1042,8 @@ export class DollViewer {
               this.triggerBlowCandle();
             } else if (emoteType === "windchime") {
               this.triggerWindChime();
+            } else if (emoteType === "hourglass") {
+              this.triggerFlipHourglass();
             } else {
               this.triggerStargaze();
             }
@@ -1161,6 +1235,20 @@ export class DollViewer {
     }
     this.currentEmote = {
       type: "windchime",
+      startTime: performance.now(),
+      duration: Math.max(800, duration),
+    };
+    this.lastFaceMode = null;
+    this.triggerBounce();
+  }
+
+  triggerFlipHourglass({ duration = 2400 } = {}) {
+    if (!this.hourglassGroup?.visible) {
+      if (this.hourglassGroup) this.hourglassGroup.visible = true;
+      this.tempHourglassVisible = true;
+    }
+    this.currentEmote = {
+      type: "hourglass",
       startTime: performance.now(),
       duration: Math.max(800, duration),
     };
@@ -1381,8 +1469,9 @@ export class DollViewer {
     lantern = false,
     candlestick = false,
     windchime = false,
+    hourglass = false,
   } = {}) {
-    this.accessories = { glasses, crown, coffee, cat, telescope, lantern, candlestick, windchime };
+    this.accessories = { glasses, crown, coffee, cat, telescope, lantern, candlestick, windchime, hourglass };
     if (this.glassesGroup) this.glassesGroup.visible = Boolean(glasses);
     if (this.crownGroup) this.crownGroup.visible = Boolean(crown);
     if (this.coffeeGroup) this.coffeeGroup.visible = Boolean(coffee);
@@ -1393,6 +1482,7 @@ export class DollViewer {
     if (this.candlestickGroup) this.candlestickGroup.visible = Boolean(candlestick);
     if (this.candleLight) this.candleLight.intensity = candlestick ? 0.9 : 0;
     if (this.windchimeGroup) this.windchimeGroup.visible = Boolean(windchime);
+    if (this.hourglassGroup) this.hourglassGroup.visible = Boolean(hourglass);
   }
 
   setAffinityAura(auraType = "none") {
@@ -1883,6 +1973,28 @@ export class DollViewer {
           const tanzakuFlutter = Math.sin(progress * Math.PI * 8.2) * 0.32 * Math.exp(-progress * 2.8);
           this.chimeTanzaku.rotation.x = tanzakuFlutter;
         }
+      } else if (emote.type === "hourglass") {
+        const progress = Math.min(1, elapsedEmote / (emote.duration / 1000));
+        const p = Math.sin(progress * Math.PI);
+        const curve = p * p * (3 - 2 * p);
+        if (this.arms && this.arms.length === 2) {
+          this.arms[0].rotation.set(0.72 * curve, -0.28 * curve, -0.24);
+          this.arms[1].rotation.set(0.22 * curve, 0.1 * curve, 0.36);
+        }
+        if (this.head) {
+          this.head.rotation.x = 0.22 * curve;
+          this.head.rotation.y = -0.36 * curve;
+          this.head.rotation.z = -0.06 * curve;
+        }
+        if (this.hourglassPivot) {
+          const flipProgress = Math.min(1, Math.max(0, (progress - 0.12) / 0.76));
+          const smoothFlip = flipProgress * flipProgress * (3 - 2 * flipProgress);
+          this.hourglassPivot.rotation.z = smoothFlip * Math.PI;
+        }
+        if (this.hourglassSandStream) {
+          const streamScale = 0.4 + Math.sin(progress * Math.PI * 12) * 0.6;
+          this.hourglassSandStream.scale.set(streamScale, 1, streamScale);
+        }
       }
     } else if (this.celebrationStartTime && performance.now() - this.celebrationStartTime < 6000) {
       const wave = Math.sin(elapsed * 9) * 0.38;
@@ -2021,6 +2133,21 @@ export class DollViewer {
       this.tempChimeVisible = false;
       if (this.windchimeGroup && !this.accessories?.windchime) {
         this.windchimeGroup.visible = false;
+      }
+    }
+
+    if (this.hourglassGroup && (!this.currentEmote || this.currentEmote.type !== "hourglass")) {
+      if (this.hourglassGroup.visible && !this.reducedMotion) {
+        if (this.hourglassSandStream) {
+          const trickle = 0.85 + Math.sin(elapsed * 7) * 0.15;
+          this.hourglassSandStream.scale.set(trickle, 1, trickle);
+        }
+      }
+    }
+    if (this.tempHourglassVisible && (!this.currentEmote || this.currentEmote.type !== "hourglass")) {
+      this.tempHourglassVisible = false;
+      if (this.hourglassGroup && !this.accessories?.hourglass) {
+        this.hourglassGroup.visible = false;
       }
     }
 

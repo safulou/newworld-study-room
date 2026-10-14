@@ -8,6 +8,7 @@ import {
   ACOUSTIC_PRESETS,
   DISTANCE_MODELS,
   SURFACE_MATERIALS,
+  ROOM_DIMENSIONS,
   createProceduralImpulseResponse,
 } from "../src/services/ambient-sound.js";
 
@@ -932,6 +933,24 @@ describe("AmbientSoundscapeManager", () => {
       expect(createdFilters[0].frequency.setValueAtTime).toHaveBeenCalledWith(5600, 75);
       expect(createdDelays[0].delayTime.setValueAtTime).toHaveBeenCalledWith(0.012, 75);
       expect(createdGains[2].gain.setValueAtTime).toHaveBeenCalledWith(0.38, 75);
+
+      // Room dimensions scaling test
+      expect(ROOM_DIMENSIONS.nook).toBeDefined();
+      expect(ROOM_DIMENSIONS.studio).toBeDefined();
+      expect(ROOM_DIMENSIONS.hall).toBeDefined();
+
+      manager.setRoomDimension("hall");
+      expect(manager.getRoomDimension()).toBe("hall");
+      // stone delayL = 0.012 * 2.2 = 0.0264
+      expect(createdDelays[0].delayTime.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0.0264, 4), 75);
+
+      manager.setRoomDimension("nook");
+      expect(manager.getRoomDimension()).toBe("nook");
+      // stone delayL = 0.012 * 0.55 = 0.0066
+      expect(createdDelays[0].delayTime.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0.0066, 4), 75);
+
+      manager.setRoomDimension("invalid_dimension");
+      expect(manager.getRoomDimension()).toBe("nook");
     });
   });
 });

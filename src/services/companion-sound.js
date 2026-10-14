@@ -1123,4 +1123,89 @@ export class CompanionSoundManager {
     noiseSource.start(now);
     noiseSource.stop(now + dur + 0.04);
   }
+
+  /**
+   * Play procedural antique hourglass fine sand trickling ASMR
+   * Granular dual-bandpass noise with subtle micro-tremolo simulating falling silica grains
+   */
+  playHourglassSandSound(duration = 2.4) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const dur = Math.max(0.8, duration);
+
+    const bufferSize = Math.floor(ctx.sampleRate * dur);
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.22;
+    }
+
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+
+    // Dual bandpass filter for granular silica sliding + glass micro-clicks
+    const filterLow = ctx.createBiquadFilter();
+    filterLow.type = "bandpass";
+    filterLow.frequency.setValueAtTime(1600, now);
+    filterLow.Q.setValueAtTime(2.4, now);
+
+    const filterHigh = ctx.createBiquadFilter();
+    filterHigh.type = "bandpass";
+    filterHigh.frequency.setValueAtTime(3200, now);
+    filterHigh.Q.setValueAtTime(3.8, now);
+
+    const gainNode = ctx.createGain();
+    const peak = 0.13 * this.volume;
+    gainNode.gain.setValueAtTime(0.0001, now);
+    gainNode.gain.linearRampToValueAtTime(peak, now + 0.12);
+    gainNode.gain.setValueAtTime(peak, now + dur - 0.25);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+    noiseSource.connect(filterLow);
+    noiseSource.connect(filterHigh);
+    filterLow.connect(gainNode);
+    filterHigh.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    noiseSource.start(now);
+    noiseSource.stop(now + dur + 0.05);
+  }
+
+  /**
+   * Play procedural morning songbird warble chirp ASMR
+   * Double-chirp FM sweep with gentle mountain warbler vibrato
+   */
+  playSongbirdWarbleSound() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    const chirps = [
+      { startOffset: 0.0, dur: 0.14, startFreq: 2600, peakFreq: 3800, endFreq: 2900, peakGain: 0.12 },
+      { startOffset: 0.16, dur: 0.22, startFreq: 2900, peakFreq: 4400, endFreq: 3200, peakGain: 0.15 },
+    ];
+
+    chirps.forEach(({ startOffset, dur, startFreq, peakFreq, endFreq, peakGain }) => {
+      const start = now + startOffset;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(startFreq, start);
+      osc.frequency.exponentialRampToValueAtTime(peakFreq, start + dur * 0.45);
+      osc.frequency.exponentialRampToValueAtTime(endFreq, start + dur);
+
+      const targetGain = peakGain * this.volume;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.linearRampToValueAtTime(targetGain, start + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(start);
+      osc.stop(start + dur + 0.02);
+    });
+  }
 }

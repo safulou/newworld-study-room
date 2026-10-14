@@ -30,6 +30,7 @@ import {
   Glasses,
   GripVertical,
   HandMetal,
+  Hourglass,
   House,
   Image as ImageIcon,
   ImagePlus,
@@ -122,6 +123,7 @@ const icons = {
   Glasses,
   GripVertical,
   HandMetal,
+  Hourglass,
   House,
   Image: ImageIcon,
   ImagePlus,
@@ -308,8 +310,10 @@ const elements = {
   stereoWidthBadge: $("#stereoWidthBadge"),
   distanceModelChips: [...document.querySelectorAll(".distance-model-chip")],
   surfaceChips: [...document.querySelectorAll(".surface-chip")],
+  roomDimensionChips: [...document.querySelectorAll(".dimension-chip")],
   gardenDewDrops: $("#gardenDewDrops"),
   gardenButterfly: $("#gardenButterfly"),
+  gardenSongbird: $("#gardenSongbird"),
   btnSprayGarden: $("#btnSprayGarden"),
   gardenRainbow: $("#gardenRainbow"),
   gardenMistContainer: $("#gardenMistContainer"),
@@ -1867,6 +1871,7 @@ const lastAffinityInteractionTime = {
   peer: 0,
   mist: 0,
   leaf: 0,
+  songbird: 0,
 };
 
 function updateAffinityUI() {
@@ -2640,6 +2645,7 @@ function syncAcousticUI() {
   syncBinauralCrossfeedUI(ambientSound.isBinauralCrossfeed());
   syncEarlyReflectionsUI(ambientSound.isEarlyReflections());
   syncSurfaceMaterialUI(ambientSound.getSurfaceMaterial());
+  syncRoomDimensionUI(ambientSound.getRoomDimension?.());
   syncStereoWidthUI(ambientSound.getStereoWidth());
   syncDistanceModelUI(ambientSound.getDistanceModel?.());
   viewer?.setAcousticGaze?.(ambientSound.getDominantTrackPan());
@@ -2670,6 +2676,15 @@ function syncSurfaceMaterialUI(material) {
   const currentMaterial = material || "wood";
   elements.surfaceChips?.forEach((chip) => {
     const isTarget = chip.dataset.surface === currentMaterial;
+    chip.classList.toggle("active", isTarget);
+    chip.setAttribute("aria-pressed", String(isTarget));
+  });
+}
+
+function syncRoomDimensionUI(dimension) {
+  const currentDimension = dimension || "studio";
+  elements.roomDimensionChips?.forEach((chip) => {
+    const isTarget = chip.dataset.dimension === currentDimension;
     chip.classList.toggle("active", isTarget);
     chip.setAttribute("aria-pressed", String(isTarget));
   });
@@ -3117,11 +3132,13 @@ function bindSoundstageModal() {
     // 1b. Early Reflection Virtual Room Boundaries
     const isEarlyReflect = ambientSound.isEarlyReflections?.();
     const surfaceMat = ambientSound.getSurfaceMaterial?.() || "wood";
+    const roomDim = ambientSound.getRoomDimension?.() || "studio";
     if (isEarlyReflect) {
-      const wallMargin = 16;
-      const wallLeft = wallMargin;
-      const wallRight = width - wallMargin;
-      const wallTop = wallMargin;
+      const scaleMultiplier = roomDim === "nook" ? 0.72 : roomDim === "hall" ? 1.0 : 0.88;
+      const wallHalfW = ((width - 32) / 2) * scaleMultiplier;
+      const wallLeft = centerX - wallHalfW;
+      const wallRight = centerX + wallHalfW;
+      const wallTop = 16 + (1 - scaleMultiplier) * 60;
       const wallBottom = listenerY + 36;
 
       const wallColor =
@@ -3136,6 +3153,8 @@ function bindSoundstageModal() {
           : surfaceMat === "stone"
             ? "🪨 岩石反射壁 (5.6kHz)"
             : "🪵 原木反射壁板 (3.4kHz)";
+      const dimLabel =
+        roomDim === "nook" ? "📖 隱密書龕 3m" : roomDim === "hall" ? "🏛️ 挑高書殿 12m" : "🎻 書齋琴室 6m";
 
       ctx.save();
       ctx.strokeStyle = wallColor;
@@ -3146,7 +3165,7 @@ function bindSoundstageModal() {
       ctx.font = "10px ui-sans-serif, system-ui, sans-serif";
       ctx.fillStyle = wallColor;
       ctx.textAlign = "right";
-      ctx.fillText(`🏛️ 早期反射界限 · ${wallLabel}`, wallRight - 10, 22);
+      ctx.fillText(`🏛️ 早期反射 · ${dimLabel} · ${wallLabel}`, wallRight - 10, 22);
       ctx.restore();
     }
 
@@ -3658,6 +3677,23 @@ function bindSoundstageModal() {
     });
   });
 
+  elements.roomDimensionChips?.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const dimension = chip.dataset.dimension;
+      if (!dimension) return;
+      ambientSound.setRoomDimension(dimension);
+      store.update({ roomDimension: dimension });
+      syncRoomDimensionUI(dimension);
+      renderSoundstage();
+      const labels = {
+        nook: "📖 隱密書龕（3m 緊密私密反射，微延遲 0.55x）",
+        studio: "🎻 書齋琴室（6m 標準物理尺度，通透平衡 1.0x）",
+        hall: "🏛️ 挑高書殿（12m 宏偉悠遠反射，悠長延遲 2.2x）",
+      };
+      showToast(`已切換房間物理尺度：${labels[dimension] || dimension}`);
+    });
+  });
+
   elements.btnSaveSoundstagePreset?.addEventListener("click", () => {
     const activeMix = ambientSound.getCurrentTrackMix();
     if (Object.keys(activeMix).length === 0) {
@@ -4144,6 +4180,7 @@ function bindAccessories() {
         lantern: "夏夜螢火微光瓶",
         candlestick: "古典黃銅燭台",
         windchime: "和風清夏風鈴",
+        hourglass: "復古黃銅沙漏",
       };
       showToast(`${next[acc] ? "已為玩偶佩戴" : "已卸下"}${labels[acc] || acc}。`);
     });
@@ -6528,6 +6565,23 @@ function bindHerbarium() {
 
   elements.focusGarden?.addEventListener("click", (e) => {
     if (e.target.closest("#openHerbarium") || e.target.closest("#btnSprayGarden")) return;
+    if (e.target.closest("#gardenSongbird")) {
+      companionSound.playSongbirdWarbleSound();
+      spawnZenSpark("🕊️ 晨光林禽", e.clientX, e.clientY);
+      const songbird = elements.gardenSongbird;
+      if (songbird) {
+        songbird.classList.add("songbird-singing");
+        setTimeout(() => {
+          songbird.classList.remove("songbird-singing");
+        }, 1200);
+      }
+      const now = Date.now();
+      if (!lastAffinityInteractionTime.songbird || now - lastAffinityInteractionTime.songbird > 4000) {
+        lastAffinityInteractionTime.songbird = now;
+        addAffinityExp(3, "聆聽晨光鳥鳴");
+      }
+      return;
+    }
     if (e.target.closest("#gardenButterfly")) {
       companionSound.playButterflyFlutterSound();
       spawnZenSpark("🦋 花間彩蝶", e.clientX, e.clientY);
@@ -6547,6 +6601,13 @@ function bindHerbarium() {
       gardenDew.style.animation = "none";
       gardenDew.offsetHeight;
       gardenDew.style.animation = "";
+    }
+  });
+
+  elements.gardenSongbird?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      elements.gardenSongbird.click();
     }
   });
 
@@ -6716,6 +6777,16 @@ async function startViewer() {
         ];
         const quote = chimeQuotes[Math.floor(Math.random() * chimeQuotes.length)];
         showCompanionBubble(quote, 3400);
+      } else if (emoteType === "hourglass") {
+        companionSound.playHourglassSandSound(2.4);
+        spawnStarlightParticles();
+        const hourglassQuotes = [
+          "翻轉黃銅沙漏～細緻的硅砂緩緩滑落，陪伴每一刻純粹心流！⏳✨",
+          "沙漏倒轉，時光靜好。讓專注如細沙般沉澱累積成智慧！⌛🕊️",
+          "滴答無聲的黃銅沙漏～時光在指尖流淌，專注當下每一秒！⌛💎",
+        ];
+        const quote = hourglassQuotes[Math.floor(Math.random() * hourglassQuotes.length)];
+        showCompanionBubble(quote, 3400);
       } else {
         companionSound.playAffirmativeNod();
         const nodQuotes = [
@@ -6857,6 +6928,10 @@ function init() {
   const initialSurfaceMaterial = store.get().surfaceMaterial || "wood";
   ambientSound.setSurfaceMaterial(initialSurfaceMaterial);
   syncSurfaceMaterialUI(initialSurfaceMaterial);
+
+  const initialRoomDimension = store.get().roomDimension || "studio";
+  ambientSound.setRoomDimension(initialRoomDimension);
+  syncRoomDimensionUI(initialRoomDimension);
 
   const autoAtm = store.get().autoAtmosphereSync !== false;
   ambientSound.setAutoAtmosphereSync(autoAtm);

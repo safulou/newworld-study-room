@@ -74,6 +74,7 @@ describe("room-scoped store", () => {
       lantern: false,
       candlestick: false,
       windchime: false,
+      hourglass: false,
     });
   });
 
@@ -483,5 +484,14 @@ describe("room-scoped store", () => {
 
     store.update({ surfaceMaterial: "invalid_surface" });
     expect(store.get().surfaceMaterial).toBe("wood");
+
+    // roomDimension
+    expect(store.get().roomDimension).toBe("studio");
+    store.update({ roomDimension: "nook" });
+    expect(store.get().roomDimension).toBe("nook");
+    store.update({ roomDimension: "hall" });
+    expect(store.get().roomDimension).toBe("hall");
+    store.update({ roomDimension: "invalid_dimension" });
+    expect(store.get().roomDimension).toBe("studio");
   });
 });

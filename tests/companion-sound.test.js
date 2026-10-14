@@ -527,4 +527,77 @@ describe("CompanionSoundManager", () => {
     expect(mockFilter.frequency.setValueAtTime).toHaveBeenCalledWith(850, 130);
     expect(mockBufferSource.start).toHaveBeenCalledWith(130);
   });
+
+  it("synthesizes granular sand trickle in playHourglassSandSound", () => {
+    expect(() => manager.playHourglassSandSound()).not.toThrow();
+
+    const mockBufferSource = { buffer: null, connect: vi.fn(), start: vi.fn(), stop: vi.fn() };
+    const mockFilters = [];
+    const mockGain = {
+      gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const mockCtx = {
+      currentTime: 140,
+      sampleRate: 44100,
+      createBuffer: vi.fn(() => ({
+        getChannelData: vi.fn(() => new Float32Array(100)),
+      })),
+      createBufferSource: vi.fn(() => mockBufferSource),
+      createBiquadFilter: vi.fn(() => {
+        const filter = {
+          type: "",
+          frequency: { setValueAtTime: vi.fn() },
+          Q: { setValueAtTime: vi.fn() },
+          connect: vi.fn(),
+        };
+        mockFilters.push(filter);
+        return filter;
+      }),
+      createGain: vi.fn(() => mockGain),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playHourglassSandSound(2.0);
+    expect(mockCtx.createBufferSource).toHaveBeenCalled();
+    expect(mockFilters).toHaveLength(2); // Low bandpass & high bandpass
+    expect(mockFilters[0].type).toBe("bandpass");
+    expect(mockFilters[0].frequency.setValueAtTime).toHaveBeenCalledWith(1600, 140);
+    expect(mockFilters[1].frequency.setValueAtTime).toHaveBeenCalledWith(3200, 140);
+    expect(mockBufferSource.start).toHaveBeenCalledWith(140);
+  });
+
+  it("synthesizes morning mountain warbler chirps in playSongbirdWarbleSound", () => {
+    expect(() => manager.playSongbirdWarbleSound()).not.toThrow();
+
+    const createdOscillators = [];
+    const mockGain = {
+      gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const mockCtx = {
+      currentTime: 150,
+      createOscillator: vi.fn(() => {
+        const osc = {
+          type: "",
+          frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+          connect: vi.fn(),
+          start: vi.fn(),
+          stop: vi.fn(),
+        };
+        createdOscillators.push(osc);
+        return osc;
+      }),
+      createGain: vi.fn(() => mockGain),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playSongbirdWarbleSound();
+    expect(createdOscillators).toHaveLength(2); // 2 chirps
+    expect(createdOscillators[0].type).toBe("sine");
+    expect(createdOscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(2600, 150);
+    expect(createdOscillators[1].frequency.setValueAtTime).toHaveBeenCalledWith(2900, 150.16);
+  });
 });

@@ -258,6 +258,33 @@ export const SURFACE_MATERIALS = {
   },
 };
 
+export const ROOM_DIMENSIONS = {
+  nook: {
+    id: "nook",
+    name: "隱密書龕",
+    desc: "3m x 3m 緊緻包覆，極短反射延遲，親暱溫暖",
+    delayMult: 0.55,
+    gainMult: 1.25,
+    radarScale: 0.68,
+  },
+  studio: {
+    id: "studio",
+    name: "書齋琴室",
+    desc: "6m x 5m 標準書房物理尺寸，通透立體",
+    delayMult: 1.0,
+    gainMult: 1.0,
+    radarScale: 1.0,
+  },
+  hall: {
+    id: "hall",
+    name: "挑高書殿",
+    desc: "12m x 9m 宏大穹頂，悠長空間反射，深遠漫射",
+    delayMult: 2.2,
+    gainMult: 0.72,
+    radarScale: 1.38,
+  },
+};
+
 export const ACOUSTIC_PRESETS = {
   bypass: {
     id: "bypass",
@@ -345,6 +372,7 @@ export class AmbientSoundscapeManager {
     this.stereoWidthNodes = null;
     this.earlyReflections = true;
     this.surfaceMaterial = "wood";
+    this.roomDimension = "studio";
     this.earlyReflectionNodes = null;
     this.sleepTimerRemainingSec = 0;
     this.sleepTimerDurationSec = 0;
@@ -475,6 +503,7 @@ export class AmbientSoundscapeManager {
     if (!SURFACE_MATERIALS[material]) return this.surfaceMaterial;
     this.surfaceMaterial = material;
     const config = SURFACE_MATERIALS[material];
+    const room = ROOM_DIMENSIONS[this.roomDimension] || ROOM_DIMENSIONS.studio;
 
     if (this.earlyReflectionNodes && this.audioCtx) {
       const now = this.audioCtx.currentTime;
@@ -485,17 +514,21 @@ export class AmbientSoundscapeManager {
         if (this.earlyReflectionNodes.filterR?.frequency?.setValueAtTime) {
           this.earlyReflectionNodes.filterR.frequency.setValueAtTime(config.cutoff, now);
         }
+        const delayL = config.delayL * room.delayMult;
+        const delayR = config.delayR * room.delayMult;
+        const gain = Math.max(0.05, Math.min(0.6, config.gain * room.gainMult));
+
         if (this.earlyReflectionNodes.delayL?.delayTime?.setValueAtTime) {
-          this.earlyReflectionNodes.delayL.delayTime.setValueAtTime(config.delayL, now);
+          this.earlyReflectionNodes.delayL.delayTime.setValueAtTime(delayL, now);
         }
         if (this.earlyReflectionNodes.delayR?.delayTime?.setValueAtTime) {
-          this.earlyReflectionNodes.delayR.delayTime.setValueAtTime(config.delayR, now);
+          this.earlyReflectionNodes.delayR.delayTime.setValueAtTime(delayR, now);
         }
         if (this.earlyReflectionNodes.reflectGainL?.gain?.setValueAtTime) {
-          this.earlyReflectionNodes.reflectGainL.gain.setValueAtTime(config.gain, now);
+          this.earlyReflectionNodes.reflectGainL.gain.setValueAtTime(gain, now);
         }
         if (this.earlyReflectionNodes.reflectGainR?.gain?.setValueAtTime) {
-          this.earlyReflectionNodes.reflectGainR.gain.setValueAtTime(config.gain, now);
+          this.earlyReflectionNodes.reflectGainR.gain.setValueAtTime(gain, now);
         }
       } catch {
         this.updateOutputRouting();
@@ -508,6 +541,44 @@ export class AmbientSoundscapeManager {
 
   getSurfaceMaterial() {
     return this.surfaceMaterial;
+  }
+
+  setRoomDimension(dimension) {
+    if (!ROOM_DIMENSIONS[dimension]) return this.roomDimension;
+    this.roomDimension = dimension;
+    const config = SURFACE_MATERIALS[this.surfaceMaterial] || SURFACE_MATERIALS.wood;
+    const room = ROOM_DIMENSIONS[dimension];
+
+    if (this.earlyReflectionNodes && this.audioCtx) {
+      const now = this.audioCtx.currentTime;
+      try {
+        const delayL = Number((config.delayL * room.delayMult).toFixed(4));
+        const delayR = Number((config.delayR * room.delayMult).toFixed(4));
+        const gain = Number(Math.max(0.05, Math.min(0.6, config.gain * room.gainMult)).toFixed(4));
+
+        if (this.earlyReflectionNodes.delayL?.delayTime?.setValueAtTime) {
+          this.earlyReflectionNodes.delayL.delayTime.setValueAtTime(delayL, now);
+        }
+        if (this.earlyReflectionNodes.delayR?.delayTime?.setValueAtTime) {
+          this.earlyReflectionNodes.delayR.delayTime.setValueAtTime(delayR, now);
+        }
+        if (this.earlyReflectionNodes.reflectGainL?.gain?.setValueAtTime) {
+          this.earlyReflectionNodes.reflectGainL.gain.setValueAtTime(gain, now);
+        }
+        if (this.earlyReflectionNodes.reflectGainR?.gain?.setValueAtTime) {
+          this.earlyReflectionNodes.reflectGainR.gain.setValueAtTime(gain, now);
+        }
+      } catch {
+        this.updateOutputRouting();
+      }
+    } else {
+      this.updateOutputRouting();
+    }
+    return this.roomDimension;
+  }
+
+  getRoomDimension() {
+    return this.roomDimension || "studio";
   }
 
   setStereoWidth(widthFactor) {
@@ -707,6 +778,7 @@ export class AmbientSoundscapeManager {
     ) {
       try {
         const material = SURFACE_MATERIALS[this.surfaceMaterial] || SURFACE_MATERIALS.wood;
+        const room = ROOM_DIMENSIONS[this.roomDimension] || ROOM_DIMENSIONS.studio;
         const splitter = this.audioCtx.createChannelSplitter(2);
         const merger = this.audioCtx.createChannelMerger(2);
 
@@ -727,19 +799,23 @@ export class AmbientSoundscapeManager {
         filterR.frequency.value = material.cutoff;
         filterR.Q.value = 0.7;
 
-        // Wall reflection micro-delays (12ms ~ 28ms)
-        const delayL = this.audioCtx.createDelay(0.1);
-        delayL.delayTime.value = material.delayL;
+        // Wall reflection micro-delays scaled by room dimension
+        const effectiveDelayL = Number((material.delayL * room.delayMult).toFixed(4));
+        const effectiveDelayR = Number((material.delayR * room.delayMult).toFixed(4));
+        const effectiveGain = Number(Math.max(0.05, Math.min(0.6, material.gain * room.gainMult)).toFixed(4));
 
-        const delayR = this.audioCtx.createDelay(0.1);
-        delayR.delayTime.value = material.delayR;
+        const delayL = this.audioCtx.createDelay(0.2);
+        delayL.delayTime.value = effectiveDelayL;
+
+        const delayR = this.audioCtx.createDelay(0.2);
+        delayR.delayTime.value = effectiveDelayR;
 
         // Reflected cross-feed gains
         const reflectGainL = this.audioCtx.createGain();
-        reflectGainL.gain.value = material.gain;
+        reflectGainL.gain.value = effectiveGain;
 
         const reflectGainR = this.audioCtx.createGain();
-        reflectGainR.gain.value = material.gain;
+        reflectGainR.gain.value = effectiveGain;
 
         currentOut.connect(splitter);
 
