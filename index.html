@@ -144,18 +144,32 @@
                 <span class="pollen-dot pollen-2"></span>
               </div>
             </div>
+            <div class="garden-rainbow" id="gardenRainbow" aria-hidden="true"></div>
+            <div class="garden-mist-container" id="gardenMistContainer" aria-hidden="true"></div>
             <span class="garden-ground" aria-hidden="true"></span>
             <span class="garden-status" id="gardenStatus" aria-live="polite">玫瑰 · 種子</span>
-            <button
-              class="herbarium-btn"
-              id="openHerbarium"
-              type="button"
-              aria-label="打開植物溫室圖鑑"
-              title="查看植物溫室圖鑑與成就徽章"
-            >
-              <i data-lucide="book-open"></i>
-              <span>圖鑑</span>
-            </button>
+            <div class="garden-action-btns">
+              <button
+                class="herbarium-btn spray-garden-btn"
+                id="btnSprayGarden"
+                type="button"
+                aria-label="細霧滋潤植物"
+                title="噴灑細霧滋潤植物 (ASMR)"
+              >
+                <i data-lucide="droplets"></i>
+                <span>滋潤</span>
+              </button>
+              <button
+                class="herbarium-btn"
+                id="openHerbarium"
+                type="button"
+                aria-label="打開植物溫室圖鑑"
+                title="查看植物溫室圖鑑與成就徽章"
+              >
+                <i data-lucide="book-open"></i>
+                <span>圖鑑</span>
+              </button>
+            </div>
           </div>
 
           <div class="avatar-zone" id="avatarZone">
@@ -788,6 +802,16 @@
               >
                 <i data-lucide="sparkle"></i>
                 <span>微光瓶</span>
+              </button>
+              <button
+                class="accessory-chip"
+                type="button"
+                data-accessory="candlestick"
+                aria-pressed="false"
+                title="古典黃銅燭台"
+              >
+                <i data-lucide="flame"></i>
+                <span>燭台</span>
               </button>
             </div>
             <div class="generation-card">
@@ -1910,6 +1934,35 @@
           >
             📱 陀螺儀：關
           </button>
+        </div>
+        <div class="soundstage-distance-model-row" role="group" aria-label="空間衰減模式">
+          <span class="distance-model-label">📐 空間衰減模式：</span>
+          <div class="distance-model-chips" id="distanceModelChips">
+            <button
+              type="button"
+              class="distance-model-chip active"
+              data-distance-model="realistic"
+              title="真實物理：標準空間聲學平方反比平滑過渡"
+            >
+              🌐 真實物理
+            </button>
+            <button
+              type="button"
+              class="distance-model-chip"
+              data-distance-model="intimate"
+              title="親密暖音：衰減柔和，高頻保真，近距離親和包覆"
+            >
+              🕯️ 親密暖音
+            </button>
+            <button
+              type="button"
+              class="distance-model-chip"
+              data-distance-model="deep_space"
+              title="深邃遼闊：遠距強烈衰減與深沉悶音，空間感深遠"
+            >
+              🌌 深邃遼闊
+            </button>
+          </div>
         </div>
         <div class="soundstage-stereo-width-row">
           <div class="stereo-width-label-group">

@@ -935,4 +935,86 @@ export class CompanionSoundManager {
       osc.stop(startTime + decay + 0.02);
     });
   }
+
+  /**
+   * Play a gentle human breath / soft breeze exhale sound (blowing candle)
+   * Swept bandpass white noise (420Hz -> 820Hz -> 380Hz) with smooth organic breath envelope
+   */
+  playBreezeBreath(duration = 0.85) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const dur = Math.max(0.3, duration);
+
+    const bufferSize = Math.floor(ctx.sampleRate * dur);
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.4;
+    }
+
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.Q.setValueAtTime(2.2, now);
+    filter.frequency.setValueAtTime(420, now);
+    filter.frequency.exponentialRampToValueAtTime(820, now + dur * 0.4);
+    filter.frequency.exponentialRampToValueAtTime(380, now + dur);
+
+    const gain = ctx.createGain();
+    const peak = 0.22 * this.volume;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(peak, now + dur * 0.35);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+    noiseSource.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    noiseSource.start(now);
+    noiseSource.stop(now + dur + 0.05);
+  }
+
+  /**
+   * Play a delicate botanical water mist spritz sound (ASMR plant misting)
+   * High-frequency airy bandpass noise (4.2kHz -> 6.8kHz) with gentle dual-pulse mist envelope
+   */
+  playWaterMistSound(duration = 0.45) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const dur = Math.max(0.2, duration);
+
+    const bufferSize = Math.floor(ctx.sampleRate * dur);
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.35;
+    }
+
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.Q.setValueAtTime(1.8, now);
+    filter.frequency.setValueAtTime(4200, now);
+    filter.frequency.linearRampToValueAtTime(6800, now + dur * 0.3);
+    filter.frequency.exponentialRampToValueAtTime(3200, now + dur);
+
+    const gain = ctx.createGain();
+    const peak = 0.18 * this.volume;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(peak, now + 0.04);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+    noiseSource.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    noiseSource.start(now);
+    noiseSource.stop(now + dur + 0.05);
+  }
 }

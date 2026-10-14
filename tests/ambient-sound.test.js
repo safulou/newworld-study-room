@@ -6,6 +6,7 @@ import {
   encodeSoundscapeCode,
   decodeSoundscapeCode,
   ACOUSTIC_PRESETS,
+  DISTANCE_MODELS,
   createProceduralImpulseResponse,
 } from "../src/services/ambient-sound.js";
 
@@ -743,5 +744,89 @@ describe("AmbientSoundscapeManager", () => {
     manager.setStereoWidth(0.0); // Mono (cd = 0.5, cc = 0.5)
     expect(createdGains[0].gain.setValueAtTime).toHaveBeenCalledWith(0.5, 50);
     expect(createdGains[1].gain.setValueAtTime).toHaveBeenCalledWith(0.5, 50);
+  });
+
+  describe("Distance Attenuation Models", () => {
+    it("exports DISTANCE_MODELS with intimate, realistic, and deep_space", () => {
+      expect(DISTANCE_MODELS.intimate).toBeDefined();
+      expect(DISTANCE_MODELS.realistic).toBeDefined();
+      expect(DISTANCE_MODELS.deep_space).toBeDefined();
+      expect(DISTANCE_MODELS.intimate.minCutoff).toBe(4800);
+      expect(DISTANCE_MODELS.realistic.minCutoff).toBe(2600);
+      expect(DISTANCE_MODELS.deep_space.minCutoff).toBe(1600);
+    });
+
+    it("defaults to realistic model and allows setting valid models", () => {
+      const manager = new AmbientSoundscapeManager();
+      expect(manager.getDistanceModel()).toBe("realistic");
+
+      manager.setDistanceModel("intimate");
+      expect(manager.getDistanceModel()).toBe("intimate");
+
+      manager.setDistanceModel("deep_space");
+      expect(manager.getDistanceModel()).toBe("deep_space");
+
+      // Invalid model should be ignored
+      manager.setDistanceModel("invalid_model");
+      expect(manager.getDistanceModel()).toBe("deep_space");
+    });
+
+    it("computes calculateDistanceCutoff properly based on active model", () => {
+      const manager = new AmbientSoundscapeManager();
+      // Realistic: 2600 + y * 17400
+      expect(manager.calculateDistanceCutoff(0)).toBe(2600);
+      expect(manager.calculateDistanceCutoff(1)).toBe(20000);
+      expect(manager.calculateDistanceCutoff(0.5)).toBe(11300);
+
+      // Intimate: 4800 + y * 15200
+      manager.setDistanceModel("intimate");
+      expect(manager.calculateDistanceCutoff(0)).toBe(4800);
+      expect(manager.calculateDistanceCutoff(1)).toBe(20000);
+      expect(manager.calculateDistanceCutoff(0.5)).toBe(12400);
+
+      // Deep Space: 1600 + y * 18400
+      manager.setDistanceModel("deep_space");
+      expect(manager.calculateDistanceCutoff(0)).toBe(1600);
+      expect(manager.calculateDistanceCutoff(1)).toBe(20000);
+      expect(manager.calculateDistanceCutoff(0.5)).toBe(10800);
+
+      // When distance damping is disabled
+      manager.setDistanceDamping(false);
+      expect(manager.calculateDistanceCutoff(0)).toBe(20000);
+    });
+
+    it("computes calculateDistanceGain properly based on active model", () => {
+      const manager = new AmbientSoundscapeManager();
+      // Realistic: min 0.35, max 1.0
+      expect(manager.calculateDistanceGain(0)).toBe(0.35);
+      expect(manager.calculateDistanceGain(1)).toBe(1.0);
+
+      // Intimate: min 0.60, max 1.0
+      manager.setDistanceModel("intimate");
+      expect(manager.calculateDistanceGain(0)).toBe(0.6);
+      expect(manager.calculateDistanceGain(1)).toBe(1.0);
+
+      // Deep Space: min 0.15, max 1.0
+      manager.setDistanceModel("deep_space");
+      expect(manager.calculateDistanceGain(0)).toBe(0.15);
+      expect(manager.calculateDistanceGain(1)).toBe(1.0);
+
+      // When distance damping is disabled
+      manager.setDistanceDamping(false);
+      expect(manager.calculateDistanceGain(0)).toBe(1.0);
+    });
+
+    it("updates track distance filters when distance model is changed with active context", () => {
+      const manager = new AmbientSoundscapeManager();
+      const mockFilter = {
+        frequency: { setValueAtTime: vi.fn() },
+      };
+      manager.nodes.set("rain", { distanceFilter: mockFilter });
+      manager.audioCtx = { currentTime: 25 };
+      manager.trackCoordinates = { rain: { x: 0, y: 0.5 } };
+
+      manager.setDistanceModel("deep_space");
+      expect(mockFilter.frequency.setValueAtTime).toHaveBeenCalledWith(10800, 25);
+    });
   });
 });

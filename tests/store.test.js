@@ -72,6 +72,7 @@ describe("room-scoped store", () => {
       cat: false,
       telescope: false,
       lantern: false,
+      candlestick: false,
     });
   });
 
@@ -458,5 +459,14 @@ describe("room-scoped store", () => {
 
     store.update({ stereoWidth: -1.2 });
     expect(store.get().stereoWidth).toBe(0);
+
+    // distanceModel
+    expect(store.get().distanceModel).toBe("realistic");
+    store.update({ distanceModel: "intimate" });
+    expect(store.get().distanceModel).toBe("intimate");
+    store.update({ distanceModel: "deep_space" });
+    expect(store.get().distanceModel).toBe("deep_space");
+    store.update({ distanceModel: "invalid_model" });
+    expect(store.get().distanceModel).toBe("realistic");
   });
 });

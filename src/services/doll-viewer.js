@@ -627,6 +627,50 @@ export class DollViewer {
     this.lanternGroup.add(this.lanternLight);
     this.lanternGroup.visible = false;
 
+    // 7. Cozy Vintage Candlestick with Flickering Flame & Local PointLight ("candlestick")
+    this.candlestickGroup = new THREE.Group();
+    this.candlestickGroup.position.set(-0.74, -0.96, 0.45);
+
+    const brassCandleMat = new THREE.MeshStandardMaterial({
+      color: 0xcca04e,
+      metalness: 0.85,
+      roughness: 0.25,
+    });
+    const waxMat = new THREE.MeshStandardMaterial({
+      color: 0xfefce8,
+      roughness: 0.6,
+    });
+    const wickMat = new THREE.MeshBasicMaterial({ color: 0x262626 });
+
+    const basePlate = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.03, 18), brassCandleMat);
+    const candleStem = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.032, 0.16, 12), brassCandleMat);
+    candleStem.position.y = 0.08;
+    const dripPan = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.06, 0.025, 16), brassCandleMat);
+    dripPan.position.y = 0.16;
+
+    const waxBody = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.22, 16), waxMat);
+    waxBody.position.y = 0.27;
+
+    const wick = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.03, 8), wickMat);
+    wick.position.y = 0.395;
+
+    const flameGeo = new THREE.ConeGeometry(0.032, 0.085, 12);
+    const flameMat = new THREE.MeshStandardMaterial({
+      color: 0xffa028,
+      emissive: 0xff6600,
+      emissiveIntensity: 1.8,
+      roughness: 0.2,
+    });
+    const flameMesh = new THREE.Mesh(flameGeo, flameMat);
+    flameMesh.position.y = 0.44;
+    this.candleFlame = flameMesh;
+
+    this.candleLight = new THREE.PointLight(0xff9d36, 0, 2.5);
+    this.candleLight.position.set(0, 0.48, 0);
+
+    this.candlestickGroup.add(basePlate, candleStem, dripPan, waxBody, wick, flameMesh, this.candleLight);
+    this.candlestickGroup.visible = false;
+
     this.customAccessories.add(
       this.glassesGroup,
       this.crownGroup,
@@ -634,6 +678,7 @@ export class DollViewer {
       this.catGroup,
       this.telescopeGroup,
       this.lanternGroup,
+      this.candlestickGroup,
     );
     this.doll.add(this.customAccessories);
 
@@ -846,7 +891,7 @@ export class DollViewer {
             const emoteChoices =
               this.timerState === "focusing"
                 ? ["wave", "nod", "wish", "stargaze", "pageturn"]
-                : ["wave", "nod", "wish", "stargaze", "coffeesip", "petcat"];
+                : ["wave", "nod", "wish", "stargaze", "coffeesip", "petcat", "blowcandle"];
             const emoteType = emoteChoices[Math.floor(Math.random() * emoteChoices.length)];
             if (emoteType === "wave") {
               this.triggerWave();
@@ -860,6 +905,8 @@ export class DollViewer {
               this.triggerCoffeeSip();
             } else if (emoteType === "petcat") {
               this.triggerPetCat();
+            } else if (emoteType === "blowcandle") {
+              this.triggerBlowCandle();
             } else {
               this.triggerStargaze();
             }
@@ -1023,6 +1070,20 @@ export class DollViewer {
     }
     this.currentEmote = {
       type: "petcat",
+      startTime: performance.now(),
+      duration: Math.max(800, duration),
+    };
+    this.lastFaceMode = null;
+    this.triggerBounce();
+  }
+
+  triggerBlowCandle({ duration = 2400 } = {}) {
+    if (!this.candlestickGroup?.visible) {
+      if (this.candlestickGroup) this.candlestickGroup.visible = true;
+      this.tempCandleVisible = true;
+    }
+    this.currentEmote = {
+      type: "blowcandle",
       startTime: performance.now(),
       duration: Math.max(800, duration),
     };
@@ -1241,8 +1302,9 @@ export class DollViewer {
     cat = false,
     telescope = false,
     lantern = false,
+    candlestick = false,
   } = {}) {
-    this.accessories = { glasses, crown, coffee, cat, telescope, lantern };
+    this.accessories = { glasses, crown, coffee, cat, telescope, lantern, candlestick };
     if (this.glassesGroup) this.glassesGroup.visible = Boolean(glasses);
     if (this.crownGroup) this.crownGroup.visible = Boolean(crown);
     if (this.coffeeGroup) this.coffeeGroup.visible = Boolean(coffee);
@@ -1250,6 +1312,8 @@ export class DollViewer {
     if (this.telescopeGroup) this.telescopeGroup.visible = Boolean(telescope);
     if (this.lanternGroup) this.lanternGroup.visible = Boolean(lantern);
     if (this.lanternLight) this.lanternLight.intensity = lantern ? 0.85 : 0;
+    if (this.candlestickGroup) this.candlestickGroup.visible = Boolean(candlestick);
+    if (this.candleLight) this.candleLight.intensity = candlestick ? 0.9 : 0;
   }
 
   setAffinityAura(auraType = "none") {
@@ -1698,6 +1762,26 @@ export class DollViewer {
           this.catTail.rotation.x = p * 0.55;
           this.catTail.rotation.z = Math.sin(elapsedEmote * 7) * (0.2 + p * 0.35);
         }
+      } else if (emote.type === "blowcandle") {
+        const progress = Math.min(1, elapsedEmote / (emote.duration / 1000));
+        const p = Math.sin(progress * Math.PI);
+        const curve = p * p * (3 - 2 * p);
+        if (this.arms && this.arms.length === 2) {
+          this.arms[0].rotation.set(0.42 * curve, 0.18 * curve, -0.32);
+          this.arms[1].rotation.set(0.32 * curve, -0.15 * curve, 0.36);
+        }
+        if (this.head) {
+          this.head.rotation.x = 0.24 * curve;
+          this.head.rotation.y = -0.28 * curve;
+          this.head.rotation.z = -0.05 * curve;
+        }
+        if (this.candleFlame) {
+          this.candleFlame.scale.set(1 - curve * 0.45, 1 - curve * 0.55, 1 - curve * 0.45);
+          this.candleFlame.rotation.z = -curve * 0.52;
+        }
+        if (this.candleLight) {
+          this.candleLight.intensity = Math.max(0.15, 0.9 - curve * 0.7);
+        }
       }
     } else if (this.celebrationStartTime && performance.now() - this.celebrationStartTime < 6000) {
       const wave = Math.sin(elapsed * 9) * 0.38;
@@ -1789,6 +1873,31 @@ export class DollViewer {
       this.tempCatVisible = false;
       if (this.catGroup && !this.accessories?.cat) {
         this.catGroup.visible = false;
+      }
+    }
+
+    if (this.candlestickGroup && (!this.currentEmote || this.currentEmote.type !== "blowcandle")) {
+      if (this.candlestickGroup.visible && !this.reducedMotion) {
+        if (this.candleFlame) {
+          const flickerY = 1.0 + Math.sin(elapsed * 16) * 0.08 + Math.sin(elapsed * 27) * 0.04;
+          const flickerTilt = Math.sin(elapsed * 11) * 0.08;
+          this.candleFlame.scale.set(1.0, flickerY, 1.0);
+          this.candleFlame.rotation.z = flickerTilt;
+        }
+        if (this.candleLight) {
+          const lightPulse = 0.85 + (Math.sin(elapsed * 19) * 0.08 + Math.sin(elapsed * 13) * 0.06);
+          this.candleLight.intensity = lightPulse;
+        }
+      } else if (this.candleFlame) {
+        this.candleFlame.scale.set(1, 1, 1);
+        this.candleFlame.rotation.set(0, 0, 0);
+      }
+    }
+    if (this.tempCandleVisible && (!this.currentEmote || this.currentEmote.type !== "blowcandle")) {
+      this.tempCandleVisible = false;
+      if (this.candlestickGroup && !this.accessories?.candlestick) {
+        this.candlestickGroup.visible = false;
+        if (this.candleLight) this.candleLight.intensity = 0;
       }
     }
 

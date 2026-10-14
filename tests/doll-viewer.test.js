@@ -436,4 +436,23 @@ describe("drawDollFace", () => {
     expect(fakeViewer.lastFaceMode).toBeNull();
     expect(fakeViewer.triggerBounce).toHaveBeenCalled();
   });
+
+  it("triggers blowcandle micro-emote with candlestick visibility setup, duration, and bounce", () => {
+    const fakeViewer = {
+      currentEmote: null,
+      lastFaceMode: "open",
+      triggerBounce: vi.fn(),
+      candlestickGroup: { visible: false },
+    };
+    fakeViewer.triggerBlowCandle = DollViewer.prototype.triggerBlowCandle.bind(fakeViewer);
+
+    fakeViewer.triggerBlowCandle({ duration: 2400 });
+    expect(fakeViewer.currentEmote).toBeDefined();
+    expect(fakeViewer.currentEmote.type).toBe("blowcandle");
+    expect(fakeViewer.currentEmote.duration).toBe(2400);
+    expect(fakeViewer.candlestickGroup.visible).toBe(true);
+    expect(fakeViewer.tempCandleVisible).toBe(true);
+    expect(fakeViewer.lastFaceMode).toBeNull();
+    expect(fakeViewer.triggerBounce).toHaveBeenCalled();
+  });
 });

@@ -383,4 +383,76 @@ describe("CompanionSoundManager", () => {
     expect(createdOscillators[1].frequency.setValueAtTime).toHaveBeenCalledWith(1020, 90 + 0.045);
     expect(createdOscillators[2].frequency.setValueAtTime).toHaveBeenCalledWith(1360, 90 + 0.09);
   });
+
+  it("synthesizes soft swept bandpass exhale in playBreezeBreath", () => {
+    expect(() => manager.playBreezeBreath()).not.toThrow();
+
+    const mockBufferSource = { buffer: null, connect: vi.fn(), start: vi.fn(), stop: vi.fn() };
+    const mockFilter = {
+      type: "",
+      frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      Q: { setValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const mockGain = {
+      gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const mockCtx = {
+      currentTime: 100,
+      sampleRate: 44100,
+      createBuffer: vi.fn(() => ({
+        getChannelData: vi.fn(() => new Float32Array(100)),
+      })),
+      createBufferSource: vi.fn(() => mockBufferSource),
+      createBiquadFilter: vi.fn(() => mockFilter),
+      createGain: vi.fn(() => mockGain),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playBreezeBreath(0.9);
+    expect(mockCtx.createBufferSource).toHaveBeenCalled();
+    expect(mockFilter.type).toBe("bandpass");
+    expect(mockFilter.frequency.setValueAtTime).toHaveBeenCalledWith(420, 100);
+    expect(mockBufferSource.start).toHaveBeenCalledWith(100);
+  });
+
+  it("synthesizes high-frequency plant mist spritz in playWaterMistSound", () => {
+    expect(() => manager.playWaterMistSound()).not.toThrow();
+
+    const mockBufferSource = { buffer: null, connect: vi.fn(), start: vi.fn(), stop: vi.fn() };
+    const mockFilter = {
+      type: "",
+      frequency: {
+        setValueAtTime: vi.fn(),
+        linearRampToValueAtTime: vi.fn(),
+        exponentialRampToValueAtTime: vi.fn(),
+      },
+      Q: { setValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const mockGain = {
+      gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const mockCtx = {
+      currentTime: 110,
+      sampleRate: 44100,
+      createBuffer: vi.fn(() => ({
+        getChannelData: vi.fn(() => new Float32Array(100)),
+      })),
+      createBufferSource: vi.fn(() => mockBufferSource),
+      createBiquadFilter: vi.fn(() => mockFilter),
+      createGain: vi.fn(() => mockGain),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playWaterMistSound(0.5);
+    expect(mockCtx.createBufferSource).toHaveBeenCalled();
+    expect(mockFilter.type).toBe("bandpass");
+    expect(mockFilter.frequency.setValueAtTime).toHaveBeenCalledWith(4200, 110);
+    expect(mockBufferSource.start).toHaveBeenCalledWith(110);
+  });
 });

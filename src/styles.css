@@ -844,6 +844,77 @@ h1 {
   }
 }
 
+/* Garden Rainbow & Mist Spritz */
+.garden-rainbow {
+  position: absolute;
+  right: 12px;
+  bottom: 26px;
+  width: 96px;
+  height: 52px;
+  border-top-left-radius: 96px;
+  border-top-right-radius: 96px;
+  pointer-events: none;
+  z-index: 7;
+  opacity: 0;
+  transform: translateY(6px) scale(0.95);
+  background: radial-gradient(
+    ellipse at 50% 100%,
+    transparent 54%,
+    rgba(244, 63, 94, 0.28) 57%,
+    rgba(251, 146, 60, 0.28) 63%,
+    rgba(250, 204, 21, 0.3) 69%,
+    rgba(74, 222, 128, 0.28) 75%,
+    rgba(56, 189, 248, 0.3) 81%,
+    rgba(168, 85, 247, 0.26) 87%,
+    transparent 92%
+  );
+  filter: drop-shadow(0 0 8px rgba(253, 224, 71, 0.35));
+  transition:
+    opacity 1.2s ease,
+    transform 1.2s ease;
+}
+
+.focus-garden.rainbow-active .garden-rainbow,
+.focus-garden.complete .garden-rainbow {
+  opacity: 0.92;
+  transform: translateY(0) scale(1);
+}
+
+.garden-mist-container {
+  position: absolute;
+  right: 6px;
+  bottom: 28px;
+  width: 104px;
+  height: 145px;
+  pointer-events: none;
+  z-index: 11;
+  overflow: visible;
+}
+
+.mist-particle {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 10%, rgba(186, 230, 253, 0.95) 60%, rgba(56, 189, 248, 0.4) 100%);
+  box-shadow: 0 0 6px rgba(186, 230, 253, 0.85);
+  animation: mist-float-drift 1.4s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes mist-float-drift {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.4);
+  }
+  20% {
+    opacity: 0.95;
+    transform: translate(var(--dx, 0px), var(--dy, -8px)) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--dx, 0px) * 1.5), calc(var(--dy, -8px) - 24px)) scale(0.2);
+  }
+}
+
 .garden-ground {
   position: absolute;
   right: 4px;
@@ -3473,7 +3544,23 @@ input::placeholder {
   }
 }
 
-/* Herbarium Button */
+/* Herbarium & Garden Actions */
+.garden-action-btns {
+  position: absolute;
+  right: 6px;
+  bottom: -22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  z-index: 10;
+}
+
+.garden-action-btns .herbarium-btn {
+  position: static;
+  right: auto;
+  bottom: auto;
+}
+
 .herbarium-btn {
   position: absolute;
   right: 10px;
@@ -3502,6 +3589,16 @@ input::placeholder {
 .herbarium-btn svg {
   width: 13px;
   height: 13px;
+}
+
+.spray-garden-btn {
+  border-color: rgba(56, 189, 248, 0.38);
+  color: #bae6fd;
+}
+.spray-garden-btn:hover {
+  background: rgba(14, 116, 144, 0.4);
+  border-color: #38bdf8;
+  color: #f0f9ff;
 }
 
 /* Pet Hearts */
@@ -7523,6 +7620,57 @@ body[data-timer-mode="longBreak"] {
   text-align: center;
 }
 
+.soundstage-distance-model-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.distance-model-label {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.distance-model-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.distance-model-chip {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(18, 26, 39, 0.85);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.distance-model-chip:hover {
+  background: rgba(30, 42, 60, 0.95);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: var(--text);
+  transform: translateY(-1px);
+}
+
+.distance-model-chip.active {
+  background: rgba(14, 116, 144, 0.35);
+  border-color: #38bdf8;
+  color: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.25);
+}
+
 .soundstage-stereo-width-row {
   display: flex;
   flex-direction: column;
@@ -7578,6 +7726,12 @@ body[data-timer-mode="longBreak"] {
     animation: none;
   }
   .pollen-dot {
+    animation: none;
+  }
+  .mist-particle {
+    animation: none;
+  }
+  .dew-drop {
     animation: none;
   }
 }

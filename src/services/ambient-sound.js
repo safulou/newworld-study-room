@@ -204,6 +204,30 @@ export const SPATIAL_SCENARIOS = {
   },
 };
 
+export const DISTANCE_MODELS = {
+  intimate: {
+    id: "intimate",
+    name: "親密暖音",
+    desc: "衰減柔和，高頻保真，近距離親和包覆",
+    minCutoff: 4800,
+    minGain: 0.6,
+  },
+  realistic: {
+    id: "realistic",
+    name: "真實物理",
+    desc: "標準空間聲學平滑過渡",
+    minCutoff: 2600,
+    minGain: 0.35,
+  },
+  deep_space: {
+    id: "deep_space",
+    name: "深邃遼闊",
+    desc: "遠距強烈衰減與深沉悶音，空間感深遠",
+    minCutoff: 1600,
+    minGain: 0.15,
+  },
+};
+
 export const ACOUSTIC_PRESETS = {
   bypass: {
     id: "bypass",
@@ -280,6 +304,7 @@ export class AmbientSoundscapeManager {
     this.atmosphereMode = "neutral";
     this.tidalSurge = true;
     this.distanceDamping = true;
+    this.distanceModel = "realistic";
     this.stageRotation = 0;
     this.trackCoordinates = {};
     this.currentSpatialScenario = "cabin_realism";
@@ -1460,7 +1485,42 @@ export class AmbientSoundscapeManager {
   calculateDistanceCutoff(y = 0.5) {
     if (!this.distanceDamping) return 20000;
     const clampedY = Math.max(0, Math.min(1, Number(y ?? 0.5)));
+    if (this.distanceModel === "intimate") {
+      return Math.round(4800 + clampedY * 15200);
+    } else if (this.distanceModel === "deep_space") {
+      return Math.round(1600 + clampedY * 18400);
+    }
     return Math.round(2600 + clampedY * 17400);
+  }
+
+  calculateDistanceGain(y = 0.5) {
+    if (!this.distanceDamping) return 1.0;
+    const clampedY = Math.max(0, Math.min(1, Number(y ?? 0.5)));
+    if (this.distanceModel === "intimate") {
+      return Math.round((0.6 + 0.4 * Math.pow(clampedY, 0.8)) * 1000) / 1000;
+    } else if (this.distanceModel === "deep_space") {
+      return Math.round((0.15 + 0.85 * Math.pow(clampedY, 1.8)) * 1000) / 1000;
+    }
+    return Math.round((0.35 + 0.65 * Math.pow(clampedY, 1.2)) * 1000) / 1000;
+  }
+
+  setDistanceModel(model) {
+    if (!DISTANCE_MODELS[model]) return this.distanceModel;
+    this.distanceModel = model;
+    if (this.audioCtx) {
+      for (const [name, track] of this.nodes.entries()) {
+        if (track && track.distanceFilter && track.distanceFilter.frequency) {
+          const coords = this.getTrackCoordinates(name);
+          const cutoff = this.calculateEffectiveCutoff(name, coords.y);
+          track.distanceFilter.frequency.setValueAtTime(cutoff, this.audioCtx.currentTime);
+        }
+      }
+    }
+    return this.distanceModel;
+  }
+
+  getDistanceModel() {
+    return this.distanceModel;
   }
 
   setDistanceDamping(enabled) {
