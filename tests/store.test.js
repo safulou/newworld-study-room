@@ -76,6 +76,7 @@ describe("room-scoped store", () => {
       windchime: false,
       hourglass: false,
       magnifier: false,
+      quill: false,
     });
   });
 
@@ -508,5 +509,24 @@ describe("room-scoped store", () => {
     expect(store.get().accessories.magnifier).toBe(false);
     store.update({ accessories: { ...store.get().accessories, magnifier: true } });
     expect(store.get().accessories.magnifier).toBe(true);
+
+    // accessories.quill
+    expect(store.get().accessories.quill).toBe(false);
+    store.update({ accessories: { ...store.get().accessories, quill: true } });
+    expect(store.get().accessories.quill).toBe(true);
+
+    // reverbDamping
+    expect(store.get().reverbDamping).toBe("transparent");
+    store.update({ reverbDamping: "warm" });
+    expect(store.get().reverbDamping).toBe("warm");
+    store.update({ reverbDamping: "airy" });
+    expect(store.get().reverbDamping).toBe("airy");
+    store.update({ reverbDamping: "invalid_damping" });
+    expect(store.get().reverbDamping).toBe("transparent");
+
+    // gardenCircadian
+    expect(store.get().gardenCircadian).toBe(true);
+    store.update({ gardenCircadian: false });
+    expect(store.get().gardenCircadian).toBe(false);
   });
 });

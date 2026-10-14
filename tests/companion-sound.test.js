@@ -668,4 +668,72 @@ describe("CompanionSoundManager", () => {
     expect(createdOscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(320, 170);
     expect(createdOscillators[1].frequency.setValueAtTime).toHaveBeenCalledWith(460, 170.07);
   });
+
+  it("synthesizes inkwell glass ping and fluid pop in playQuillDipSound", () => {
+    expect(() => manager.playQuillDipSound()).not.toThrow();
+
+    const createdOscillators = [];
+    const mockGain = {
+      gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const mockCtx = {
+      currentTime: 180,
+      createOscillator: vi.fn(() => {
+        const osc = {
+          type: "",
+          frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+          connect: vi.fn(),
+          start: vi.fn(),
+          stop: vi.fn(),
+        };
+        createdOscillators.push(osc);
+        return osc;
+      }),
+      createGain: vi.fn(() => mockGain),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playQuillDipSound();
+    // 2 glass notes + 1 fluid pop
+    expect(createdOscillators).toHaveLength(3);
+    expect(createdOscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(1479.98, 180);
+    expect(createdOscillators[1].frequency.setValueAtTime).toHaveBeenCalledWith(2217.46, 180);
+    expect(createdOscillators[2].frequency.setValueAtTime).toHaveBeenCalledWith(540, 180.03);
+  });
+
+  it("synthesizes multi-stroke parchment scratch noise bursts in playQuillWritingSound", () => {
+    expect(() => manager.playQuillWritingSound()).not.toThrow();
+
+    const mockBufferSource = { buffer: null, connect: vi.fn(), start: vi.fn(), stop: vi.fn() };
+    const mockFilter = {
+      type: "",
+      frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      Q: { value: 0 },
+      connect: vi.fn(),
+    };
+    const mockGain = {
+      gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const mockCtx = {
+      currentTime: 190,
+      sampleRate: 44100,
+      createBuffer: vi.fn(() => ({
+        getChannelData: vi.fn(() => new Float32Array(100)),
+      })),
+      createBufferSource: vi.fn(() => mockBufferSource),
+      createBiquadFilter: vi.fn(() => mockFilter),
+      createGain: vi.fn(() => mockGain),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playQuillWritingSound(2.4);
+    // 4 strokes
+    expect(mockCtx.createBufferSource).toHaveBeenCalledTimes(4);
+    expect(mockFilter.type).toBe("bandpass");
+    expect(mockFilter.Q.value).toBe(3.2);
+  });
 });

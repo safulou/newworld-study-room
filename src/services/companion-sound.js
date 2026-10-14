@@ -1301,4 +1301,107 @@ export class CompanionSoundManager {
       osc.stop(start + dur + 0.02);
     });
   }
+
+  /**
+   * Play procedural inkwell dip sound
+   * Glass rim tap with viscous fluid surface tension release
+   */
+  playQuillDipSound() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // 1. Crystal inkwell rim tap (dual harmonic ping)
+    const glassNotes = [
+      { freq: 1479.98, dur: 0.18, gain: 0.12 }, // F#6
+      { freq: 2217.46, dur: 0.22, gain: 0.08 }, // C#7
+    ];
+    glassNotes.forEach(({ freq, dur, gain }) => {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now);
+
+      const targetGain = gain * this.volume;
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.linearRampToValueAtTime(targetGain, now + 0.003);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+      osc.connect(g);
+      g.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + dur + 0.02);
+    });
+
+    // 2. Viscous ink surface droplet pop
+    const fluidOsc = ctx.createOscillator();
+    const fluidGain = ctx.createGain();
+    fluidOsc.type = "sine";
+    fluidOsc.frequency.setValueAtTime(540, now + 0.03);
+    fluidOsc.frequency.exponentialRampToValueAtTime(360, now + 0.11);
+
+    const fluidTarget = 0.09 * this.volume;
+    fluidGain.gain.setValueAtTime(0.0001, now + 0.03);
+    fluidGain.gain.linearRampToValueAtTime(fluidTarget, now + 0.045);
+    fluidGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
+    fluidOsc.connect(fluidGain);
+    fluidGain.connect(ctx.destination);
+    fluidOsc.start(now + 0.03);
+    fluidOsc.stop(now + 0.14);
+  }
+
+  /**
+   * Play procedural antique quill pen handwriting cursive scratch ASMR
+   * Multi-stroke bandpass filtered noise bursts simulating nib friction on dry parchment
+   * @param {number} duration - Total writing duration in seconds
+   */
+  playQuillWritingSound(duration = 2.0) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const dur = Math.max(0.6, Math.min(4.0, Number(duration) || 2.0));
+
+    // Synthesize 3-4 natural writing strokes across the duration
+    const strokeCount = 4;
+    const strokeInterval = dur / strokeCount;
+
+    for (let i = 0; i < strokeCount; i++) {
+      const strokeStart = now + i * strokeInterval + (i === 0 ? 0.08 : 0);
+      const strokeDur = strokeInterval * 0.72;
+
+      // Noise source for parchment scratch
+      const bufferSize = Math.max(256, Math.floor(ctx.sampleRate * strokeDur));
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let j = 0; j < bufferSize; j++) {
+        data[j] = Math.random() * 2 - 1;
+      }
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      // Dynamic sweep bandpass filter (1600Hz -> 2600Hz)
+      const filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      const startCutoff = 1700 + Math.random() * 400;
+      const endCutoff = 2300 + Math.random() * 500;
+      filter.frequency.setValueAtTime(startCutoff, strokeStart);
+      filter.frequency.exponentialRampToValueAtTime(endCutoff, strokeStart + strokeDur);
+      filter.Q.value = 3.2;
+
+      const gain = ctx.createGain();
+      const strokePeak = (0.09 + Math.random() * 0.04) * this.volume;
+      gain.gain.setValueAtTime(0.0001, strokeStart);
+      gain.gain.linearRampToValueAtTime(strokePeak, strokeStart + strokeDur * 0.25);
+      gain.gain.exponentialRampToValueAtTime(0.0001, strokeStart + strokeDur);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      noise.start(strokeStart);
+      noise.stop(strokeStart + strokeDur + 0.02);
+    }
+  }
 }

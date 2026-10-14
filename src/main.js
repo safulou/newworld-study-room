@@ -25,6 +25,7 @@ import {
   Cuboid,
   Disc,
   Download,
+  Feather,
   Flame,
   Gift,
   Glasses,
@@ -85,7 +86,12 @@ import { createCompanionAsset } from "./services/doll-generation.js";
 import { FocusTimer, SPRINT_PRESETS } from "./services/focus-timer.js";
 import { LofiGenerator } from "./services/lofi-generator.js";
 import { NotificationManager } from "./services/notification-manager.js";
-import { StudyStatsManager, PLANT_BOTANICAL_SPECIES } from "./services/study-stats.js";
+import {
+  StudyStatsManager,
+  PLANT_BOTANICAL_SPECIES,
+  GARDEN_DIURNAL_PHASES,
+  getGardenDiurnalPhase,
+} from "./services/study-stats.js";
 import { TaskTracker } from "./services/task-tracker.js";
 import { FocusPosterGenerator } from "./services/poster-generator.js";
 import { renderQrToCanvas, downloadQrCanvas, copyQrCanvasToClipboard } from "./services/qr-generator.js";
@@ -118,6 +124,7 @@ const icons = {
   Cuboid,
   Disc,
   Download,
+  Feather,
   Flame,
   Gift,
   Glasses,
@@ -312,6 +319,7 @@ const elements = {
   surfaceChips: [...document.querySelectorAll(".surface-chip")],
   roomDimensionChips: [...document.querySelectorAll(".dimension-chip")],
   reverbDecayChips: [...document.querySelectorAll(".decay-chip")],
+  reverbDampingChips: [...document.querySelectorAll(".damping-chip")],
   gardenDewDrops: $("#gardenDewDrops"),
   gardenButterfly: $("#gardenButterfly"),
   gardenSongbird: $("#gardenSongbird"),
@@ -1572,7 +1580,23 @@ function clampProgress(value) {
   return Math.max(0, Math.min(1, value));
 }
 
+function updateGardenDiurnalSky() {
+  if (!elements.focusGarden) return;
+  const isCircadian = store.get().gardenCircadian !== false;
+  if (!isCircadian) {
+    elements.focusGarden.removeAttribute("data-diurnal");
+    return;
+  }
+  const phase = getGardenDiurnalPhase(new Date());
+  elements.focusGarden.dataset.diurnal = phase;
+  const meta = GARDEN_DIURNAL_PHASES[phase];
+  if (meta) {
+    elements.focusGarden.title = `專注花園 · ${meta.name} (${meta.timeRange})：${meta.description}`;
+  }
+}
+
 function updateGarden(remaining = timer.remaining) {
+  updateGardenDiurnalSky();
   const totalSeconds = Math.max(1, timer.minutes * 60);
   const growth = clampProgress(1 - remaining / totalSeconds);
   const sprout = clampProgress(growth * 5);
@@ -2703,6 +2727,15 @@ function syncReverbDecayUI(decayTime) {
   });
 }
 
+function syncReverbDampingUI(dampingMode) {
+  const currentDamping = dampingMode || "transparent";
+  elements.reverbDampingChips?.forEach((chip) => {
+    const isTarget = chip.dataset.damping === currentDamping;
+    chip.classList.toggle("active", isTarget);
+    chip.setAttribute("aria-pressed", String(isTarget));
+  });
+}
+
 function syncStereoWidthUI(widthValue) {
   const w = Math.max(0, Math.min(2, Number(widthValue ?? 1.0) || 0));
   if (elements.stereoWidthSlider) {
@@ -3149,10 +3182,13 @@ function bindSoundstageModal() {
         : reverbDecay === "cathedral"
           ? "⏳ RT60: 2.8s 大殿"
           : "⏳ RT60: 1.4s 自然";
+    const reverbDamping = ambientSound.getReverbDamping?.() || "transparent";
+    const dampingText =
+      reverbDamping === "warm" ? "🎨 暖調木質" : reverbDamping === "airy" ? "🎨 空靈天籟" : "🎨 純淨平衡";
     ctx.font = "10px ui-sans-serif, system-ui, sans-serif";
     ctx.fillStyle = "rgba(192, 132, 252, 0.75)";
     ctx.textAlign = "left";
-    ctx.fillText(decayText, 16, 22);
+    ctx.fillText(`${decayText} · ${dampingText}`, 16, 22);
 
     // 1b. Early Reflection Virtual Room Boundaries
     const isEarlyReflect = ambientSound.isEarlyReflections?.();
@@ -3736,6 +3772,23 @@ function bindSoundstageModal() {
     });
   });
 
+  elements.reverbDampingChips?.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const damping = chip.dataset.damping;
+      if (!damping) return;
+      ambientSound.setReverbDamping(damping);
+      store.update({ reverbDamping: damping });
+      syncReverbDampingUI(damping);
+      renderSoundstage();
+      const labels = {
+        warm: "🪵 暖調木質（2400Hz 低通阻尼吸收，溫潤低頻）",
+        transparent: "✨ 純淨平衡（全頻通透平衡，原始空間聲學響應）",
+        airy: "🌌 空靈天籟（5800Hz 高頻泛音提升 +2.4dB，晶瑩明亮）",
+      };
+      showToast(`已切換殘響頻率染色：${labels[damping] || damping}`);
+    });
+  });
+
   elements.btnSaveSoundstagePreset?.addEventListener("click", () => {
     const activeMix = ambientSound.getCurrentTrackMix();
     if (Object.keys(activeMix).length === 0) {
@@ -4224,6 +4277,7 @@ function bindAccessories() {
         windchime: "和風清夏風鈴",
         hourglass: "復古黃銅沙漏",
         magnifier: "復古銅柄放大鏡",
+        quill: "古風金屬羽毛筆",
       };
       showToast(`${next[acc] ? "已為玩偶佩戴" : "已卸下"}${labels[acc] || acc}。`);
     });
@@ -6888,6 +6942,19 @@ async function startViewer() {
         ];
         const quote = magnifierQuotes[Math.floor(Math.random() * magnifierQuotes.length)];
         showCompanionBubble(quote, 3400);
+      } else if (emoteType === "quill") {
+        companionSound.playQuillDipSound();
+        setTimeout(() => {
+          companionSound.playQuillWritingSound(2.2);
+        }, 320);
+        spawnStarlightParticles();
+        const quillQuotes = [
+          "羽毛筆輕點墨水～墨香裊裊，文思泉湧，落筆生花！🪶📜",
+          "揮毫疾書～靈感如泉水般流淌在羊皮紙上，字字珠璣！🖋️✨",
+          "筆尖沙沙作響，靜夜墨香怡人。專注的文字是最美的沉澱！🪶💎",
+        ];
+        const quote = quillQuotes[Math.floor(Math.random() * quillQuotes.length)];
+        showCompanionBubble(quote, 3400);
       } else {
         companionSound.playAffirmativeNod();
         const nodQuotes = [
@@ -7038,6 +7105,10 @@ function init() {
   ambientSound.setReverbDecayTime(initialReverbDecay);
   syncReverbDecayUI(initialReverbDecay);
 
+  const initialReverbDamping = store.get().reverbDamping || "transparent";
+  ambientSound.setReverbDamping(initialReverbDamping);
+  syncReverbDampingUI(initialReverbDamping);
+
   const autoAtm = store.get().autoAtmosphereSync !== false;
   ambientSound.setAutoAtmosphereSync(autoAtm);
   ambientSound.setAtmosphereMode(timer.mode);
@@ -7087,6 +7158,8 @@ function init() {
   });
   updateTimerModeUI(timer.mode, timer.cycleRound);
   timer.emitTick();
+  updateGardenDiurnalSky();
+  setInterval(updateGardenDiurnalSky, 60000);
   startViewer();
   startAcousticVisualizer();
   checkNewBadges(true);

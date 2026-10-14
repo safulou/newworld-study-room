@@ -964,3 +964,61 @@ export const FOCUS_CATEGORIES = {
     color: "#a78bfa",
   },
 };
+
+export const GARDEN_DIURNAL_PHASES = {
+  dawn: {
+    id: "dawn",
+    name: "黎明朝霞",
+    icon: "🌅",
+    timeRange: "05:00 - 07:00",
+    description: "薄霧初歇，破曉霞光溫柔喚醒花草",
+  },
+  morning: {
+    id: "morning",
+    name: "晨曦朝露",
+    icon: "☀️",
+    timeRange: "07:00 - 11:00",
+    description: "金黃朝陽灑落，晶瑩晨露滋潤新芽",
+  },
+  noon: {
+    id: "noon",
+    name: "正午天青",
+    icon: "🌞",
+    timeRange: "11:00 - 15:00",
+    description: "天青碧透，微風拂面，生機昂然",
+  },
+  dusk: {
+    id: "dusk",
+    name: "薄暮夕照",
+    icon: "🌇",
+    timeRange: "15:00 - 18:30",
+    description: "暖金晚霞，落日熔金，沉澱思緒",
+  },
+  night: {
+    id: "night",
+    name: "靜謐夜幕",
+    icon: "🌌",
+    timeRange: "18:30 - 05:00",
+    description: "繁星漫天，夜色溫柔，守護專注心流",
+  },
+};
+
+export function getGardenDiurnalPhase(date = new Date()) {
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const totalMinutes = hours * 60 + minutes;
+
+  if (totalMinutes >= 300 && totalMinutes < 420) {
+    return "dawn";
+  }
+  if (totalMinutes >= 420 && totalMinutes < 660) {
+    return "morning";
+  }
+  if (totalMinutes >= 660 && totalMinutes < 900) {
+    return "noon";
+  }
+  if (totalMinutes >= 900 && totalMinutes < 1110) {
+    return "dusk";
+  }
+  return "night";
+}

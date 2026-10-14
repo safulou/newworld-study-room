@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { StudyStatsManager, FOCUS_CATEGORIES } from "../src/services/study-stats.js";
+import {
+  StudyStatsManager,
+  FOCUS_CATEGORIES,
+  GARDEN_DIURNAL_PHASES,
+  getGardenDiurnalPhase,
+} from "../src/services/study-stats.js";
 
 class MockStorage {
   constructor() {
@@ -480,5 +485,48 @@ describe("StudyStatsManager Service", () => {
     expect(stats.getDailyGoalProgress(5).goalMinutes).toBe(10);
     expect(stats.getDailyGoalProgress(1000).goalMinutes).toBe(720);
     expect(stats.getDailyGoalProgress("invalid").goalMinutes).toBe(100);
+  });
+
+  it("calculates botanical garden diurnal circadian phases accurately across 24 hours", () => {
+    // Dawn: 05:00 - 06:59
+    const dawn1 = new Date(2026, 9, 14, 5, 0);
+    const dawn2 = new Date(2026, 9, 14, 6, 59);
+    expect(getGardenDiurnalPhase(dawn1)).toBe("dawn");
+    expect(getGardenDiurnalPhase(dawn2)).toBe("dawn");
+
+    // Morning: 07:00 - 10:59
+    const morning1 = new Date(2026, 9, 14, 7, 0);
+    const morning2 = new Date(2026, 9, 14, 10, 30);
+    expect(getGardenDiurnalPhase(morning1)).toBe("morning");
+    expect(getGardenDiurnalPhase(morning2)).toBe("morning");
+
+    // Noon: 11:00 - 14:59
+    const noon1 = new Date(2026, 9, 14, 11, 0);
+    const noon2 = new Date(2026, 9, 14, 14, 45);
+    expect(getGardenDiurnalPhase(noon1)).toBe("noon");
+    expect(getGardenDiurnalPhase(noon2)).toBe("noon");
+
+    // Dusk: 15:00 - 18:29
+    const dusk1 = new Date(2026, 9, 14, 15, 0);
+    const dusk2 = new Date(2026, 9, 14, 18, 29);
+    expect(getGardenDiurnalPhase(dusk1)).toBe("dusk");
+    expect(getGardenDiurnalPhase(dusk2)).toBe("dusk");
+
+    // Night: 18:30 - 04:59
+    const night1 = new Date(2026, 9, 14, 18, 30);
+    const night2 = new Date(2026, 9, 14, 23, 59);
+    const night3 = new Date(2026, 9, 14, 0, 0);
+    const night4 = new Date(2026, 9, 14, 4, 59);
+    expect(getGardenDiurnalPhase(night1)).toBe("night");
+    expect(getGardenDiurnalPhase(night2)).toBe("night");
+    expect(getGardenDiurnalPhase(night3)).toBe("night");
+    expect(getGardenDiurnalPhase(night4)).toBe("night");
+
+    // Verify metadata dictionary
+    expect(GARDEN_DIURNAL_PHASES.dawn.name).toBe("黎明朝霞");
+    expect(GARDEN_DIURNAL_PHASES.morning.name).toBe("晨曦朝露");
+    expect(GARDEN_DIURNAL_PHASES.noon.name).toBe("正午天青");
+    expect(GARDEN_DIURNAL_PHASES.dusk.name).toBe("薄暮夕照");
+    expect(GARDEN_DIURNAL_PHASES.night.name).toBe("靜謐夜幕");
   });
 });

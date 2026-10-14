@@ -853,6 +853,68 @@ export class DollViewer {
     this.magnifierGroup.add(this.magnifierPivot);
     this.magnifierGroup.visible = false;
 
+    // 11. Antique Brass Quill Pen & Glass Inkwell ("quill")
+    this.quillGroup = new THREE.Group();
+    this.quillGroup.position.set(0.66, -0.96, 0.4);
+
+    const inkwellGlassMat = new THREE.MeshPhysicalMaterial({
+      color: 0x0f172a,
+      roughness: 0.15,
+      transmission: 0.72,
+      ior: 1.54,
+      transparent: true,
+      opacity: 0.92,
+      depthWrite: false,
+    });
+    const inkLiquidMat = new THREE.MeshStandardMaterial({
+      color: 0x020617,
+      roughness: 0.08,
+      metalness: 0.2,
+    });
+    const brassQuillMat = new THREE.MeshStandardMaterial({
+      color: 0xd97706,
+      metalness: 0.85,
+      roughness: 0.28,
+    });
+    const featherMat = new THREE.MeshStandardMaterial({
+      color: 0x4338ca,
+      roughness: 0.65,
+      metalness: 0.1,
+      side: THREE.DoubleSide,
+    });
+    const quillShaftMat = new THREE.MeshStandardMaterial({
+      color: 0xfef3c7,
+      roughness: 0.4,
+    });
+
+    const inkwellBase = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.14, 8), inkwellGlassMat);
+    inkwellBase.position.y = 0.07;
+
+    const inkwellNeck = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, 0.04, 16), brassQuillMat);
+    inkwellNeck.position.y = 0.15;
+
+    const inkLiquid = new THREE.Mesh(new THREE.CircleGeometry(0.07, 16), inkLiquidMat);
+    inkLiquid.rotation.x = -Math.PI / 2;
+    inkLiquid.position.y = 0.11;
+
+    this.quillPivot = new THREE.Group();
+    this.quillPivot.position.set(0, 0.12, 0);
+    this.quillPivot.rotation.set(-0.25, 0.15, 0.35);
+
+    const quillNib = new THREE.Mesh(new THREE.ConeGeometry(0.016, 0.07, 8), brassQuillMat);
+    quillNib.position.y = 0.035;
+
+    const quillShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.016, 0.38, 8), quillShaftMat);
+    quillShaft.position.y = 0.24;
+
+    const quillFeather = new THREE.Mesh(new THREE.PlaneGeometry(0.075, 0.28), featherMat);
+    quillFeather.position.set(0.02, 0.31, 0);
+    quillFeather.rotation.z = -0.08;
+
+    this.quillPivot.add(quillNib, quillShaft, quillFeather);
+    this.quillGroup.add(inkwellBase, inkwellNeck, inkLiquid, this.quillPivot);
+    this.quillGroup.visible = false;
+
     this.customAccessories.add(
       this.glassesGroup,
       this.crownGroup,
@@ -864,6 +926,7 @@ export class DollViewer {
       this.windchimeGroup,
       this.hourglassGroup,
       this.magnifierGroup,
+      this.quillGroup,
     );
     this.doll.add(this.customAccessories);
 
@@ -1075,7 +1138,7 @@ export class DollViewer {
           } else if (this.consecutiveTaps === 2) {
             const emoteChoices =
               this.timerState === "focusing"
-                ? ["wave", "nod", "wish", "stargaze", "pageturn", "hourglass", "magnifier"]
+                ? ["wave", "nod", "wish", "stargaze", "pageturn", "hourglass", "magnifier", "quill"]
                 : [
                     "wave",
                     "nod",
@@ -1087,6 +1150,7 @@ export class DollViewer {
                     "windchime",
                     "hourglass",
                     "magnifier",
+                    "quill",
                   ];
             const emoteType = emoteChoices[Math.floor(Math.random() * emoteChoices.length)];
             if (emoteType === "wave") {
@@ -1109,6 +1173,8 @@ export class DollViewer {
               this.triggerFlipHourglass();
             } else if (emoteType === "magnifier") {
               this.triggerInspectCuriosity();
+            } else if (emoteType === "quill") {
+              this.triggerQuillWriting();
             } else {
               this.triggerStargaze();
             }
@@ -1335,6 +1401,20 @@ export class DollViewer {
     this.triggerBounce();
   }
 
+  triggerQuillWriting({ duration = 2800 } = {}) {
+    if (!this.quillGroup?.visible) {
+      if (this.quillGroup) this.quillGroup.visible = true;
+      this.tempQuillVisible = true;
+    }
+    this.currentEmote = {
+      type: "quill",
+      startTime: performance.now(),
+      duration: Math.max(800, duration),
+    };
+    this.lastFaceMode = null;
+    this.triggerBounce();
+  }
+
   setTimerState(state) {
     this.timerState = state;
     if (this.studyBook) {
@@ -1550,6 +1630,7 @@ export class DollViewer {
     windchime = false,
     hourglass = false,
     magnifier = false,
+    quill = false,
   } = {}) {
     this.accessories = {
       glasses,
@@ -1562,6 +1643,7 @@ export class DollViewer {
       windchime,
       hourglass,
       magnifier,
+      quill,
     };
     if (this.glassesGroup) this.glassesGroup.visible = Boolean(glasses);
     if (this.crownGroup) this.crownGroup.visible = Boolean(crown);
@@ -1575,6 +1657,7 @@ export class DollViewer {
     if (this.windchimeGroup) this.windchimeGroup.visible = Boolean(windchime);
     if (this.hourglassGroup) this.hourglassGroup.visible = Boolean(hourglass);
     if (this.magnifierGroup) this.magnifierGroup.visible = Boolean(magnifier);
+    if (this.quillGroup) this.quillGroup.visible = Boolean(quill);
   }
 
   setAffinityAura(auraType = "none") {
@@ -2115,6 +2198,53 @@ export class DollViewer {
           const flarePulse = 1.0 + Math.sin(progress * Math.PI * 8) * 0.35;
           this.magnifierFlare.scale.set(flarePulse, flarePulse, 1);
         }
+      } else if (emote.type === "quill") {
+        const progress = Math.min(1, elapsedEmote / (emote.duration / 1000));
+        if (progress < 0.32) {
+          const dipP = progress / 0.32;
+          const curve = Math.sin(dipP * Math.PI);
+          if (this.arms && this.arms.length === 2) {
+            this.arms[0].rotation.set(0.68 * curve, -0.32 * curve, -0.18);
+            this.arms[1].rotation.set(0.12 * curve, 0.05 * curve, 0.28);
+          }
+          if (this.head) {
+            this.head.rotation.set(0.22 * curve, 0.25 * curve, 0.05 * curve);
+          }
+          if (this.quillPivot) {
+            this.quillPivot.position.y = 0.12 - 0.04 * curve;
+          }
+        } else if (progress < 0.84) {
+          const writeP = (progress - 0.32) / 0.52;
+          const cursiveX = Math.sin(writeP * Math.PI * 12) * 0.035;
+          const cursiveZ = Math.cos(writeP * Math.PI * 10) * 0.025;
+          if (this.arms && this.arms.length === 2) {
+            this.arms[0].rotation.set(0.56 + cursiveX, -0.15 + cursiveZ, -0.28);
+            this.arms[1].rotation.set(0.25, 0.1, 0.35);
+          }
+          if (this.head) {
+            this.head.rotation.set(0.32, 0.06, -0.04);
+          }
+          if (this.quillGroup) {
+            this.quillGroup.position.set(
+              0.66 - 0.32 * Math.sin(writeP * Math.PI) + cursiveX,
+              -0.96 + 0.18 * Math.sin(writeP * Math.PI) + cursiveZ,
+              0.4 + 0.15 * Math.sin(writeP * Math.PI),
+            );
+          }
+          if (this.quillPivot) {
+            this.quillPivot.rotation.set(-0.55 + cursiveX * 2, 0.15, 0.45);
+          }
+        } else {
+          const returnP = (progress - 0.84) / 0.16;
+          const curve = 1 - returnP;
+          if (this.arms && this.arms.length === 2) {
+            this.arms[0].rotation.set(0.56 * curve, -0.15 * curve, -0.28 * curve - 0.48 * (1 - curve));
+            this.arms[1].rotation.set(0.25 * curve, 0.1 * curve, 0.35 * curve + 0.48 * (1 - curve));
+          }
+          if (this.head) {
+            this.head.rotation.set(0.32 * curve, 0.06 * curve, -0.04 * curve);
+          }
+        }
       }
     } else if (this.celebrationStartTime && performance.now() - this.celebrationStartTime < 6000) {
       const wave = Math.sin(elapsed * 9) * 0.38;
@@ -2284,6 +2414,20 @@ export class DollViewer {
       this.tempMagnifierVisible = false;
       if (this.magnifierGroup && !this.accessories?.magnifier) {
         this.magnifierGroup.visible = false;
+      }
+    }
+
+    if (this.quillGroup && (!this.currentEmote || this.currentEmote.type !== "quill")) {
+      this.quillGroup.position.set(0.66, -0.96, 0.4);
+      if (this.quillPivot) {
+        this.quillPivot.position.set(0, 0.12, 0);
+        this.quillPivot.rotation.set(-0.25, 0.15, 0.35);
+      }
+    }
+    if (this.tempQuillVisible && (!this.currentEmote || this.currentEmote.type !== "quill")) {
+      this.tempQuillVisible = false;
+      if (this.quillGroup && !this.accessories?.quill) {
+        this.quillGroup.visible = false;
       }
     }
 

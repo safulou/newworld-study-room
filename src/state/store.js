@@ -52,6 +52,7 @@ const profileDefaults = {
     windchime: false,
     hourglass: false,
     magnifier: false,
+    quill: false,
   },
   ambientMode: "auto",
   desktopNotifications: false,
@@ -88,6 +89,8 @@ const profileDefaults = {
   surfaceMaterial: "wood",
   roomDimension: "studio",
   reverbDecayTime: "natural",
+  reverbDamping: "transparent",
+  gardenCircadian: true,
 };
 
 export const AFFINITY_RANKS = [
@@ -223,6 +226,7 @@ function sanitizeProfile(value = {}) {
     windchime: Boolean(value.accessories?.windchime),
     hourglass: Boolean(value.accessories?.hourglass),
     magnifier: Boolean(value.accessories?.magnifier),
+    quill: Boolean(value.accessories?.quill),
   };
   const ambientMode = ["auto", "day", "dusk", "night"].includes(value.ambientMode) ? value.ambientMode : "auto";
   const heatmapTheme = ["emerald", "amber", "cyber", "ocean"].includes(value.heatmapTheme)
@@ -395,6 +399,11 @@ function sanitizeProfile(value = {}) {
     reverbDecayTime: ["dry", "natural", "cathedral"].includes(value.reverbDecayTime)
       ? value.reverbDecayTime
       : profileDefaults.reverbDecayTime,
+    reverbDamping: ["warm", "transparent", "airy"].includes(value.reverbDamping)
+      ? value.reverbDamping
+      : profileDefaults.reverbDamping,
+    gardenCircadian:
+      value.gardenCircadian !== undefined ? Boolean(value.gardenCircadian) : profileDefaults.gardenCircadian,
   };
 }
 

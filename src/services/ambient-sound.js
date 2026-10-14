@@ -322,6 +322,30 @@ export const REVERB_DECAY_PRESETS = {
   cathedral: { id: "cathedral", label: "宏偉大殿 (2.8s)", multiplier: 2.0 },
 };
 
+export const REVERB_DAMPING_PRESETS = {
+  warm: {
+    id: "warm",
+    label: "暖調木質",
+    filterType: "lowpass",
+    frequency: 2400,
+    gain: 0,
+  },
+  transparent: {
+    id: "transparent",
+    label: "純淨平衡",
+    filterType: "allpass",
+    frequency: 1000,
+    gain: 0,
+  },
+  airy: {
+    id: "airy",
+    label: "空靈天籟",
+    filterType: "highshelf",
+    frequency: 5800,
+    gain: 2.4,
+  },
+};
+
 export function createProceduralImpulseResponse(ctx, duration = 1.2, decay = 2.2) {
   if (!ctx || !ctx.createBuffer) return null;
   const sampleRate = ctx.sampleRate || 44100;
@@ -380,6 +404,8 @@ export class AmbientSoundscapeManager {
     this.surfaceMaterial = "wood";
     this.roomDimension = "studio";
     this.reverbDecayTime = "natural";
+    this.reverbDamping = "transparent";
+    this.reverbDampingFilter = null;
     this.earlyReflectionNodes = null;
     this.sleepTimerRemainingSec = 0;
     this.sleepTimerDurationSec = 0;
@@ -445,6 +471,8 @@ export class AmbientSoundscapeManager {
         this.wetGain.gain.value = Math.max(0, this.masterReverb.wet);
 
         this.convolver = this.audioCtx.createConvolver();
+        this.reverbDampingFilter = this.audioCtx.createBiquadFilter();
+        this.updateDampingFilter();
         if (this.masterReverb.wet > 0) {
           const decayMult = REVERB_DECAY_PRESETS[this.reverbDecayTime]?.multiplier ?? 1.0;
           this.convolver.buffer = createProceduralImpulseResponse(
@@ -465,9 +493,10 @@ export class AmbientSoundscapeManager {
         this.eqTreble.connect(this.dryGain);
         this.dryGain.connect(this.masterSumGain);
 
-        // Reverb wet path
+        // Reverb wet path with frequency-dependent damping EQ
         this.eqTreble.connect(this.convolver);
-        this.convolver.connect(this.wetGain);
+        this.convolver.connect(this.reverbDampingFilter);
+        this.reverbDampingFilter.connect(this.wetGain);
         this.wetGain.connect(this.masterSumGain);
 
         this.updateOutputRouting();
@@ -607,6 +636,32 @@ export class AmbientSoundscapeManager {
 
   getReverbDecayTime() {
     return this.reverbDecayTime || "natural";
+  }
+
+  setReverbDamping(dampingPreset) {
+    if (!REVERB_DAMPING_PRESETS[dampingPreset]) return this.reverbDamping;
+    this.reverbDamping = dampingPreset;
+    this.updateDampingFilter();
+    return this.reverbDamping;
+  }
+
+  getReverbDamping() {
+    return this.reverbDamping || "transparent";
+  }
+
+  updateDampingFilter() {
+    if (!this.reverbDampingFilter || !this.audioCtx) return;
+    const config = REVERB_DAMPING_PRESETS[this.reverbDamping] || REVERB_DAMPING_PRESETS.transparent;
+    const now = this.audioCtx.currentTime;
+    try {
+      this.reverbDampingFilter.type = config.filterType;
+      if (this.reverbDampingFilter.frequency?.setValueAtTime) {
+        this.reverbDampingFilter.frequency.setValueAtTime(config.frequency, now);
+      }
+      if (this.reverbDampingFilter.gain?.setValueAtTime) {
+        this.reverbDampingFilter.gain.setValueAtTime(config.gain, now);
+      }
+    } catch {}
   }
 
   setStereoWidth(widthFactor) {

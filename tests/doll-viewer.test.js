@@ -587,4 +587,50 @@ describe("drawDollFace", () => {
     expect(fakeViewer.magnifierGroup.visible).toBe(false);
     expect(fakeViewer.accessories.magnifier).toBe(false);
   });
+
+  it("triggers quill handwriting emote with bounce and duration", () => {
+    const fakeViewer = {
+      currentEmote: null,
+      lastFaceMode: "open",
+      triggerBounce: vi.fn(),
+      quillGroup: { visible: false },
+    };
+    fakeViewer.triggerQuillWriting = DollViewer.prototype.triggerQuillWriting.bind(fakeViewer);
+
+    fakeViewer.triggerQuillWriting({ duration: 2800 });
+    expect(fakeViewer.currentEmote).toBeDefined();
+    expect(fakeViewer.currentEmote.type).toBe("quill");
+    expect(fakeViewer.currentEmote.duration).toBe(2800);
+    expect(fakeViewer.quillGroup.visible).toBe(true);
+    expect(fakeViewer.tempQuillVisible).toBe(true);
+    expect(fakeViewer.lastFaceMode).toBeNull();
+    expect(fakeViewer.triggerBounce).toHaveBeenCalled();
+  });
+
+  it("updates quillGroup visibility in setAccessories", () => {
+    const fakeViewer = {
+      glassesGroup: { visible: false },
+      crownGroup: { visible: false },
+      coffeeGroup: { visible: false },
+      catGroup: { visible: false },
+      telescopeGroup: { visible: false },
+      lanternGroup: { visible: false },
+      lanternLight: { intensity: 0 },
+      candlestickGroup: { visible: false },
+      candleLight: { intensity: 0 },
+      windchimeGroup: { visible: false },
+      hourglassGroup: { visible: false },
+      magnifierGroup: { visible: false },
+      quillGroup: { visible: false },
+    };
+    fakeViewer.setAccessories = DollViewer.prototype.setAccessories.bind(fakeViewer);
+
+    fakeViewer.setAccessories({ quill: true });
+    expect(fakeViewer.quillGroup.visible).toBe(true);
+    expect(fakeViewer.accessories.quill).toBe(true);
+
+    fakeViewer.setAccessories({ quill: false });
+    expect(fakeViewer.quillGroup.visible).toBe(false);
+    expect(fakeViewer.accessories.quill).toBe(false);
+  });
 });

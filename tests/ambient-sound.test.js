@@ -10,6 +10,7 @@ import {
   SURFACE_MATERIALS,
   ROOM_DIMENSIONS,
   REVERB_DECAY_PRESETS,
+  REVERB_DAMPING_PRESETS,
   createProceduralImpulseResponse,
 } from "../src/services/ambient-sound.js";
 
@@ -968,6 +969,21 @@ describe("AmbientSoundscapeManager", () => {
       expect(manager.getReverbDecayTime()).toBe("dry");
       manager.setReverbDecayTime("unknown_preset");
       expect(manager.getReverbDecayTime()).toBe("dry");
+
+      // Reverb Frequency-Dependent Damping presets
+      expect(REVERB_DAMPING_PRESETS.warm).toBeDefined();
+      expect(REVERB_DAMPING_PRESETS.transparent).toBeDefined();
+      expect(REVERB_DAMPING_PRESETS.airy).toBeDefined();
+      expect(REVERB_DAMPING_PRESETS.warm.filterType).toBe("lowpass");
+      expect(REVERB_DAMPING_PRESETS.airy.filterType).toBe("highshelf");
+
+      expect(manager.getReverbDamping()).toBe("transparent");
+      manager.setReverbDamping("warm");
+      expect(manager.getReverbDamping()).toBe("warm");
+      manager.setReverbDamping("airy");
+      expect(manager.getReverbDamping()).toBe("airy");
+      manager.setReverbDamping("invalid_damping");
+      expect(manager.getReverbDamping()).toBe("airy");
     });
   });
 });
