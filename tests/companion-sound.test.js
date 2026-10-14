@@ -600,4 +600,72 @@ describe("CompanionSoundManager", () => {
     expect(createdOscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(2600, 150);
     expect(createdOscillators[1].frequency.setValueAtTime).toHaveBeenCalledWith(2900, 150.16);
   });
+
+  it("synthesizes vintage magnifying glass brass tap and lens shimmer in playMagnifierInspectSound", () => {
+    expect(() => manager.playMagnifierInspectSound()).not.toThrow();
+
+    const createdOscillators = [];
+    const mockGain = {
+      gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const mockCtx = {
+      currentTime: 160,
+      createOscillator: vi.fn(() => {
+        const osc = {
+          type: "",
+          frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+          connect: vi.fn(),
+          start: vi.fn(),
+          stop: vi.fn(),
+        };
+        createdOscillators.push(osc);
+        return osc;
+      }),
+      createGain: vi.fn(() => mockGain),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playMagnifierInspectSound(1.8);
+    // 2 brass chimes (triangle) + 2 optical lens tones (sine) = 4 oscillators
+    expect(createdOscillators).toHaveLength(4);
+    expect(createdOscillators[0].type).toBe("triangle");
+    expect(createdOscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(587.33, 160);
+    expect(createdOscillators[2].type).toBe("sine");
+    expect(createdOscillators[2].frequency.setValueAtTime).toHaveBeenCalledWith(1760.0, 160.12);
+  });
+
+  it("synthesizes organic springy mushroom cap bounce in playMushroomBounceSound", () => {
+    expect(() => manager.playMushroomBounceSound()).not.toThrow();
+
+    const createdOscillators = [];
+    const mockGain = {
+      gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const mockCtx = {
+      currentTime: 170,
+      createOscillator: vi.fn(() => {
+        const osc = {
+          type: "",
+          frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+          connect: vi.fn(),
+          start: vi.fn(),
+          stop: vi.fn(),
+        };
+        createdOscillators.push(osc);
+        return osc;
+      }),
+      createGain: vi.fn(() => mockGain),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playMushroomBounceSound();
+    expect(createdOscillators).toHaveLength(2); // 2 bouncy harmonic impulses
+    expect(createdOscillators[0].type).toBe("sine");
+    expect(createdOscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(320, 170);
+    expect(createdOscillators[1].frequency.setValueAtTime).toHaveBeenCalledWith(460, 170.07);
+  });
 });

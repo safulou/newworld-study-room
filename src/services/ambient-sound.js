@@ -316,6 +316,12 @@ export const ACOUSTIC_PRESETS = {
   },
 };
 
+export const REVERB_DECAY_PRESETS = {
+  dry: { id: "dry", label: "乾爽錄音室 (0.6s)", multiplier: 0.5 },
+  natural: { id: "natural", label: "舒適起居室 (1.4s)", multiplier: 1.0 },
+  cathedral: { id: "cathedral", label: "宏偉大殿 (2.8s)", multiplier: 2.0 },
+};
+
 export function createProceduralImpulseResponse(ctx, duration = 1.2, decay = 2.2) {
   if (!ctx || !ctx.createBuffer) return null;
   const sampleRate = ctx.sampleRate || 44100;
@@ -373,6 +379,7 @@ export class AmbientSoundscapeManager {
     this.earlyReflections = true;
     this.surfaceMaterial = "wood";
     this.roomDimension = "studio";
+    this.reverbDecayTime = "natural";
     this.earlyReflectionNodes = null;
     this.sleepTimerRemainingSec = 0;
     this.sleepTimerDurationSec = 0;
@@ -439,9 +446,10 @@ export class AmbientSoundscapeManager {
 
         this.convolver = this.audioCtx.createConvolver();
         if (this.masterReverb.wet > 0) {
+          const decayMult = REVERB_DECAY_PRESETS[this.reverbDecayTime]?.multiplier ?? 1.0;
           this.convolver.buffer = createProceduralImpulseResponse(
             this.audioCtx,
-            this.masterReverb.duration,
+            this.masterReverb.duration * decayMult,
             this.masterReverb.decay,
           );
         }
@@ -579,6 +587,26 @@ export class AmbientSoundscapeManager {
 
   getRoomDimension() {
     return this.roomDimension || "studio";
+  }
+
+  setReverbDecayTime(decayPreset) {
+    if (!REVERB_DECAY_PRESETS[decayPreset]) return this.reverbDecayTime;
+    this.reverbDecayTime = decayPreset;
+    if (this.audioCtx && this.convolver && this.masterReverb.wet > 0) {
+      try {
+        const decayMult = REVERB_DECAY_PRESETS[this.reverbDecayTime]?.multiplier ?? 1.0;
+        this.convolver.buffer = createProceduralImpulseResponse(
+          this.audioCtx,
+          this.masterReverb.duration * decayMult,
+          this.masterReverb.decay,
+        );
+      } catch {}
+    }
+    return this.reverbDecayTime;
+  }
+
+  getReverbDecayTime() {
+    return this.reverbDecayTime || "natural";
   }
 
   setStereoWidth(widthFactor) {
@@ -894,9 +922,10 @@ export class AmbientSoundscapeManager {
       if (this.dryGain?.gain) this.dryGain.gain.setValueAtTime(Math.max(0, 1 - clampedWet), now);
       if (this.convolver && clampedWet > 0) {
         try {
+          const decayMult = REVERB_DECAY_PRESETS[this.reverbDecayTime]?.multiplier ?? 1.0;
           this.convolver.buffer = createProceduralImpulseResponse(
             this.audioCtx,
-            this.masterReverb.duration,
+            this.masterReverb.duration * decayMult,
             this.masterReverb.decay,
           );
         } catch {}

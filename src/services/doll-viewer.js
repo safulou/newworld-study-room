@@ -802,6 +802,57 @@ export class DollViewer {
     this.hourglassGroup.add(hgBase, hgTop, ...pillars, this.hourglassPivot);
     this.hourglassGroup.visible = false;
 
+    // 10. Vintage Brass Magnifying Glass ("magnifier")
+    this.magnifierGroup = new THREE.Group();
+    this.magnifierGroup.position.set(0.78, -0.96, 0.46);
+
+    const brassMagnifierMat = new THREE.MeshStandardMaterial({
+      color: 0xd4af37,
+      metalness: 0.88,
+      roughness: 0.25,
+    });
+    const magnifierGlassMat = new THREE.MeshPhysicalMaterial({
+      color: 0xffffff,
+      transmission: 0.95,
+      roughness: 0.04,
+      ior: 1.52,
+      transparent: true,
+      opacity: 0.88,
+      depthWrite: false,
+    });
+    const magnifierFlareMat = new THREE.MeshBasicMaterial({
+      color: 0xe0f2fe,
+      transparent: true,
+      opacity: 0.35,
+      depthWrite: false,
+    });
+
+    this.magnifierPivot = new THREE.Group();
+    this.magnifierPivot.rotation.set(-Math.PI / 2 + 0.12, 0, -0.35);
+
+    const magRim = new THREE.Mesh(new THREE.TorusGeometry(0.082, 0.007, 10, 24), brassMagnifierMat);
+    magRim.position.y = 0.12;
+
+    const magLens = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.006, 24), magnifierGlassMat);
+    magLens.position.y = 0.12;
+    magLens.rotation.x = Math.PI / 2;
+
+    this.magnifierFlare = new THREE.Mesh(new THREE.CircleGeometry(0.045, 16), magnifierFlareMat);
+    this.magnifierFlare.position.set(0.02, 0.14, 0.005);
+
+    const magNeck = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.009, 0.025, 10), brassMagnifierMat);
+    magNeck.position.y = 0.03;
+
+    const magHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.0065, 0.14, 12), brassMagnifierMat);
+    magHandle.position.y = -0.055;
+
+    const magRing = new THREE.Mesh(new THREE.TorusGeometry(0.012, 0.0035, 8, 16), brassMagnifierMat);
+    magRing.position.y = -0.135;
+
+    this.magnifierPivot.add(magRim, magLens, this.magnifierFlare, magNeck, magHandle, magRing);
+    this.magnifierGroup.add(this.magnifierPivot);
+    this.magnifierGroup.visible = false;
+
     this.customAccessories.add(
       this.glassesGroup,
       this.crownGroup,
@@ -812,6 +863,7 @@ export class DollViewer {
       this.candlestickGroup,
       this.windchimeGroup,
       this.hourglassGroup,
+      this.magnifierGroup,
     );
     this.doll.add(this.customAccessories);
 
@@ -1023,8 +1075,19 @@ export class DollViewer {
           } else if (this.consecutiveTaps === 2) {
             const emoteChoices =
               this.timerState === "focusing"
-                ? ["wave", "nod", "wish", "stargaze", "pageturn", "hourglass"]
-                : ["wave", "nod", "wish", "stargaze", "coffeesip", "petcat", "blowcandle", "windchime", "hourglass"];
+                ? ["wave", "nod", "wish", "stargaze", "pageturn", "hourglass", "magnifier"]
+                : [
+                    "wave",
+                    "nod",
+                    "wish",
+                    "stargaze",
+                    "coffeesip",
+                    "petcat",
+                    "blowcandle",
+                    "windchime",
+                    "hourglass",
+                    "magnifier",
+                  ];
             const emoteType = emoteChoices[Math.floor(Math.random() * emoteChoices.length)];
             if (emoteType === "wave") {
               this.triggerWave();
@@ -1044,6 +1107,8 @@ export class DollViewer {
               this.triggerWindChime();
             } else if (emoteType === "hourglass") {
               this.triggerFlipHourglass();
+            } else if (emoteType === "magnifier") {
+              this.triggerInspectCuriosity();
             } else {
               this.triggerStargaze();
             }
@@ -1249,6 +1314,20 @@ export class DollViewer {
     }
     this.currentEmote = {
       type: "hourglass",
+      startTime: performance.now(),
+      duration: Math.max(800, duration),
+    };
+    this.lastFaceMode = null;
+    this.triggerBounce();
+  }
+
+  triggerInspectCuriosity({ duration = 2600 } = {}) {
+    if (!this.magnifierGroup?.visible) {
+      if (this.magnifierGroup) this.magnifierGroup.visible = true;
+      this.tempMagnifierVisible = true;
+    }
+    this.currentEmote = {
+      type: "magnifier",
       startTime: performance.now(),
       duration: Math.max(800, duration),
     };
@@ -1470,8 +1549,20 @@ export class DollViewer {
     candlestick = false,
     windchime = false,
     hourglass = false,
+    magnifier = false,
   } = {}) {
-    this.accessories = { glasses, crown, coffee, cat, telescope, lantern, candlestick, windchime, hourglass };
+    this.accessories = {
+      glasses,
+      crown,
+      coffee,
+      cat,
+      telescope,
+      lantern,
+      candlestick,
+      windchime,
+      hourglass,
+      magnifier,
+    };
     if (this.glassesGroup) this.glassesGroup.visible = Boolean(glasses);
     if (this.crownGroup) this.crownGroup.visible = Boolean(crown);
     if (this.coffeeGroup) this.coffeeGroup.visible = Boolean(coffee);
@@ -1483,6 +1574,7 @@ export class DollViewer {
     if (this.candleLight) this.candleLight.intensity = candlestick ? 0.9 : 0;
     if (this.windchimeGroup) this.windchimeGroup.visible = Boolean(windchime);
     if (this.hourglassGroup) this.hourglassGroup.visible = Boolean(hourglass);
+    if (this.magnifierGroup) this.magnifierGroup.visible = Boolean(magnifier);
   }
 
   setAffinityAura(auraType = "none") {
@@ -1995,6 +2087,34 @@ export class DollViewer {
           const streamScale = 0.4 + Math.sin(progress * Math.PI * 12) * 0.6;
           this.hourglassSandStream.scale.set(streamScale, 1, streamScale);
         }
+      } else if (emote.type === "magnifier") {
+        const progress = Math.min(1, elapsedEmote / (emote.duration / 1000));
+        const p = Math.sin(progress * Math.PI);
+        const curve = p * p * (3 - 2 * p);
+        if (this.arms && this.arms.length === 2) {
+          this.arms[0].rotation.set(0.85 * curve, -0.42 * curve, -0.15);
+          this.arms[1].rotation.set(0.18 * curve, 0.12 * curve, 0.32);
+        }
+        if (this.head) {
+          this.head.rotation.x = 0.28 * curve;
+          this.head.rotation.y = 0.35 * curve;
+          this.head.rotation.z = 0.08 * curve;
+        }
+        if (this.magnifierGroup) {
+          this.magnifierGroup.position.set(0.78 - 0.45 * curve, -0.96 + 0.65 * curve, 0.46 + 0.22 * curve);
+        }
+        if (this.magnifierPivot) {
+          const baseRotX = -Math.PI / 2 + 0.12;
+          this.magnifierPivot.rotation.set(
+            baseRotX + (0.22 - baseRotX) * curve,
+            0.42 * curve,
+            -0.35 + (0.65 - -0.35) * curve,
+          );
+        }
+        if (this.magnifierFlare) {
+          const flarePulse = 1.0 + Math.sin(progress * Math.PI * 8) * 0.35;
+          this.magnifierFlare.scale.set(flarePulse, flarePulse, 1);
+        }
       }
     } else if (this.celebrationStartTime && performance.now() - this.celebrationStartTime < 6000) {
       const wave = Math.sin(elapsed * 9) * 0.38;
@@ -2148,6 +2268,22 @@ export class DollViewer {
       this.tempHourglassVisible = false;
       if (this.hourglassGroup && !this.accessories?.hourglass) {
         this.hourglassGroup.visible = false;
+      }
+    }
+
+    if (this.magnifierGroup && (!this.currentEmote || this.currentEmote.type !== "magnifier")) {
+      this.magnifierGroup.position.set(0.78, -0.96, 0.46);
+      if (this.magnifierPivot) {
+        this.magnifierPivot.rotation.set(-Math.PI / 2 + 0.12, 0, -0.35);
+      }
+      if (this.magnifierFlare) {
+        this.magnifierFlare.scale.set(1, 1, 1);
+      }
+    }
+    if (this.tempMagnifierVisible && (!this.currentEmote || this.currentEmote.type !== "magnifier")) {
+      this.tempMagnifierVisible = false;
+      if (this.magnifierGroup && !this.accessories?.magnifier) {
+        this.magnifierGroup.visible = false;
       }
     }
 

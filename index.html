@@ -163,6 +163,23 @@
               <span class="songbird-branch"></span>
               <span class="songbird-note-bubble" id="songbirdNoteBubble" aria-hidden="true">♪</span>
             </div>
+            <div
+              class="garden-mushroom"
+              id="gardenMushroom"
+              role="button"
+              tabindex="0"
+              aria-label="花園晨露小蘑菇"
+              title="點擊輕觸小蘑菇彈跳 (+3 EXP)"
+            >
+              <div class="mushroom-stem"></div>
+              <div class="mushroom-cap">
+                <i class="mushroom-dot dot-1"></i>
+                <i class="mushroom-dot dot-2"></i>
+                <i class="mushroom-dot dot-3"></i>
+                <span class="mushroom-dew"></span>
+              </div>
+              <div class="spore-dust-container" id="sporeDustContainer" aria-hidden="true"></div>
+            </div>
             <div class="garden-rainbow" id="gardenRainbow" aria-hidden="true"></div>
             <div class="garden-mist-container" id="gardenMistContainer" aria-hidden="true"></div>
             <div class="garden-petal-container" id="gardenPetalContainer" aria-hidden="true"></div>
@@ -852,6 +869,16 @@
               >
                 <i data-lucide="hourglass"></i>
                 <span>沙漏</span>
+              </button>
+              <button
+                class="accessory-chip"
+                type="button"
+                data-accessory="magnifier"
+                aria-pressed="false"
+                title="復古銅柄放大鏡"
+              >
+                <i data-lucide="search"></i>
+                <span>放大鏡</span>
               </button>
             </div>
             <div class="generation-card">
@@ -2067,6 +2094,35 @@
               title="挑高書殿 (12m)：宏偉悠遠反射，悠長延遲 (2.2x)，空間開闊"
             >
               🏛️ 挑高書殿 (12m)
+            </button>
+          </div>
+        </div>
+        <div class="soundstage-decay-row" role="group" aria-label="聲學殘響衰減時間">
+          <span class="decay-label">⏳ 物理殘響時間：</span>
+          <div class="decay-chips" id="reverbDecayChips">
+            <button
+              type="button"
+              class="decay-chip"
+              data-decay="dry"
+              title="乾爽錄音室 (0.6s)：緊湊俐落，微殘響 (0.5x)，極低干擾"
+            >
+              🎙️ 乾爽 (0.6s)
+            </button>
+            <button
+              type="button"
+              class="decay-chip active"
+              data-decay="natural"
+              title="舒適起居室 (1.4s)：自然平衡，溫潤通透 (1.0x)"
+            >
+              ☕ 自然 (1.4s)
+            </button>
+            <button
+              type="button"
+              class="decay-chip"
+              data-decay="cathedral"
+              title="宏偉大殿 (2.8s)：悠遠宏大，深邃漫射 (2.0x)"
+            >
+              🏛️ 大殿 (2.8s)
             </button>
           </div>
         </div>

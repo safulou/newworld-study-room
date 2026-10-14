@@ -51,6 +51,7 @@ const profileDefaults = {
     candlestick: false,
     windchime: false,
     hourglass: false,
+    magnifier: false,
   },
   ambientMode: "auto",
   desktopNotifications: false,
@@ -86,6 +87,7 @@ const profileDefaults = {
   earlyReflections: true,
   surfaceMaterial: "wood",
   roomDimension: "studio",
+  reverbDecayTime: "natural",
 };
 
 export const AFFINITY_RANKS = [
@@ -220,6 +222,7 @@ function sanitizeProfile(value = {}) {
     candlestick: Boolean(value.accessories?.candlestick),
     windchime: Boolean(value.accessories?.windchime),
     hourglass: Boolean(value.accessories?.hourglass),
+    magnifier: Boolean(value.accessories?.magnifier),
   };
   const ambientMode = ["auto", "day", "dusk", "night"].includes(value.ambientMode) ? value.ambientMode : "auto";
   const heatmapTheme = ["emerald", "amber", "cyber", "ocean"].includes(value.heatmapTheme)
@@ -389,6 +392,9 @@ function sanitizeProfile(value = {}) {
     roomDimension: ["nook", "studio", "hall"].includes(value.roomDimension)
       ? value.roomDimension
       : profileDefaults.roomDimension,
+    reverbDecayTime: ["dry", "natural", "cathedral"].includes(value.reverbDecayTime)
+      ? value.reverbDecayTime
+      : profileDefaults.reverbDecayTime,
   };
 }
 

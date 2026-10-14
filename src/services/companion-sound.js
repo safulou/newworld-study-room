@@ -1208,4 +1208,97 @@ export class CompanionSoundManager {
       osc.stop(start + dur + 0.02);
     });
   }
+
+  /**
+   * Play procedural optical lens shimmer and brass tap ASMR for vintage magnifying glass inspection
+   * Combines warm brass handle resonance with luminous refractive glass glisten
+   */
+  playMagnifierInspectSound(duration = 1.6) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const dur = Math.max(0.8, Math.min(3.0, Number(duration) || 1.6));
+
+    // 1. Brass handle gentle pickup tap (D5 & A5 dual metallic pulse)
+    const brassChimes = [
+      { freq: 587.33, delay: 0.0, pulseDur: 0.28, gain: 0.12 },
+      { freq: 880.0, delay: 0.02, pulseDur: 0.32, gain: 0.09 },
+    ];
+    brassChimes.forEach(({ freq, delay, pulseDur, gain: chGain }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, now + delay);
+
+      const targetGain = chGain * this.volume;
+      gain.gain.setValueAtTime(0.0001, now + delay);
+      gain.gain.linearRampToValueAtTime(targetGain, now + delay + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + pulseDur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + delay);
+      osc.stop(now + delay + pulseDur + 0.02);
+    });
+
+    // 2. Optical lens crystalline refractive shimmer (high dual-sine refraction glisten)
+    const lensTones = [
+      { startFreq: 1760.0, endFreq: 2093.0, delay: 0.12, toneDur: dur * 0.7, gain: 0.08 },
+      { startFreq: 2637.0, endFreq: 3136.0, delay: 0.22, toneDur: dur * 0.8, gain: 0.06 },
+    ];
+    lensTones.forEach(({ startFreq, endFreq, delay, toneDur, gain: tGain }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(startFreq, now + delay);
+      osc.frequency.exponentialRampToValueAtTime(endFreq, now + delay + toneDur * 0.4);
+
+      const targetGain = tGain * this.volume;
+      gain.gain.setValueAtTime(0.0001, now + delay);
+      gain.gain.linearRampToValueAtTime(targetGain, now + delay + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + toneDur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + delay);
+      osc.stop(now + delay + toneDur + 0.03);
+    });
+  }
+
+  /**
+   * Play procedural springy mushroom bounce ASMR
+   * Double-pitch swept bubble sine wave synthesizing tactile organic cap rebound
+   */
+  playMushroomBounceSound() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    const bounces = [
+      { startOffset: 0.0, dur: 0.16, startFreq: 320, peakFreq: 640, endFreq: 420, peakGain: 0.18 },
+      { startOffset: 0.07, dur: 0.14, startFreq: 460, peakFreq: 760, endFreq: 520, peakGain: 0.12 },
+    ];
+
+    bounces.forEach(({ startOffset, dur, startFreq, peakFreq, endFreq, peakGain }) => {
+      const start = now + startOffset;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(startFreq, start);
+      osc.frequency.exponentialRampToValueAtTime(peakFreq, start + dur * 0.35);
+      osc.frequency.exponentialRampToValueAtTime(endFreq, start + dur);
+
+      const targetGain = peakGain * this.volume;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.linearRampToValueAtTime(targetGain, start + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(start);
+      osc.stop(start + dur + 0.02);
+    });
+  }
 }

@@ -542,4 +542,49 @@ describe("drawDollFace", () => {
     expect(fakeViewer.hourglassGroup.visible).toBe(false);
     expect(fakeViewer.accessories.hourglass).toBe(false);
   });
+
+  it("triggers magnifier micro-emote with magnifierGroup visibility setup, duration, and bounce", () => {
+    const fakeViewer = {
+      currentEmote: null,
+      lastFaceMode: "open",
+      triggerBounce: vi.fn(),
+      magnifierGroup: { visible: false },
+    };
+    fakeViewer.triggerInspectCuriosity = DollViewer.prototype.triggerInspectCuriosity.bind(fakeViewer);
+
+    fakeViewer.triggerInspectCuriosity({ duration: 2600 });
+    expect(fakeViewer.currentEmote).toBeDefined();
+    expect(fakeViewer.currentEmote.type).toBe("magnifier");
+    expect(fakeViewer.currentEmote.duration).toBe(2600);
+    expect(fakeViewer.magnifierGroup.visible).toBe(true);
+    expect(fakeViewer.tempMagnifierVisible).toBe(true);
+    expect(fakeViewer.lastFaceMode).toBeNull();
+    expect(fakeViewer.triggerBounce).toHaveBeenCalled();
+  });
+
+  it("updates magnifierGroup visibility in setAccessories", () => {
+    const fakeViewer = {
+      glassesGroup: { visible: false },
+      crownGroup: { visible: false },
+      coffeeGroup: { visible: false },
+      catGroup: { visible: false },
+      telescopeGroup: { visible: false },
+      lanternGroup: { visible: false },
+      lanternLight: { intensity: 0 },
+      candlestickGroup: { visible: false },
+      candleLight: { intensity: 0 },
+      windchimeGroup: { visible: false },
+      hourglassGroup: { visible: false },
+      magnifierGroup: { visible: false },
+    };
+    fakeViewer.setAccessories = DollViewer.prototype.setAccessories.bind(fakeViewer);
+
+    fakeViewer.setAccessories({ magnifier: true });
+    expect(fakeViewer.magnifierGroup.visible).toBe(true);
+    expect(fakeViewer.accessories.magnifier).toBe(true);
+
+    fakeViewer.setAccessories({ magnifier: false });
+    expect(fakeViewer.magnifierGroup.visible).toBe(false);
+    expect(fakeViewer.accessories.magnifier).toBe(false);
+  });
 });

@@ -75,6 +75,7 @@ describe("room-scoped store", () => {
       candlestick: false,
       windchime: false,
       hourglass: false,
+      magnifier: false,
     });
   });
 
@@ -493,5 +494,19 @@ describe("room-scoped store", () => {
     expect(store.get().roomDimension).toBe("hall");
     store.update({ roomDimension: "invalid_dimension" });
     expect(store.get().roomDimension).toBe("studio");
+
+    // reverbDecayTime
+    expect(store.get().reverbDecayTime).toBe("natural");
+    store.update({ reverbDecayTime: "dry" });
+    expect(store.get().reverbDecayTime).toBe("dry");
+    store.update({ reverbDecayTime: "cathedral" });
+    expect(store.get().reverbDecayTime).toBe("cathedral");
+    store.update({ reverbDecayTime: "invalid_decay" });
+    expect(store.get().reverbDecayTime).toBe("natural");
+
+    // accessories.magnifier
+    expect(store.get().accessories.magnifier).toBe(false);
+    store.update({ accessories: { ...store.get().accessories, magnifier: true } });
+    expect(store.get().accessories.magnifier).toBe(true);
   });
 });

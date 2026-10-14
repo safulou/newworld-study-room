@@ -9,6 +9,7 @@ import {
   DISTANCE_MODELS,
   SURFACE_MATERIALS,
   ROOM_DIMENSIONS,
+  REVERB_DECAY_PRESETS,
   createProceduralImpulseResponse,
 } from "../src/services/ambient-sound.js";
 
@@ -951,6 +952,22 @@ describe("AmbientSoundscapeManager", () => {
 
       manager.setRoomDimension("invalid_dimension");
       expect(manager.getRoomDimension()).toBe("nook");
+
+      // RT60 Reverb Decay Time presets and scaling
+      expect(REVERB_DECAY_PRESETS.dry).toBeDefined();
+      expect(REVERB_DECAY_PRESETS.natural).toBeDefined();
+      expect(REVERB_DECAY_PRESETS.cathedral).toBeDefined();
+      expect(REVERB_DECAY_PRESETS.dry.multiplier).toBe(0.5);
+      expect(REVERB_DECAY_PRESETS.natural.multiplier).toBe(1.0);
+      expect(REVERB_DECAY_PRESETS.cathedral.multiplier).toBe(2.0);
+
+      expect(manager.getReverbDecayTime()).toBe("natural");
+      manager.setReverbDecayTime("cathedral");
+      expect(manager.getReverbDecayTime()).toBe("cathedral");
+      manager.setReverbDecayTime("dry");
+      expect(manager.getReverbDecayTime()).toBe("dry");
+      manager.setReverbDecayTime("unknown_preset");
+      expect(manager.getReverbDecayTime()).toBe("dry");
     });
   });
 });
