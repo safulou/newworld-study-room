@@ -180,6 +180,28 @@
               </div>
               <div class="spore-dust-container" id="sporeDustContainer" aria-hidden="true"></div>
             </div>
+            <div
+              class="garden-cicada"
+              id="gardenCicada"
+              role="button"
+              tabindex="0"
+              aria-label="花園晨露夏蟬"
+              title="輕觸晨露夏蟬，聆聽翼羽微顫與清脆短鳴 (+3 EXP)"
+            >
+              <div class="cicada-body">
+                <span class="cicada-head">
+                  <i class="cicada-eye eye-left"></i>
+                  <i class="cicada-eye eye-right"></i>
+                </span>
+                <span class="cicada-thorax"></span>
+                <span class="cicada-abdomen"></span>
+                <div class="cicada-wings">
+                  <span class="cicada-wing wing-left"></span>
+                  <span class="cicada-wing wing-right"></span>
+                </div>
+              </div>
+              <span class="cicada-sparkle" id="cicadaSparkle" aria-hidden="true">✦</span>
+            </div>
             <div class="garden-rainbow" id="gardenRainbow" aria-hidden="true"></div>
             <div class="garden-mist-container" id="gardenMistContainer" aria-hidden="true"></div>
             <div class="garden-petal-container" id="gardenPetalContainer" aria-hidden="true"></div>
@@ -889,6 +911,16 @@
               >
                 <i data-lucide="feather"></i>
                 <span>羽毛筆</span>
+              </button>
+              <button
+                class="accessory-chip"
+                type="button"
+                data-accessory="musicBox"
+                aria-pressed="false"
+                title="古典胡桃木八音盒"
+              >
+                <i data-lucide="music-2"></i>
+                <span>八音盒</span>
               </button>
             </div>
             <div class="generation-card">
@@ -2162,6 +2194,35 @@
               title="空靈天籟：高頻泛音提升 (+2.4dB)，晶瑩通透空靈"
             >
               🌌 空靈天籟
+            </button>
+          </div>
+        </div>
+        <div class="soundstage-elevation-row" role="group" aria-label="空間耳廓仰角感知">
+          <span class="elevation-label">📐 垂直仰角耳廓濾波：</span>
+          <div class="elevation-chips" id="elevationModelChips">
+            <button
+              type="button"
+              class="elevation-chip"
+              data-elevation="ground"
+              title="地面沉降 (-20°)：低位投影，4.2kHz 耳廓凹陷 (-3.5dB)，低頻沉穩紮實"
+            >
+              🌿 地面沉降 (-20°)
+            </button>
+            <button
+              type="button"
+              class="elevation-chip active"
+              data-elevation="ear_level"
+              title="齊耳平視 (0°)：自然水平全通，純淨平衡平直頻響"
+            >
+              👀 齊耳平視 (0°)
+            </button>
+            <button
+              type="button"
+              class="elevation-chip"
+              data-elevation="elevated"
+              title="空中穹頂 (+30°)：穹頂高懸，7.8kHz 耳廓反射提升 (+4.2dB)，高空微風明亮"
+            >
+              🌤️ 空中穹頂 (+30°)
             </button>
           </div>
         </div>

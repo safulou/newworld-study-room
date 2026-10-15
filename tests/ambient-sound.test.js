@@ -11,6 +11,7 @@ import {
   ROOM_DIMENSIONS,
   REVERB_DECAY_PRESETS,
   REVERB_DAMPING_PRESETS,
+  ELEVATION_PRESETS,
   createProceduralImpulseResponse,
 } from "../src/services/ambient-sound.js";
 
@@ -984,6 +985,22 @@ describe("AmbientSoundscapeManager", () => {
       expect(manager.getReverbDamping()).toBe("airy");
       manager.setReverbDamping("invalid_damping");
       expect(manager.getReverbDamping()).toBe("airy");
+
+      // 3D Soundstage Elevation HRTF Presets and Model
+      expect(ELEVATION_PRESETS.ground).toBeDefined();
+      expect(ELEVATION_PRESETS.ear_level).toBeDefined();
+      expect(ELEVATION_PRESETS.elevated).toBeDefined();
+      expect(ELEVATION_PRESETS.ground.pitchAngle).toBe(-20);
+      expect(ELEVATION_PRESETS.ear_level.pitchAngle).toBe(0);
+      expect(ELEVATION_PRESETS.elevated.pitchAngle).toBe(30);
+
+      expect(manager.getElevationModel()).toBe("ear_level");
+      manager.setElevationModel("elevated");
+      expect(manager.getElevationModel()).toBe("elevated");
+      manager.setElevationModel("ground");
+      expect(manager.getElevationModel()).toBe("ground");
+      manager.setElevationModel("invalid_model");
+      expect(manager.getElevationModel()).toBe("ground");
     });
   });
 });

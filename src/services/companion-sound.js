@@ -1404,4 +1404,157 @@ export class CompanionSoundManager {
       noise.stop(strokeStart + strokeDur + 0.02);
     }
   }
+
+  /**
+   * Play procedural mechanical music box crank ratchet winding clicks
+   * Simulates winding the key/crank of a vintage music box or gramophone
+   * @param {number} duration - Total winding time in seconds
+   */
+  playMusicBoxCrankSound(duration = 0.8) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const dur = Math.max(0.3, Math.min(2.0, Number(duration) || 0.8));
+    const clickCount = 5;
+    const interval = dur / clickCount;
+
+    for (let i = 0; i < clickCount; i++) {
+      const clickTime = now + i * interval + Math.random() * 0.01;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+
+      // Sharp mechanical ratchet click
+      osc.type = "square";
+      osc.frequency.setValueAtTime(1800 + (i % 2) * 350, clickTime);
+      osc.frequency.exponentialRampToValueAtTime(750, clickTime + 0.018);
+
+      filter.type = "bandpass";
+      filter.frequency.setValueAtTime(2800, clickTime);
+      filter.Q.value = 4.0;
+
+      const clickPeak = 0.08 * this.volume;
+      gain.gain.setValueAtTime(0.0001, clickTime);
+      gain.gain.linearRampToValueAtTime(clickPeak, clickTime + 0.002);
+      gain.gain.exponentialRampToValueAtTime(0.0001, clickTime + 0.022);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(clickTime);
+      osc.stop(clickTime + 0.028);
+    }
+  }
+
+  /**
+   * Play procedural vintage metallic tine music box chime melody
+   * Synthesizes resonant steel reed vibrations with inharmonic overtones
+   * @param {Array<{freq: number, delay: number, dur: number}>} [customMelody]
+   */
+  playMusicBoxChime(customMelody = null) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // Classic music box motif (E6, G#6, B6, E7, B6)
+    const melody =
+      Array.isArray(customMelody) && customMelody.length > 0
+        ? customMelody
+        : [
+            { freq: 1318.51, delay: 0.0, dur: 0.9 }, // E6
+            { freq: 1661.22, delay: 0.22, dur: 0.85 }, // G#6
+            { freq: 1975.53, delay: 0.44, dur: 0.85 }, // B6
+            { freq: 2637.02, delay: 0.68, dur: 1.2 }, // E7
+            { freq: 1975.53, delay: 0.96, dur: 1.1 }, // B6
+          ];
+
+    melody.forEach(({ freq, delay, dur }) => {
+      const noteTime = now + delay;
+      const noteDur = Math.max(0.2, dur);
+
+      // 1. Fundamental metallic tine resonator
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, noteTime);
+
+      const peak = 0.16 * this.volume;
+      gain.gain.setValueAtTime(0.0001, noteTime);
+      gain.gain.linearRampToValueAtTime(peak, noteTime + 0.003); // Instant mechanical pluck
+      gain.gain.exponentialRampToValueAtTime(peak * 0.45, noteTime + 0.18);
+      gain.gain.exponentialRampToValueAtTime(0.0001, noteTime + noteDur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(noteTime);
+      osc.stop(noteTime + noteDur + 0.05);
+
+      // 2. High inharmonic tine ping overtone (approx 2.756x fundamental)
+      const overtoneOsc = ctx.createOscillator();
+      const overtoneGain = ctx.createGain();
+      overtoneOsc.type = "sine";
+      overtoneOsc.frequency.setValueAtTime(freq * 2.756, noteTime);
+
+      const overtonePeak = 0.06 * this.volume;
+      overtoneGain.gain.setValueAtTime(0.0001, noteTime);
+      overtoneGain.gain.linearRampToValueAtTime(overtonePeak, noteTime + 0.002);
+      overtoneGain.gain.exponentialRampToValueAtTime(0.0001, noteTime + 0.14); // rapid metallic decay
+
+      overtoneOsc.connect(overtoneGain);
+      overtoneGain.connect(ctx.destination);
+      overtoneOsc.start(noteTime);
+      overtoneOsc.stop(noteTime + 0.18);
+    });
+  }
+
+  /**
+   * Play procedural single organic sunlit cicada chirp ASMR
+   * Double-pulse amplitude modulated high-frequency stridulation
+   */
+  playCicadaShortChirp() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // Two rapid syllable pulses (38ms each, 18ms gap)
+    [0.0, 0.054].forEach((pulseOffset) => {
+      const pulseStart = now + pulseOffset;
+      const osc = ctx.createOscillator();
+      const tremolo = ctx.createOscillator();
+      const tremoloGain = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+      const gain = ctx.createGain();
+
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(4950, pulseStart);
+      osc.frequency.linearRampToValueAtTime(5350, pulseStart + 0.02);
+      osc.frequency.linearRampToValueAtTime(4800, pulseStart + 0.038);
+
+      // 120Hz rapid wing-flutter tremolo
+      tremolo.type = "sine";
+      tremolo.frequency.setValueAtTime(120, pulseStart);
+      tremoloGain.gain.setValueAtTime(280, pulseStart);
+      tremolo.connect(tremoloGain);
+      tremoloGain.connect(osc.frequency);
+
+      filter.type = "bandpass";
+      filter.frequency.setValueAtTime(5100, pulseStart);
+      filter.Q.value = 5.8;
+
+      const peak = 0.075 * this.volume;
+      gain.gain.setValueAtTime(0.0001, pulseStart);
+      gain.gain.linearRampToValueAtTime(peak, pulseStart + 0.006);
+      gain.gain.exponentialRampToValueAtTime(0.0001, pulseStart + 0.038);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(pulseStart);
+      tremolo.start(pulseStart);
+      osc.stop(pulseStart + 0.045);
+      tremolo.stop(pulseStart + 0.045);
+    });
+  }
 }

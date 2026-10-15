@@ -915,6 +915,68 @@ export class DollViewer {
     this.quillGroup.add(inkwellBase, inkwellNeck, inkLiquid, this.quillPivot);
     this.quillGroup.visible = false;
 
+    // 12. Companion Vintage Wind-Up Music Box ("musicBox")
+    this.musicBoxGroup = new THREE.Group();
+    this.musicBoxGroup.position.set(0.48, -0.96, 0.42);
+
+    const walnutMat = new THREE.MeshStandardMaterial({
+      color: 0x4a2e1b,
+      roughness: 0.65,
+    });
+    const brassMusicMat = new THREE.MeshStandardMaterial({
+      color: 0xd4af37,
+      metalness: 0.88,
+      roughness: 0.22,
+    });
+    const steelMat = new THREE.MeshStandardMaterial({
+      color: 0x94a3b8,
+      metalness: 0.9,
+      roughness: 0.25,
+    });
+
+    const mbBase = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.14), walnutMat);
+    mbBase.position.y = 0.04;
+
+    const feetPositions = [
+      [-0.08, 0.006, -0.06],
+      [0.08, 0.006, -0.06],
+      [-0.08, 0.006, 0.06],
+      [0.08, 0.006, 0.06],
+    ];
+    feetPositions.forEach(([fx, fy, fz]) => {
+      const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.015, 0.012, 8), brassMusicMat);
+      foot.position.set(fx, fy, fz);
+      this.musicBoxGroup.add(foot);
+    });
+
+    const cylinderSupport = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.012, 0.03), brassMusicMat);
+    cylinderSupport.position.set(0, 0.085, 0);
+
+    this.musicBoxCylinder = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.09, 16), brassMusicMat);
+    this.musicBoxCylinder.rotation.z = Math.PI / 2;
+    this.musicBoxCylinder.position.set(0, 0.105, 0);
+
+    const comb = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.004, 0.022), steelMat);
+    comb.position.set(0, 0.102, -0.026);
+
+    this.musicBoxCrank = new THREE.Group();
+    this.musicBoxCrank.position.set(0.09, 0.06, 0);
+
+    const crankShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.035, 8), brassMusicMat);
+    crankShaft.rotation.z = Math.PI / 2;
+    crankShaft.position.x = 0.0175;
+
+    const crankArm = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.038, 0.006), brassMusicMat);
+    crankArm.position.set(0.035, 0.016, 0);
+
+    const crankKnob = new THREE.Mesh(new THREE.SphereGeometry(0.01, 8, 8), walnutMat);
+    crankKnob.position.set(0.045, 0.032, 0);
+
+    this.musicBoxCrank.add(crankShaft, crankArm, crankKnob);
+
+    this.musicBoxGroup.add(mbBase, cylinderSupport, this.musicBoxCylinder, comb, this.musicBoxCrank);
+    this.musicBoxGroup.visible = false;
+
     this.customAccessories.add(
       this.glassesGroup,
       this.crownGroup,
@@ -927,6 +989,7 @@ export class DollViewer {
       this.hourglassGroup,
       this.magnifierGroup,
       this.quillGroup,
+      this.musicBoxGroup,
     );
     this.doll.add(this.customAccessories);
 
@@ -1138,7 +1201,7 @@ export class DollViewer {
           } else if (this.consecutiveTaps === 2) {
             const emoteChoices =
               this.timerState === "focusing"
-                ? ["wave", "nod", "wish", "stargaze", "pageturn", "hourglass", "magnifier", "quill"]
+                ? ["wave", "nod", "wish", "stargaze", "pageturn", "hourglass", "magnifier", "quill", "musicbox"]
                 : [
                     "wave",
                     "nod",
@@ -1151,6 +1214,7 @@ export class DollViewer {
                     "hourglass",
                     "magnifier",
                     "quill",
+                    "musicbox",
                   ];
             const emoteType = emoteChoices[Math.floor(Math.random() * emoteChoices.length)];
             if (emoteType === "wave") {
@@ -1175,6 +1239,8 @@ export class DollViewer {
               this.triggerInspectCuriosity();
             } else if (emoteType === "quill") {
               this.triggerQuillWriting();
+            } else if (emoteType === "musicbox") {
+              this.triggerMusicBoxWindup();
             } else {
               this.triggerStargaze();
             }
@@ -1415,6 +1481,20 @@ export class DollViewer {
     this.triggerBounce();
   }
 
+  triggerMusicBoxWindup({ duration = 3000 } = {}) {
+    if (!this.musicBoxGroup?.visible) {
+      if (this.musicBoxGroup) this.musicBoxGroup.visible = true;
+      this.tempMusicBoxVisible = true;
+    }
+    this.currentEmote = {
+      type: "musicbox",
+      startTime: performance.now(),
+      duration: Math.max(800, duration),
+    };
+    this.lastFaceMode = null;
+    this.triggerBounce();
+  }
+
   setTimerState(state) {
     this.timerState = state;
     if (this.studyBook) {
@@ -1631,6 +1711,7 @@ export class DollViewer {
     hourglass = false,
     magnifier = false,
     quill = false,
+    musicBox = false,
   } = {}) {
     this.accessories = {
       glasses,
@@ -1644,6 +1725,7 @@ export class DollViewer {
       hourglass,
       magnifier,
       quill,
+      musicBox,
     };
     if (this.glassesGroup) this.glassesGroup.visible = Boolean(glasses);
     if (this.crownGroup) this.crownGroup.visible = Boolean(crown);
@@ -1658,6 +1740,7 @@ export class DollViewer {
     if (this.hourglassGroup) this.hourglassGroup.visible = Boolean(hourglass);
     if (this.magnifierGroup) this.magnifierGroup.visible = Boolean(magnifier);
     if (this.quillGroup) this.quillGroup.visible = Boolean(quill);
+    if (this.musicBoxGroup) this.musicBoxGroup.visible = Boolean(musicBox);
   }
 
   setAffinityAura(auraType = "none") {
@@ -2245,6 +2328,43 @@ export class DollViewer {
             this.head.rotation.set(0.32 * curve, 0.06 * curve, -0.04 * curve);
           }
         }
+      } else if (emote.type === "musicbox") {
+        const progress = Math.min(1, elapsedEmote / (emote.duration / 1000));
+        if (progress < 0.42) {
+          // Phase 1: Doll winds the brass crank 3 full rotations
+          const windP = progress / 0.42;
+          const crankAngle = windP * Math.PI * 6;
+          if (this.musicBoxCrank) {
+            this.musicBoxCrank.rotation.x = crankAngle;
+          }
+          if (this.musicBoxCylinder) {
+            this.musicBoxCylinder.rotation.x = windP * Math.PI * 2;
+          }
+          const armCrankY = Math.sin(crankAngle) * 0.05;
+          const armCrankZ = Math.cos(crankAngle) * 0.05;
+          if (this.arms && this.arms.length === 2) {
+            this.arms[0].rotation.set(0.18, 0.08, -0.32);
+            this.arms[1].rotation.set(0.62 + armCrankY, -0.22 + armCrankZ, 0.42);
+          }
+          if (this.head) {
+            this.head.rotation.set(0.16, 0.28, 0.04);
+          }
+        } else {
+          // Phase 2: Melody chime plays, cylinder spins smoothly, doll tilts head to listen affectionately
+          const listenP = (progress - 0.42) / 0.58;
+          const headSway = Math.sin(listenP * Math.PI * 3) * 0.12;
+          if (this.musicBoxCylinder) {
+            this.musicBoxCylinder.rotation.x += 0.06;
+          }
+          if (this.arms && this.arms.length === 2) {
+            const easeBack = Math.sin(listenP * Math.PI);
+            this.arms[0].rotation.set(0.12 * easeBack, 0.05 * easeBack, -0.36);
+            this.arms[1].rotation.set(0.32 * easeBack, -0.1 * easeBack, 0.38);
+          }
+          if (this.head) {
+            this.head.rotation.set(0.12, 0.22, 0.1 + headSway);
+          }
+        }
       }
     } else if (this.celebrationStartTime && performance.now() - this.celebrationStartTime < 6000) {
       const wave = Math.sin(elapsed * 9) * 0.38;
@@ -2428,6 +2548,20 @@ export class DollViewer {
       this.tempQuillVisible = false;
       if (this.quillGroup && !this.accessories?.quill) {
         this.quillGroup.visible = false;
+      }
+    }
+
+    if (this.musicBoxGroup && (!this.currentEmote || this.currentEmote.type !== "musicbox")) {
+      if (this.musicBoxGroup.visible && !this.reducedMotion) {
+        if (this.musicBoxCylinder) {
+          this.musicBoxCylinder.rotation.x += 0.008;
+        }
+      }
+    }
+    if (this.tempMusicBoxVisible && (!this.currentEmote || this.currentEmote.type !== "musicbox")) {
+      this.tempMusicBoxVisible = false;
+      if (this.musicBoxGroup && !this.accessories?.musicBox) {
+        this.musicBoxGroup.visible = false;
       }
     }
 

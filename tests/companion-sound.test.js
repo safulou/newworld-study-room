@@ -736,4 +736,125 @@ describe("CompanionSoundManager", () => {
     expect(mockFilter.type).toBe("bandpass");
     expect(mockFilter.Q.value).toBe(3.2);
   });
+
+  it("synthesizes ratchet mechanical winding clicks in playMusicBoxCrankSound", () => {
+    expect(() => manager.playMusicBoxCrankSound()).not.toThrow();
+
+    const createdOscillators = [];
+    const mockGain = {
+      gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const mockFilter = {
+      type: "",
+      frequency: { setValueAtTime: vi.fn() },
+      Q: { value: 0 },
+      connect: vi.fn(),
+    };
+    const mockCtx = {
+      currentTime: 200,
+      createOscillator: vi.fn(() => {
+        const osc = {
+          type: "",
+          frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+          connect: vi.fn(),
+          start: vi.fn(),
+          stop: vi.fn(),
+        };
+        createdOscillators.push(osc);
+        return osc;
+      }),
+      createGain: vi.fn(() => mockGain),
+      createBiquadFilter: vi.fn(() => mockFilter),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playMusicBoxCrankSound(1.0);
+    // 5 ratchet clicks
+    expect(createdOscillators).toHaveLength(5);
+    expect(createdOscillators[0].type).toBe("square");
+    expect(mockFilter.type).toBe("bandpass");
+    expect(mockFilter.Q.value).toBe(4.0);
+  });
+
+  it("synthesizes resonant metallic tines with inharmonic overtones in playMusicBoxChime", () => {
+    expect(() => manager.playMusicBoxChime()).not.toThrow();
+
+    const createdOscillators = [];
+    const mockGain = {
+      gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const mockCtx = {
+      currentTime: 210,
+      createOscillator: vi.fn(() => {
+        const osc = {
+          type: "",
+          frequency: { setValueAtTime: vi.fn() },
+          connect: vi.fn(),
+          start: vi.fn(),
+          stop: vi.fn(),
+        };
+        createdOscillators.push(osc);
+        return osc;
+      }),
+      createGain: vi.fn(() => mockGain),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playMusicBoxChime();
+    // Default 5 notes * 2 (fundamental + overtone) = 10 oscillators
+    expect(createdOscillators).toHaveLength(10);
+    expect(createdOscillators[0].type).toBe("sine");
+    expect(createdOscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(1318.51, 210);
+    // Overtone ~ 1318.51 * 2.756
+    expect(createdOscillators[1].frequency.setValueAtTime).toHaveBeenCalledWith(
+      expect.closeTo(1318.51 * 2.756, 1),
+      210,
+    );
+  });
+
+  it("synthesizes organic dual-pulse cicada chirp in playCicadaShortChirp", () => {
+    expect(() => manager.playCicadaShortChirp()).not.toThrow();
+
+    const createdOscillators = [];
+    const mockGain = {
+      gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const mockFilter = {
+      type: "",
+      frequency: { setValueAtTime: vi.fn() },
+      Q: { value: 0 },
+      connect: vi.fn(),
+    };
+    const mockCtx = {
+      currentTime: 220,
+      createOscillator: vi.fn(() => {
+        const osc = {
+          type: "",
+          frequency: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn() },
+          connect: vi.fn(),
+          start: vi.fn(),
+          stop: vi.fn(),
+        };
+        createdOscillators.push(osc);
+        return osc;
+      }),
+      createGain: vi.fn(() => mockGain),
+      createBiquadFilter: vi.fn(() => mockFilter),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playCicadaShortChirp();
+    // 2 pulses * 2 oscillators (carrier + tremolo) = 4 oscillators
+    expect(createdOscillators).toHaveLength(4);
+    expect(createdOscillators[0].type).toBe("sawtooth");
+    expect(createdOscillators[1].type).toBe("sine");
+    expect(mockFilter.type).toBe("bandpass");
+    expect(mockFilter.Q.value).toBe(5.8);
+  });
 });

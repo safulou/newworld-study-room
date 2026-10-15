@@ -622,6 +622,7 @@ describe("drawDollFace", () => {
       hourglassGroup: { visible: false },
       magnifierGroup: { visible: false },
       quillGroup: { visible: false },
+      musicBoxGroup: { visible: false },
     };
     fakeViewer.setAccessories = DollViewer.prototype.setAccessories.bind(fakeViewer);
 
@@ -632,5 +633,52 @@ describe("drawDollFace", () => {
     fakeViewer.setAccessories({ quill: false });
     expect(fakeViewer.quillGroup.visible).toBe(false);
     expect(fakeViewer.accessories.quill).toBe(false);
+  });
+
+  it("triggers music box wind-up emote with bounce and duration", () => {
+    const fakeViewer = {
+      currentEmote: null,
+      lastFaceMode: "open",
+      triggerBounce: vi.fn(),
+      musicBoxGroup: { visible: false },
+    };
+    fakeViewer.triggerMusicBoxWindup = DollViewer.prototype.triggerMusicBoxWindup.bind(fakeViewer);
+
+    fakeViewer.triggerMusicBoxWindup({ duration: 3000 });
+    expect(fakeViewer.currentEmote).toBeDefined();
+    expect(fakeViewer.currentEmote.type).toBe("musicbox");
+    expect(fakeViewer.currentEmote.duration).toBe(3000);
+    expect(fakeViewer.musicBoxGroup.visible).toBe(true);
+    expect(fakeViewer.tempMusicBoxVisible).toBe(true);
+    expect(fakeViewer.lastFaceMode).toBeNull();
+    expect(fakeViewer.triggerBounce).toHaveBeenCalled();
+  });
+
+  it("updates musicBoxGroup visibility in setAccessories", () => {
+    const fakeViewer = {
+      glassesGroup: { visible: false },
+      crownGroup: { visible: false },
+      coffeeGroup: { visible: false },
+      catGroup: { visible: false },
+      telescopeGroup: { visible: false },
+      lanternGroup: { visible: false },
+      lanternLight: { intensity: 0 },
+      candlestickGroup: { visible: false },
+      candleLight: { intensity: 0 },
+      windchimeGroup: { visible: false },
+      hourglassGroup: { visible: false },
+      magnifierGroup: { visible: false },
+      quillGroup: { visible: false },
+      musicBoxGroup: { visible: false },
+    };
+    fakeViewer.setAccessories = DollViewer.prototype.setAccessories.bind(fakeViewer);
+
+    fakeViewer.setAccessories({ musicBox: true });
+    expect(fakeViewer.musicBoxGroup.visible).toBe(true);
+    expect(fakeViewer.accessories.musicBox).toBe(true);
+
+    fakeViewer.setAccessories({ musicBox: false });
+    expect(fakeViewer.musicBoxGroup.visible).toBe(false);
+    expect(fakeViewer.accessories.musicBox).toBe(false);
   });
 });

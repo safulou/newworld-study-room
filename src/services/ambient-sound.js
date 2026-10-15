@@ -346,6 +346,42 @@ export const REVERB_DAMPING_PRESETS = {
   },
 };
 
+export const ELEVATION_PRESETS = {
+  ground: {
+    id: "ground",
+    label: "地面沉降 (-20°)",
+    icon: "campfire",
+    pitchAngle: -20,
+    filterType: "peaking",
+    frequency: 4200,
+    gain: -3.5,
+    Q: 1.8,
+    desc: "低位地面聲源（篝火、溪流、足音），胸腔微反射，低頻沉穩",
+  },
+  ear_level: {
+    id: "ear_level",
+    label: "齊耳平視 (0°)",
+    icon: "headphones",
+    pitchAngle: 0,
+    filterType: "allpass",
+    frequency: 1000,
+    gain: 0,
+    Q: 1.0,
+    desc: "標準水平耳齊（書桌伴讀、白噪音），平直自然聲像",
+  },
+  elevated: {
+    id: "elevated",
+    label: "空中穹頂 (+30°)",
+    icon: "wind",
+    pitchAngle: 30,
+    filterType: "peaking",
+    frequency: 7800,
+    gain: 4.2,
+    Q: 2.2,
+    desc: "高位仰角聲源（頂棚雨聲、樹梢鳥語、微風），耳廓高頻反射增強",
+  },
+};
+
 export function createProceduralImpulseResponse(ctx, duration = 1.2, decay = 2.2) {
   if (!ctx || !ctx.createBuffer) return null;
   const sampleRate = ctx.sampleRate || 44100;
@@ -406,6 +442,7 @@ export class AmbientSoundscapeManager {
     this.reverbDecayTime = "natural";
     this.reverbDamping = "transparent";
     this.reverbDampingFilter = null;
+    this.elevationModel = "ear_level";
     this.earlyReflectionNodes = null;
     this.sleepTimerRemainingSec = 0;
     this.sleepTimerDurationSec = 0;
@@ -1111,22 +1148,38 @@ export class AmbientSoundscapeManager {
       distanceFilter.Q.setValueAtTime(0.7, ctx.currentTime);
     }
 
+    let elevationFilter = null;
+    if (ctx.createBiquadFilter) {
+      elevationFilter = ctx.createBiquadFilter();
+      const elevConfig = ELEVATION_PRESETS[this.elevationModel] || ELEVATION_PRESETS.ear_level;
+      elevationFilter.type = elevConfig.filterType;
+      elevationFilter.frequency.setValueAtTime(elevConfig.frequency, ctx.currentTime);
+      if (elevationFilter.gain?.setValueAtTime) {
+        elevationFilter.gain.setValueAtTime(elevConfig.gain, ctx.currentTime);
+      }
+      if (elevationFilter.Q?.setValueAtTime) {
+        elevationFilter.Q.setValueAtTime(elevConfig.Q, ctx.currentTime);
+      }
+    }
+
     let panner = null;
+    let lastNode = trackGain;
+    if (distanceFilter) {
+      lastNode.connect(distanceFilter);
+      lastNode = distanceFilter;
+    }
+    if (elevationFilter) {
+      lastNode.connect(elevationFilter);
+      lastNode = elevationFilter;
+    }
+
     if (ctx.createStereoPanner) {
       panner = ctx.createStereoPanner();
       panner.pan.setValueAtTime(Math.max(-1, Math.min(1, initialPan)), ctx.currentTime);
-      if (distanceFilter) {
-        trackGain.connect(distanceFilter);
-        distanceFilter.connect(panner);
-      } else {
-        trackGain.connect(panner);
-      }
+      lastNode.connect(panner);
       panner.connect(this.masterGain);
-    } else if (distanceFilter) {
-      trackGain.connect(distanceFilter);
-      distanceFilter.connect(this.masterGain);
     } else {
-      trackGain.connect(this.masterGain);
+      lastNode.connect(this.masterGain);
     }
 
     // Procedural Binaural Beat Synthesis (Theta 6Hz, Alpha 10Hz, or Gamma 40Hz)
@@ -1172,6 +1225,7 @@ export class AmbientSoundscapeManager {
           pan: initialPan,
         },
         distanceFilter,
+        elevationFilter,
       );
       return true;
     }
@@ -1202,6 +1256,7 @@ export class AmbientSoundscapeManager {
           pan: initialPan,
         },
         distanceFilter,
+        elevationFilter,
       );
       return true;
     }
@@ -1248,6 +1303,7 @@ export class AmbientSoundscapeManager {
           pan: initialPan,
         },
         distanceFilter,
+        elevationFilter,
       );
       return true;
     }
@@ -1331,6 +1387,7 @@ export class AmbientSoundscapeManager {
           pan: initialPan,
         },
         distanceFilter,
+        elevationFilter,
       );
       return true;
     }
@@ -1362,6 +1419,7 @@ export class AmbientSoundscapeManager {
           pan: initialPan,
         },
         distanceFilter,
+        elevationFilter,
       );
       return true;
     }
@@ -1393,6 +1451,7 @@ export class AmbientSoundscapeManager {
           pan: initialPan,
         },
         distanceFilter,
+        elevationFilter,
       );
       return true;
     }
@@ -1490,6 +1549,7 @@ export class AmbientSoundscapeManager {
           pan: initialPan,
         },
         distanceFilter,
+        elevationFilter,
       );
       return true;
     }
@@ -1540,13 +1600,17 @@ export class AmbientSoundscapeManager {
         pan: initialPan,
       },
       distanceFilter,
+      elevationFilter,
     );
     return true;
   }
 
-  _registerTrack(name, trackNode, distanceFilter = null) {
+  _registerTrack(name, trackNode, distanceFilter = null, elevationFilter = null) {
     if (distanceFilter) {
       trackNode.distanceFilter = distanceFilter;
+    }
+    if (elevationFilter) {
+      trackNode.elevationFilter = elevationFilter;
     }
     this.nodes.set(name, trackNode);
     if (this.orbitingBreeze) {
@@ -1643,6 +1707,7 @@ export class AmbientSoundscapeManager {
       }
       if (track.filter) track.filter.disconnect();
       if (track.distanceFilter) track.distanceFilter.disconnect();
+      if (track.elevationFilter) track.elevationFilter.disconnect();
       if (track.gain) track.gain.disconnect();
       if (track.panner) track.panner.disconnect();
     } catch {}
@@ -1853,6 +1918,35 @@ export class AmbientSoundscapeManager {
 
   getDistanceModel() {
     return this.distanceModel;
+  }
+
+  setElevationModel(model) {
+    if (!ELEVATION_PRESETS[model]) return this.elevationModel;
+    this.elevationModel = model;
+    this.updateTrackElevationFilters();
+    return this.elevationModel;
+  }
+
+  getElevationModel() {
+    return this.elevationModel;
+  }
+
+  updateTrackElevationFilters() {
+    if (!this.audioCtx) return;
+    const config = ELEVATION_PRESETS[this.elevationModel] || ELEVATION_PRESETS.ear_level;
+    const now = this.audioCtx.currentTime;
+    for (const [, track] of this.nodes.entries()) {
+      if (track && track.elevationFilter) {
+        track.elevationFilter.type = config.filterType;
+        track.elevationFilter.frequency.setValueAtTime(config.frequency, now);
+        if (track.elevationFilter.gain?.setValueAtTime) {
+          track.elevationFilter.gain.setValueAtTime(config.gain, now);
+        }
+        if (track.elevationFilter.Q?.setValueAtTime) {
+          track.elevationFilter.Q.setValueAtTime(config.Q, now);
+        }
+      }
+    }
   }
 
   setDistanceDamping(enabled) {

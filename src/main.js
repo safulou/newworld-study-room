@@ -320,9 +320,11 @@ const elements = {
   roomDimensionChips: [...document.querySelectorAll(".dimension-chip")],
   reverbDecayChips: [...document.querySelectorAll(".decay-chip")],
   reverbDampingChips: [...document.querySelectorAll(".damping-chip")],
+  elevationModelChips: [...document.querySelectorAll(".elevation-chip")],
   gardenDewDrops: $("#gardenDewDrops"),
   gardenButterfly: $("#gardenButterfly"),
   gardenSongbird: $("#gardenSongbird"),
+  gardenCicada: $("#gardenCicada"),
   gardenMushroom: $("#gardenMushroom"),
   sporeDustContainer: $("#sporeDustContainer"),
   btnSprayGarden: $("#btnSprayGarden"),
@@ -2736,6 +2738,15 @@ function syncReverbDampingUI(dampingMode) {
   });
 }
 
+function syncElevationModelUI(elevationModel) {
+  const currentModel = elevationModel || "ear_level";
+  elements.elevationModelChips?.forEach((chip) => {
+    const isTarget = chip.dataset.elevation === currentModel;
+    chip.classList.toggle("active", isTarget);
+    chip.setAttribute("aria-pressed", String(isTarget));
+  });
+}
+
 function syncStereoWidthUI(widthValue) {
   const w = Math.max(0, Math.min(2, Number(widthValue ?? 1.0) || 0));
   if (elements.stereoWidthSlider) {
@@ -3173,7 +3184,18 @@ function bindSoundstageModal() {
     ctx.font = "10px ui-sans-serif, system-ui, sans-serif";
     ctx.fillStyle = contourTheme.stroke.replace(/0\.\d+\)/, "0.7)");
     ctx.textAlign = "center";
-    ctx.fillText(`衰減模型：${contourTheme.label}`, centerX, 22);
+    ctx.fillText(`衰減模型：${contourTheme.label}`, centerX, 18);
+
+    const elevationModel = ambientSound.getElevationModel?.() || "ear_level";
+    const elevationTheme =
+      elevationModel === "ground"
+        ? { label: "🌿 地面沉降 (-20° · 4.2kHz 凹陷)", color: "rgba(52, 211, 153, 0.85)" }
+        : elevationModel === "elevated"
+          ? { label: "🌤️ 空中穹頂 (+30° · 7.8kHz 提升)", color: "rgba(56, 189, 248, 0.85)" }
+          : { label: "👀 齊耳平視 (0° · 平直全通)", color: "rgba(255, 255, 255, 0.55)" };
+
+    ctx.fillStyle = elevationTheme.color;
+    ctx.fillText(`仰角耳廓：${elevationTheme.label}`, centerX, 32);
 
     const reverbDecay = ambientSound.getReverbDecayTime?.() || "natural";
     const decayText =
@@ -3789,6 +3811,23 @@ function bindSoundstageModal() {
     });
   });
 
+  elements.elevationModelChips?.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const elevation = chip.dataset.elevation;
+      if (!elevation) return;
+      ambientSound.setElevationModel(elevation);
+      store.update({ elevationModel: elevation });
+      syncElevationModelUI(elevation);
+      renderSoundstage();
+      const labels = {
+        ground: "🌿 地面沉降（-20° 低位投影，4.2kHz 耳廓凹陷 -3.5dB）",
+        ear_level: "👀 齊耳平視（0° 平直自然全通，立體聲平衡）",
+        elevated: "🌤️ 空中穹頂（+30° 穹頂高懸，7.8kHz 耳廓反射提升 +4.2dB）",
+      };
+      showToast(`已切換仰角耳廓濾波：${labels[elevation] || elevation}`);
+    });
+  });
+
   elements.btnSaveSoundstagePreset?.addEventListener("click", () => {
     const activeMix = ambientSound.getCurrentTrackMix();
     if (Object.keys(activeMix).length === 0) {
@@ -4278,6 +4317,7 @@ function bindAccessories() {
         hourglass: "復古黃銅沙漏",
         magnifier: "復古銅柄放大鏡",
         quill: "古風金屬羽毛筆",
+        musicBox: "古典胡桃木八音盒",
       };
       showToast(`${next[acc] ? "已為玩偶佩戴" : "已卸下"}${labels[acc] || acc}。`);
     });
@@ -6720,6 +6760,23 @@ function bindHerbarium() {
       }
       return;
     }
+    if (e.target.closest("#gardenCicada")) {
+      companionSound.playCicadaShortChirp();
+      spawnZenSpark("🦗 晨露夏蟬", e.clientX, e.clientY);
+      const cicada = elements.gardenCicada;
+      if (cicada) {
+        cicada.classList.add("cicada-chirping");
+        setTimeout(() => {
+          cicada.classList.remove("cicada-chirping");
+        }, 850);
+      }
+      const now = Date.now();
+      if (!lastAffinityInteractionTime.cicada || now - lastAffinityInteractionTime.cicada > 4000) {
+        lastAffinityInteractionTime.cicada = now;
+        addAffinityExp(3, "輕觸花園夏蟬短鳴");
+      }
+      return;
+    }
     if (e.target.closest("#gardenButterfly")) {
       companionSound.playButterflyFlutterSound();
       spawnZenSpark("🦋 花間彩蝶", e.clientX, e.clientY);
@@ -6746,6 +6803,13 @@ function bindHerbarium() {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       elements.gardenSongbird.click();
+    }
+  });
+
+  elements.gardenCicada?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      elements.gardenCicada.click();
     }
   });
 
@@ -6955,6 +7019,19 @@ async function startViewer() {
         ];
         const quote = quillQuotes[Math.floor(Math.random() * quillQuotes.length)];
         showCompanionBubble(quote, 3400);
+      } else if (emoteType === "musicbox") {
+        companionSound.playMusicBoxCrankSound(1.2);
+        setTimeout(() => {
+          companionSound.playMusicBoxChime();
+        }, 950);
+        spawnStarlightParticles();
+        const musicBoxQuotes = [
+          "曲柄微轉，八音盒叮咚奏響～清澈琴音滌淨心靈，心無雜念！🎵✨",
+          "古典胡桃木八音盒旋動發條... 叮鈴清音漫溢書室，心緒澄澈！🎶💫",
+          "金屬簧片清脆微鳴～專注的旋律在耳畔迴盪，靈思寧靜流淌！🎹🌸",
+        ];
+        const quote = musicBoxQuotes[Math.floor(Math.random() * musicBoxQuotes.length)];
+        showCompanionBubble(quote, 3400);
       } else {
         companionSound.playAffirmativeNod();
         const nodQuotes = [
@@ -7108,6 +7185,10 @@ function init() {
   const initialReverbDamping = store.get().reverbDamping || "transparent";
   ambientSound.setReverbDamping(initialReverbDamping);
   syncReverbDampingUI(initialReverbDamping);
+
+  const initialElevationModel = store.get().elevationModel || "ear_level";
+  ambientSound.setElevationModel(initialElevationModel);
+  syncElevationModelUI(initialElevationModel);
 
   const autoAtm = store.get().autoAtmosphereSync !== false;
   ambientSound.setAutoAtmosphereSync(autoAtm);
