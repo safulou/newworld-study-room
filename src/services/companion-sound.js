@@ -1557,4 +1557,129 @@ export class CompanionSoundManager {
       tremolo.stop(pulseStart + 0.045);
     });
   }
+
+  /**
+   * Play procedural mechanical typewriter key clacks ASMR
+   * Multi-key staggered strikes with sharp impact and hollow metal platen thump
+   */
+  playTypewriterClackSound(keyCount = 5) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const count = Math.max(1, Math.min(12, keyCount));
+
+    for (let i = 0; i < count; i++) {
+      const strikeDelay = i * 0.088 + Math.sin(i * 3.7) * 0.015;
+      const strikeTime = now + strikeDelay;
+
+      // 1. High metal impact clack (triangle sweep ~1600Hz -> 750Hz)
+      const clickOsc = ctx.createOscillator();
+      const clickGain = ctx.createGain();
+      clickOsc.type = "triangle";
+      clickOsc.frequency.setValueAtTime(1600 + (i % 3) * 120, strikeTime);
+      clickOsc.frequency.exponentialRampToValueAtTime(750, strikeTime + 0.018);
+
+      const clickPeak = 0.12 * this.volume;
+      clickGain.gain.setValueAtTime(0.0001, strikeTime);
+      clickGain.gain.linearRampToValueAtTime(clickPeak, strikeTime + 0.002);
+      clickGain.gain.exponentialRampToValueAtTime(0.0001, strikeTime + 0.022);
+
+      clickOsc.connect(clickGain);
+      clickGain.connect(ctx.destination);
+      clickOsc.start(strikeTime);
+      clickOsc.stop(strikeTime + 0.03);
+
+      // 2. Hollow platen bar thump (damped low sine 260Hz)
+      const thumpOsc = ctx.createOscillator();
+      const thumpGain = ctx.createGain();
+      thumpOsc.type = "sine";
+      thumpOsc.frequency.setValueAtTime(260 + (i % 2) * 35, strikeTime);
+      thumpOsc.frequency.exponentialRampToValueAtTime(140, strikeTime + 0.032);
+
+      const thumpPeak = 0.09 * this.volume;
+      thumpGain.gain.setValueAtTime(0.0001, strikeTime);
+      thumpGain.gain.linearRampToValueAtTime(thumpPeak, strikeTime + 0.003);
+      thumpGain.gain.exponentialRampToValueAtTime(0.0001, strikeTime + 0.04);
+
+      thumpOsc.connect(thumpGain);
+      thumpGain.connect(ctx.destination);
+      thumpOsc.start(strikeTime);
+      thumpOsc.stop(strikeTime + 0.05);
+    }
+  }
+
+  /**
+   * Play crystal-clear carriage return bell chime ASMR
+   * High-Q dual-harmonic metallic bell with long resonance
+   */
+  playTypewriterBellSound() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    const bellFrequencies = [2960, 5880];
+    bellFrequencies.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now);
+
+      const peak = (idx === 0 ? 0.14 : 0.05) * this.volume;
+      const decay = idx === 0 ? 0.85 : 0.45;
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(peak, now + 0.002);
+      gain.gain.exponentialRampToValueAtTime(peak * 0.35, now + 0.2);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + decay);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + decay + 0.05);
+    });
+  }
+
+  /**
+   * Play organic seasonal wind gust / petal swirl ASMR
+   * Swept bandpass dynamic white noise breeze
+   */
+  playSeasonalWindGustSound(duration = 2.2) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const dur = Math.max(0.8, duration);
+
+    const bufferSize = Math.floor(ctx.sampleRate * dur);
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    let lastOut = 0.0;
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1;
+      data[i] = (lastOut + 0.02 * white) / 1.02;
+      lastOut = data[i];
+      data[i] *= 3.5;
+    }
+
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(380, now);
+    filter.frequency.exponentialRampToValueAtTime(780, now + dur * 0.45);
+    filter.frequency.exponentialRampToValueAtTime(420, now + dur);
+    filter.Q.value = 2.2;
+
+    const gain = ctx.createGain();
+    const peak = 0.13 * this.volume;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(peak, now + dur * 0.4);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+    noiseSource.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    noiseSource.start(now);
+    noiseSource.stop(now + dur + 0.05);
+  }
 }

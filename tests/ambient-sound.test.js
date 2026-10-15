@@ -1001,6 +1001,26 @@ describe("AmbientSoundscapeManager", () => {
       expect(manager.getElevationModel()).toBe("ground");
       manager.setElevationModel("invalid_model");
       expect(manager.getElevationModel()).toBe("ground");
+
+      // Dynamic Head Tracking & Yaw Compensation
+      expect(manager.isHeadTrackingEnabled()).toBe(false);
+      expect(manager.getDynamicHeadYaw()).toBe(0);
+
+      manager.setHeadTrackingEnabled(true);
+      expect(manager.isHeadTrackingEnabled()).toBe(true);
+
+      manager.setDynamicHeadYaw(0.25);
+      expect(manager.getDynamicHeadYaw()).toBe(0.25);
+
+      // Clamp to +/- PI/4
+      manager.setDynamicHeadYaw(2.5);
+      expect(manager.getDynamicHeadYaw()).toBeCloseTo(Math.PI / 4, 3);
+      manager.setDynamicHeadYaw(-2.5);
+      expect(manager.getDynamicHeadYaw()).toBeCloseTo(-Math.PI / 4, 3);
+
+      manager.setHeadTrackingEnabled(false);
+      expect(manager.isHeadTrackingEnabled()).toBe(false);
+      expect(manager.getDynamicHeadYaw()).toBe(0);
     });
   });
 });

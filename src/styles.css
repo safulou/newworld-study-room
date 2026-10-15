@@ -1545,6 +1545,44 @@ h1 {
   }
 }
 
+.garden-seasonal-breeze {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
+  z-index: 6;
+}
+
+.seasonal-breeze-petal {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 65% 15% 65% 15%;
+  filter: drop-shadow(0 2px 5px rgba(244, 114, 182, 0.35));
+  animation: seasonal-petal-cascade var(--breeze-duration, 3.2s) cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes seasonal-petal-cascade {
+  0% {
+    opacity: 0;
+    transform: translate(var(--startX, -10px), var(--startY, -10px)) rotate(var(--rotStart, 0deg)) scale(0.4);
+  }
+  15% {
+    opacity: 0.95;
+    transform: translate(calc(var(--startX, 0px) + var(--midX, 20px)), calc(var(--startY, 0px) + var(--midY, 40px)))
+      rotate(var(--rotMid, 90deg)) scale(1.1);
+  }
+  60% {
+    opacity: 0.85;
+    transform: translate(calc(var(--startX, 0px) + var(--swayX, 50px)), calc(var(--startY, 0px) + var(--swayY, 90px)))
+      rotate(var(--rotSway, 210deg)) scale(0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--endX, 90px), var(--endY, 140px)) rotate(var(--rotEnd, 360deg)) scale(0.5);
+  }
+}
+
 .garden-ground {
   position: absolute;
   right: 4px;
@@ -8239,6 +8277,36 @@ body[data-timer-mode="longBreak"] {
   }
 }
 
+.soundstage-head-tracking-btn {
+  border-color: rgba(167, 139, 250, 0.3);
+  color: #a78bfa;
+}
+
+.soundstage-head-tracking-btn:hover {
+  background: rgba(167, 139, 250, 0.12);
+  border-color: #a78bfa;
+  color: #c4b5fd;
+}
+
+.soundstage-head-tracking-btn.active {
+  background: rgba(167, 139, 250, 0.22);
+  border-color: #a78bfa;
+  color: #c4b5fd;
+  font-weight: 600;
+  box-shadow: 0 0 10px rgba(167, 139, 250, 0.4);
+  animation: head-tracking-pulse 2s infinite ease-in-out;
+}
+
+@keyframes head-tracking-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 6px rgba(167, 139, 250, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(167, 139, 250, 0.55);
+  }
+}
+
 .soundstage-radar-wrap {
   display: flex;
   flex-direction: column;
@@ -8645,7 +8713,8 @@ body[data-timer-mode="longBreak"] {
   .dew-drop {
     animation: none;
   }
-  .garden-petal-drift {
+  .garden-petal-drift,
+  .seasonal-breeze-petal {
     animation: none;
   }
 }

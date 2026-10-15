@@ -443,6 +443,8 @@ export class AmbientSoundscapeManager {
     this.reverbDamping = "transparent";
     this.reverbDampingFilter = null;
     this.elevationModel = "ear_level";
+    this.dynamicHeadYaw = 0;
+    this.headTrackingEnabled = false;
     this.earlyReflectionNodes = null;
     this.sleepTimerRemainingSec = 0;
     this.sleepTimerDurationSec = 0;
@@ -1991,22 +1993,63 @@ export class AmbientSoundscapeManager {
 
   getEffectiveTrackPan(name) {
     const pan = this.getTrackPan(name);
-    if (!this.stageRotation) return pan;
+    const headOffset = this.headTrackingEnabled && this.dynamicHeadYaw ? -this.dynamicHeadYaw : 0;
+    if (!this.stageRotation && !headOffset) return pan;
     const baseAngle = (pan * Math.PI) / 2.5;
-    const rotatedAngle = baseAngle + this.stageRotation;
+    const rotatedAngle = baseAngle + this.stageRotation + headOffset;
     return Math.max(-1, Math.min(1, Math.round(Math.sin(rotatedAngle) * 1000) / 1000));
   }
 
   calculateEffectiveCutoff(name, y = 0.5) {
     let cutoff = this.calculateDistanceCutoff(y);
-    if (!this.stageRotation) return cutoff;
+    const headOffset = this.headTrackingEnabled && this.dynamicHeadYaw ? -this.dynamicHeadYaw : 0;
+    if (!this.stageRotation && !headOffset) return cutoff;
     const pan = this.getTrackPan(name);
     const baseAngle = (pan * Math.PI) / 2.5;
-    const rotatedAngle = baseAngle + this.stageRotation;
+    const rotatedAngle = baseAngle + this.stageRotation + headOffset;
     if (Math.cos(rotatedAngle) < 0) {
       cutoff = Math.min(cutoff, 5800);
     }
     return cutoff;
+  }
+
+  setDynamicHeadYaw(yawRad) {
+    const clamped = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, Number(yawRad) || 0));
+    this.dynamicHeadYaw = clamped;
+    this.updateDynamicHeadCompensation();
+    return this.dynamicHeadYaw;
+  }
+
+  getDynamicHeadYaw() {
+    return this.dynamicHeadYaw || 0;
+  }
+
+  isHeadTrackingEnabled() {
+    return Boolean(this.headTrackingEnabled);
+  }
+
+  setHeadTrackingEnabled(enabled) {
+    this.headTrackingEnabled = Boolean(enabled);
+    if (!this.headTrackingEnabled) {
+      this.dynamicHeadYaw = 0;
+    }
+    this.updateDynamicHeadCompensation();
+    return this.headTrackingEnabled;
+  }
+
+  updateDynamicHeadCompensation() {
+    if (!this.audioCtx) return;
+    for (const [name, track] of this.nodes.entries()) {
+      const effPan = this.getEffectiveTrackPan(name);
+      if (track && track.panner && track.panner.pan?.setValueAtTime) {
+        track.panner.pan.setValueAtTime(effPan, this.audioCtx.currentTime);
+      }
+      if (track && track.distanceFilter && track.distanceFilter.frequency?.setValueAtTime) {
+        const coords = this.getTrackCoordinates(name);
+        const cutoff = this.calculateEffectiveCutoff(name, coords.y);
+        track.distanceFilter.frequency.setValueAtTime(cutoff, this.audioCtx.currentTime);
+      }
+    }
   }
 
   setTrackCoordinates(name, { x = 0, y = 0.5 } = {}) {

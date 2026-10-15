@@ -977,6 +977,99 @@ export class DollViewer {
     this.musicBoxGroup.add(mbBase, cylinderSupport, this.musicBoxCylinder, comb, this.musicBoxCrank);
     this.musicBoxGroup.visible = false;
 
+    // 13. Vintage Mechanical Typewriter ("typewriter")
+    this.typewriterGroup = new THREE.Group();
+    this.typewriterGroup.position.set(-0.28, -0.96, 0.44);
+
+    const castIronMat = new THREE.MeshStandardMaterial({
+      color: 0x1e242d,
+      roughness: 0.75,
+      metalness: 0.35,
+    });
+    const chromeMat = new THREE.MeshStandardMaterial({
+      color: 0xe2e8f0,
+      metalness: 0.92,
+      roughness: 0.18,
+    });
+    const rollerMat = new THREE.MeshStandardMaterial({
+      color: 0x0f172a,
+      roughness: 0.9,
+    });
+    const paperMat = new THREE.MeshStandardMaterial({
+      color: 0xfefce8,
+      roughness: 0.65,
+      side: THREE.DoubleSide,
+    });
+    const keyCapMat = new THREE.MeshStandardMaterial({
+      color: 0xf1f5f9,
+      roughness: 0.35,
+    });
+
+    const bodyBase = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.045, 0.22), castIronMat);
+    bodyBase.position.y = 0.0225;
+
+    const keyWell = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.025, 0.1), castIronMat);
+    keyWell.position.set(0, 0.04, 0.05);
+    keyWell.rotation.x = 0.22;
+
+    for (let row = 0; row < 3; row++) {
+      const zOffset = 0.025 + row * 0.026;
+      const yOffset = 0.048 - row * 0.006;
+      const keysInRow = row === 0 ? 8 : row === 1 ? 7 : 8;
+      const xSpacing = 0.022;
+      const startX = -((keysInRow - 1) * xSpacing) / 2;
+
+      for (let k = 0; k < keysInRow; k++) {
+        const keyMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.0075, 0.0075, 0.008, 8), keyCapMat);
+        keyMesh.position.set(startX + k * xSpacing, yOffset, zOffset);
+        keyMesh.rotation.x = 0.22;
+        this.typewriterGroup.add(keyMesh);
+      }
+    }
+
+    const carriage = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.035, 0.06), castIronMat);
+    carriage.position.set(0, 0.065, -0.06);
+
+    const platenRoller = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.22, 16), rollerMat);
+    platenRoller.rotation.z = Math.PI / 2;
+    platenRoller.position.set(0, 0.082, -0.06);
+
+    const rollerKnobL = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.016, 10), chromeMat);
+    rollerKnobL.rotation.z = Math.PI / 2;
+    rollerKnobL.position.set(-0.118, 0.082, -0.06);
+
+    const rollerKnobR = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.016, 10), chromeMat);
+    rollerKnobR.rotation.z = Math.PI / 2;
+    rollerKnobR.position.set(0.118, 0.082, -0.06);
+
+    const paperSheet = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.11), paperMat);
+    paperSheet.position.set(0, 0.125, -0.075);
+    paperSheet.rotation.x = -0.32;
+
+    this.typewriterLever = new THREE.Group();
+    this.typewriterLever.position.set(-0.11, 0.085, -0.06);
+
+    const leverArm = new THREE.Mesh(new THREE.CylinderGeometry(0.0035, 0.0035, 0.065, 8), chromeMat);
+    leverArm.position.set(-0.025, 0.025, 0.01);
+    leverArm.rotation.z = 0.8;
+
+    const leverKnob = new THREE.Mesh(new THREE.SphereGeometry(0.008, 8, 8), chromeMat);
+    leverKnob.position.set(-0.048, 0.045, 0.01);
+
+    this.typewriterLever.add(leverArm, leverKnob);
+
+    this.typewriterGroup.add(
+      bodyBase,
+      keyWell,
+      carriage,
+      platenRoller,
+      rollerKnobL,
+      rollerKnobR,
+      paperSheet,
+      this.typewriterLever,
+    );
+    this.typewriterGroup.visible = false;
+
     this.customAccessories.add(
       this.glassesGroup,
       this.crownGroup,
@@ -990,6 +1083,7 @@ export class DollViewer {
       this.magnifierGroup,
       this.quillGroup,
       this.musicBoxGroup,
+      this.typewriterGroup,
     );
     this.doll.add(this.customAccessories);
 
@@ -1201,7 +1295,18 @@ export class DollViewer {
           } else if (this.consecutiveTaps === 2) {
             const emoteChoices =
               this.timerState === "focusing"
-                ? ["wave", "nod", "wish", "stargaze", "pageturn", "hourglass", "magnifier", "quill", "musicbox"]
+                ? [
+                    "wave",
+                    "nod",
+                    "wish",
+                    "stargaze",
+                    "pageturn",
+                    "hourglass",
+                    "magnifier",
+                    "quill",
+                    "musicbox",
+                    "typewriter",
+                  ]
                 : [
                     "wave",
                     "nod",
@@ -1215,6 +1320,7 @@ export class DollViewer {
                     "magnifier",
                     "quill",
                     "musicbox",
+                    "typewriter",
                   ];
             const emoteType = emoteChoices[Math.floor(Math.random() * emoteChoices.length)];
             if (emoteType === "wave") {
@@ -1241,6 +1347,8 @@ export class DollViewer {
               this.triggerQuillWriting();
             } else if (emoteType === "musicbox") {
               this.triggerMusicBoxWindup();
+            } else if (emoteType === "typewriter") {
+              this.triggerTypewriterTyping();
             } else {
               this.triggerStargaze();
             }
@@ -1495,6 +1603,20 @@ export class DollViewer {
     this.triggerBounce();
   }
 
+  triggerTypewriterTyping({ duration = 3000 } = {}) {
+    if (!this.typewriterGroup?.visible) {
+      if (this.typewriterGroup) this.typewriterGroup.visible = true;
+      this.tempTypewriterVisible = true;
+    }
+    this.currentEmote = {
+      type: "typewriter",
+      startTime: performance.now(),
+      duration: Math.max(800, duration),
+    };
+    this.lastFaceMode = null;
+    this.triggerBounce();
+  }
+
   setTimerState(state) {
     this.timerState = state;
     if (this.studyBook) {
@@ -1712,6 +1834,7 @@ export class DollViewer {
     magnifier = false,
     quill = false,
     musicBox = false,
+    typewriter = false,
   } = {}) {
     this.accessories = {
       glasses,
@@ -1726,6 +1849,7 @@ export class DollViewer {
       magnifier,
       quill,
       musicBox,
+      typewriter,
     };
     if (this.glassesGroup) this.glassesGroup.visible = Boolean(glasses);
     if (this.crownGroup) this.crownGroup.visible = Boolean(crown);
@@ -1741,6 +1865,7 @@ export class DollViewer {
     if (this.magnifierGroup) this.magnifierGroup.visible = Boolean(magnifier);
     if (this.quillGroup) this.quillGroup.visible = Boolean(quill);
     if (this.musicBoxGroup) this.musicBoxGroup.visible = Boolean(musicBox);
+    if (this.typewriterGroup) this.typewriterGroup.visible = Boolean(typewriter);
   }
 
   setAffinityAura(auraType = "none") {
@@ -2365,6 +2490,52 @@ export class DollViewer {
             this.head.rotation.set(0.12, 0.22, 0.1 + headSway);
           }
         }
+      } else if (emote.type === "typewriter") {
+        const progress = Math.min(1, elapsedEmote / (emote.duration / 1000));
+        if (progress < 0.72) {
+          // Phase 1: Rapid rhythmic typing on mechanical keyboard keys
+          const typeP = progress / 0.72;
+          const leftTap = Math.sin(typeP * Math.PI * 26) * 0.08;
+          const rightTap = Math.cos(typeP * Math.PI * 24) * 0.08;
+          if (this.arms && this.arms.length === 2) {
+            this.arms[0].rotation.set(0.68 + leftTap, 0.15, -0.22);
+            this.arms[1].rotation.set(0.68 + rightTap, -0.15, 0.22);
+          }
+          if (this.head) {
+            this.head.rotation.set(0.24 + Math.sin(typeP * Math.PI * 12) * 0.03, 0, 0);
+          }
+          if (this.typewriterLever) {
+            this.typewriterLever.rotation.z = 0;
+          }
+        } else if (progress < 0.9) {
+          // Phase 2: Reach for carriage return lever and push it smoothly leftwards
+          const leverP = (progress - 0.72) / 0.18;
+          const sweep = Math.sin(leverP * Math.PI);
+          if (this.arms && this.arms.length === 2) {
+            this.arms[0].rotation.set(0.78, 0.32 * sweep, -0.28);
+            this.arms[1].rotation.set(0.45 * (1 - sweep), -0.1, 0.35);
+          }
+          if (this.head) {
+            this.head.rotation.set(0.18, -0.22 * sweep, -0.04);
+          }
+          if (this.typewriterLever) {
+            this.typewriterLever.rotation.z = 0.52 * sweep;
+          }
+        } else {
+          // Phase 3: Satisfied release & cheerful upright posture
+          const endP = (progress - 0.9) / 0.1;
+          const easeBack = 1 - endP;
+          if (this.arms && this.arms.length === 2) {
+            this.arms[0].rotation.set(0.78 * easeBack, 0, -0.28 * easeBack - 0.48 * (1 - easeBack));
+            this.arms[1].rotation.set(0.45 * easeBack, 0, 0.35 * easeBack + 0.48 * (1 - easeBack));
+          }
+          if (this.head) {
+            this.head.rotation.set(0.1 * easeBack, 0, 0);
+          }
+          if (this.typewriterLever) {
+            this.typewriterLever.rotation.z = 0;
+          }
+        }
       }
     } else if (this.celebrationStartTime && performance.now() - this.celebrationStartTime < 6000) {
       const wave = Math.sin(elapsed * 9) * 0.38;
@@ -2562,6 +2733,12 @@ export class DollViewer {
       this.tempMusicBoxVisible = false;
       if (this.musicBoxGroup && !this.accessories?.musicBox) {
         this.musicBoxGroup.visible = false;
+      }
+    }
+    if (this.tempTypewriterVisible && (!this.currentEmote || this.currentEmote.type !== "typewriter")) {
+      this.tempTypewriterVisible = false;
+      if (this.typewriterGroup && !this.accessories?.typewriter) {
+        this.typewriterGroup.visible = false;
       }
     }
 

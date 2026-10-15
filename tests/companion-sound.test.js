@@ -857,4 +857,110 @@ describe("CompanionSoundManager", () => {
     expect(mockFilter.type).toBe("bandpass");
     expect(mockFilter.Q.value).toBe(5.8);
   });
+
+  it("synthesizes multi-strike mechanical clacks in playTypewriterClackSound", () => {
+    expect(() => manager.playTypewriterClackSound()).not.toThrow();
+
+    const createdOscillators = [];
+    const mockGain = {
+      gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const mockCtx = {
+      currentTime: 240,
+      createOscillator: vi.fn(() => {
+        const osc = {
+          type: "",
+          frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+          connect: vi.fn(),
+          start: vi.fn(),
+          stop: vi.fn(),
+        };
+        createdOscillators.push(osc);
+        return osc;
+      }),
+      createGain: vi.fn(() => mockGain),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playTypewriterClackSound(4);
+    // 4 key strikes * 2 oscillators (impact click + platen thump) = 8 oscillators
+    expect(createdOscillators).toHaveLength(8);
+    expect(createdOscillators[0].type).toBe("triangle");
+    expect(createdOscillators[1].type).toBe("sine");
+  });
+
+  it("synthesizes carriage return bell chime in playTypewriterBellSound", () => {
+    expect(() => manager.playTypewriterBellSound()).not.toThrow();
+
+    const createdOscillators = [];
+    const mockGain = {
+      gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const mockCtx = {
+      currentTime: 250,
+      createOscillator: vi.fn(() => {
+        const osc = {
+          type: "",
+          frequency: { setValueAtTime: vi.fn() },
+          connect: vi.fn(),
+          start: vi.fn(),
+          stop: vi.fn(),
+        };
+        createdOscillators.push(osc);
+        return osc;
+      }),
+      createGain: vi.fn(() => mockGain),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playTypewriterBellSound();
+    expect(createdOscillators).toHaveLength(2);
+    expect(createdOscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(2960, 250);
+    expect(createdOscillators[1].frequency.setValueAtTime).toHaveBeenCalledWith(5880, 250);
+  });
+
+  it("synthesizes organic swept bandpass breeze in playSeasonalWindGustSound", () => {
+    expect(() => manager.playSeasonalWindGustSound()).not.toThrow();
+
+    const mockSource = {
+      buffer: null,
+      connect: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+    };
+    const mockFilter = {
+      type: "",
+      frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      Q: { value: 0 },
+      connect: vi.fn(),
+    };
+    const mockGain = {
+      gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const channelData = new Float32Array(44100 * 2);
+    const mockBuffer = {
+      getChannelData: vi.fn(() => channelData),
+    };
+    const mockCtx = {
+      currentTime: 260,
+      sampleRate: 44100,
+      createBuffer: vi.fn(() => mockBuffer),
+      createBufferSource: vi.fn(() => mockSource),
+      createBiquadFilter: vi.fn(() => mockFilter),
+      createGain: vi.fn(() => mockGain),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playSeasonalWindGustSound(2.0);
+    expect(mockCtx.createBuffer).toHaveBeenCalledWith(1, 44100 * 2, 44100);
+    expect(mockFilter.type).toBe("bandpass");
+    expect(mockFilter.Q.value).toBe(2.2);
+    expect(mockSource.start).toHaveBeenCalledWith(260);
+  });
 });

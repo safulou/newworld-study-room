@@ -681,4 +681,52 @@ describe("drawDollFace", () => {
     expect(fakeViewer.musicBoxGroup.visible).toBe(false);
     expect(fakeViewer.accessories.musicBox).toBe(false);
   });
+
+  it("triggers typewriter typing emote with bounce and duration", () => {
+    const fakeViewer = {
+      currentEmote: null,
+      lastFaceMode: "open",
+      triggerBounce: vi.fn(),
+      typewriterGroup: { visible: false },
+    };
+    fakeViewer.triggerTypewriterTyping = DollViewer.prototype.triggerTypewriterTyping.bind(fakeViewer);
+
+    fakeViewer.triggerTypewriterTyping({ duration: 3000 });
+    expect(fakeViewer.currentEmote).toBeDefined();
+    expect(fakeViewer.currentEmote.type).toBe("typewriter");
+    expect(fakeViewer.currentEmote.duration).toBe(3000);
+    expect(fakeViewer.typewriterGroup.visible).toBe(true);
+    expect(fakeViewer.tempTypewriterVisible).toBe(true);
+    expect(fakeViewer.lastFaceMode).toBeNull();
+    expect(fakeViewer.triggerBounce).toHaveBeenCalled();
+  });
+
+  it("updates typewriterGroup visibility in setAccessories", () => {
+    const fakeViewer = {
+      glassesGroup: { visible: false },
+      crownGroup: { visible: false },
+      coffeeGroup: { visible: false },
+      catGroup: { visible: false },
+      telescopeGroup: { visible: false },
+      lanternGroup: { visible: false },
+      lanternLight: { intensity: 0 },
+      candlestickGroup: { visible: false },
+      candleLight: { intensity: 0 },
+      windchimeGroup: { visible: false },
+      hourglassGroup: { visible: false },
+      magnifierGroup: { visible: false },
+      quillGroup: { visible: false },
+      musicBoxGroup: { visible: false },
+      typewriterGroup: { visible: false },
+    };
+    fakeViewer.setAccessories = DollViewer.prototype.setAccessories.bind(fakeViewer);
+
+    fakeViewer.setAccessories({ typewriter: true });
+    expect(fakeViewer.typewriterGroup.visible).toBe(true);
+    expect(fakeViewer.accessories.typewriter).toBe(true);
+
+    fakeViewer.setAccessories({ typewriter: false });
+    expect(fakeViewer.typewriterGroup.visible).toBe(false);
+    expect(fakeViewer.accessories.typewriter).toBe(false);
+  });
 });

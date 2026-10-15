@@ -308,8 +308,11 @@ const elements = {
   btnCloseSoundstage: $("#btnCloseSoundstage"),
   soundstageCanvas: $("#soundstageCanvas"),
   soundstagePresetPills: [...document.querySelectorAll(".soundstage-preset-pill")],
-  soundstageRotButtons: [...document.querySelectorAll(".soundstage-rot-btn:not(.soundstage-gyro-btn)")],
+  soundstageRotButtons: [
+    ...document.querySelectorAll(".soundstage-rot-btn:not(.soundstage-gyro-btn):not(.soundstage-head-tracking-btn)"),
+  ],
   btnToggleSoundstageGyro: $("#btnToggleSoundstageGyro"),
+  btnToggleSoundstageHeadTracking: $("#btnToggleSoundstageHeadTracking"),
   btnToggleDistanceDamping: $("#btnToggleDistanceDamping"),
   btnToggleBinauralCrossfeed: $("#btnToggleBinauralCrossfeed"),
   btnToggleEarlyReflections: $("#btnToggleEarlyReflections"),
@@ -328,6 +331,8 @@ const elements = {
   gardenMushroom: $("#gardenMushroom"),
   sporeDustContainer: $("#sporeDustContainer"),
   btnSprayGarden: $("#btnSprayGarden"),
+  btnGardenBreeze: $("#btnGardenBreeze"),
+  gardenSeasonalBreeze: $("#gardenSeasonalBreeze"),
   gardenRainbow: $("#gardenRainbow"),
   gardenMistContainer: $("#gardenMistContainer"),
   gardenPetalContainer: $("#gardenPetalContainer"),
@@ -1901,6 +1906,7 @@ const lastAffinityInteractionTime = {
   mist: 0,
   leaf: 0,
   songbird: 0,
+  breeze: 0,
 };
 
 function updateAffinityUI() {
@@ -3212,6 +3218,14 @@ function bindSoundstageModal() {
     ctx.textAlign = "left";
     ctx.fillText(`${decayText} · ${dampingText}`, 16, 22);
 
+    if (ambientSound.isHeadTrackingEnabled?.()) {
+      const headYawDeg = ((ambientSound.getDynamicHeadYaw?.() || 0) * (180 / Math.PI)).toFixed(1);
+      ctx.font = "10px ui-sans-serif, system-ui, sans-serif";
+      ctx.fillStyle = "rgba(167, 139, 250, 0.9)";
+      ctx.textAlign = "left";
+      ctx.fillText(`🎧 動態頭部 HRTF: ${headYawDeg > 0 ? "+" : ""}${headYawDeg}°`, 16, 36);
+    }
+
     // 1b. Early Reflection Virtual Room Boundaries
     const isEarlyReflect = ambientSound.isEarlyReflections?.();
     const surfaceMat = ambientSound.getSurfaceMaterial?.() || "wood";
@@ -3314,6 +3328,35 @@ function bindSoundstageModal() {
     ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
     ctx.fillStyle = "#69c8bd";
     ctx.fillText("聆聽者 (You)", centerX, listenerY + 28);
+
+    if (ambientSound.isHeadTrackingEnabled?.()) {
+      const dynamicYaw = ambientSound.getDynamicHeadYaw?.() || 0;
+      const headAngle = dynamicYaw + stageRot;
+      ctx.save();
+      ctx.translate(centerX, listenerY);
+      ctx.rotate(headAngle);
+
+      // FOV acoustic vision cone
+      const coneGrad = ctx.createRadialGradient(0, 0, 10, 0, 0, 72);
+      coneGrad.addColorStop(0, "rgba(167, 139, 250, 0.35)");
+      coneGrad.addColorStop(1, "rgba(167, 139, 250, 0)");
+      ctx.fillStyle = coneGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, 72, -Math.PI / 2 - 0.35, -Math.PI / 2 + 0.35);
+      ctx.closePath();
+      ctx.fill();
+
+      // Heading pointer line
+      ctx.strokeStyle = "#c4b5fd";
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.moveTo(0, -18);
+      ctx.lineTo(0, -72);
+      ctx.stroke();
+      ctx.restore();
+    }
 
     // 3. Track Emitters & Expanding Acoustic Ripples
     const tracksToDraw = activeTracks.length ? activeTracks : ["rain", "campfire", "wind", "ocean_waves"];
@@ -3534,13 +3577,36 @@ function bindSoundstageModal() {
   });
 
   canvas.addEventListener("pointermove", (e) => {
-    if (!draggingTrack) return;
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     const cx = (e.clientX - rect.left) * scaleX;
     const cy = (e.clientY - rect.top) * scaleY;
-    updateTrackFromCanvas(draggingTrack, cx, cy);
+
+    if (draggingTrack) {
+      updateTrackFromCanvas(draggingTrack, cx, cy);
+      return;
+    }
+
+    if (ambientSound.isHeadTrackingEnabled?.()) {
+      const centerX = canvas.width / 2;
+      const listenerY = canvas.height - 55;
+      const dx = cx - centerX;
+      const dy = listenerY - cy;
+      if (dy > 0) {
+        const rawYaw = Math.atan2(dx, dy);
+        const clampedYaw = Math.max(-0.785, Math.min(0.785, rawYaw));
+        ambientSound.setDynamicHeadYaw(clampedYaw);
+        renderSoundstage();
+      }
+    }
+  });
+
+  canvas.addEventListener("pointerleave", () => {
+    if (ambientSound.isHeadTrackingEnabled?.() && !draggingTrack) {
+      ambientSound.setDynamicHeadYaw(0);
+      renderSoundstage();
+    }
   });
 
   const onPointerUp = () => {
@@ -3629,6 +3695,30 @@ function bindSoundstageModal() {
     }
   });
 
+  function updateHeadTrackingUI() {
+    const isEnabled = ambientSound.isHeadTrackingEnabled?.() || false;
+    if (elements.btnToggleSoundstageHeadTracking) {
+      elements.btnToggleSoundstageHeadTracking.classList.toggle("active", isEnabled);
+      elements.btnToggleSoundstageHeadTracking.textContent = isEnabled ? "🎧 頭部運動：開" : "🎧 頭部運動：關";
+    }
+  }
+
+  elements.btnToggleSoundstageHeadTracking?.addEventListener("click", () => {
+    const nextState = !ambientSound.isHeadTrackingEnabled();
+    ambientSound.setHeadTrackingEnabled(nextState);
+    if (!nextState) {
+      ambientSound.setDynamicHeadYaw(0);
+    }
+    updateHeadTrackingUI();
+    store.update({ soundstageHeadTracking: nextState });
+    renderSoundstage();
+    showToast(
+      nextState
+        ? "🎧 已開啟動態頭部運動追蹤：滑鼠在聲學舞台微移，即可即時模擬耳廓動態轉向！"
+        : "🎧 已關閉動態頭部運動追蹤，耳廓濾波已重設居中。",
+    );
+  });
+
   elements.soundstageRotButtons?.forEach((btn) => {
     btn.addEventListener("click", () => {
       stopGyroTracking();
@@ -3644,6 +3734,7 @@ function bindSoundstageModal() {
 
   elements.btnOpenSoundstage?.addEventListener("click", () => {
     elements.soundstageModal?.showModal();
+    updateHeadTrackingUI();
     const currentRot = ambientSound.getStageRotation ? ambientSound.getStageRotation() : 0;
     elements.soundstageRotButtons?.forEach((btn) => {
       const rot = parseFloat(btn.dataset.rot ?? btn.dataset.rotation ?? "0");
@@ -3657,6 +3748,7 @@ function bindSoundstageModal() {
     elements.soundstageModal?.close();
     stopSoundstageAnimation();
     stopGyroTracking();
+    ambientSound.setDynamicHeadYaw(0);
   });
 
   elements.soundstageModal?.addEventListener("click", (e) => {
@@ -3664,12 +3756,14 @@ function bindSoundstageModal() {
       elements.soundstageModal.close();
       stopSoundstageAnimation();
       stopGyroTracking();
+      ambientSound.setDynamicHeadYaw(0);
     }
   });
 
   elements.soundstageModal?.addEventListener("close", () => {
     stopSoundstageAnimation();
     stopGyroTracking();
+    ambientSound.setDynamicHeadYaw(0);
   });
 
   elements.soundstagePresetPills?.forEach((pill) => {
@@ -4318,6 +4412,7 @@ function bindAccessories() {
         magnifier: "復古銅柄放大鏡",
         quill: "古風金屬羽毛筆",
         musicBox: "古典胡桃木八音盒",
+        typewriter: "復古機械打字機",
       };
       showToast(`${next[acc] ? "已為玩偶佩戴" : "已卸下"}${labels[acc] || acc}。`);
     });
@@ -6700,6 +6795,69 @@ function bindHerbarium() {
     showToast("💧 細霧滋潤植物葉片，空氣清新芬芳～🌸");
   });
 
+  function triggerSeasonalBreeze() {
+    companionSound.playSeasonalWindGustSound(2.2);
+
+    const container = elements.gardenSeasonalBreeze;
+    if (container) {
+      const colors = [
+        "linear-gradient(135deg, rgba(244, 114, 182, 0.95), rgba(251, 146, 60, 0.85))",
+        "linear-gradient(135deg, rgba(236, 72, 153, 0.95), rgba(244, 114, 182, 0.85))",
+        "linear-gradient(135deg, rgba(251, 207, 232, 0.95), rgba(244, 114, 182, 0.8))",
+        "linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(249, 115, 22, 0.85))",
+      ];
+      const petalCount = 10;
+      for (let i = 0; i < petalCount; i++) {
+        const p = document.createElement("span");
+        p.className = "seasonal-breeze-petal";
+        const w = 10 + Math.random() * 8;
+        const h = w * (0.65 + Math.random() * 0.25);
+        p.style.width = `${w}px`;
+        p.style.height = `${h}px`;
+        p.style.background = colors[Math.floor(Math.random() * colors.length)];
+        const startX = -15 + Math.random() * 40;
+        const startY = 10 + Math.random() * 60;
+        const midX = 35 + Math.random() * 40;
+        const midY = 30 + Math.random() * 30;
+        const swayX = 65 + Math.random() * 45;
+        const swayY = 60 + Math.random() * 35;
+        const endX = 110 + Math.random() * 40;
+        const endY = 90 + Math.random() * 40;
+        const duration = 2.4 + Math.random() * 1.2;
+        p.style.setProperty("--startX", `${startX}px`);
+        p.style.setProperty("--startY", `${startY}px`);
+        p.style.setProperty("--midX", `${midX}px`);
+        p.style.setProperty("--midY", `${midY}px`);
+        p.style.setProperty("--swayX", `${swayX}px`);
+        p.style.setProperty("--swayY", `${swayY}px`);
+        p.style.setProperty("--endX", `${endX}px`);
+        p.style.setProperty("--endY", `${endY}px`);
+        p.style.setProperty("--rotStart", `${Math.random() * 60}deg`);
+        p.style.setProperty("--rotMid", `${120 + Math.random() * 80}deg`);
+        p.style.setProperty("--rotSway", `${220 + Math.random() * 90}deg`);
+        p.style.setProperty("--rotEnd", `${360 + Math.random() * 180}deg`);
+        p.style.setProperty("--breeze-duration", `${duration}s`);
+        p.style.animationDelay = `${(i * 0.12).toFixed(2)}s`;
+
+        container.appendChild(p);
+        setTimeout(() => p.remove(), (duration + 0.3) * 1000);
+      }
+    }
+  }
+
+  elements.btnGardenBreeze?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    triggerSeasonalBreeze();
+    spawnZenSpark("🍃 季節微風", e.clientX, e.clientY);
+
+    const now = Date.now();
+    if (!lastAffinityInteractionTime.breeze || now - lastAffinityInteractionTime.breeze > 3000) {
+      lastAffinityInteractionTime.breeze = now;
+      addAffinityExp(2, "迎來季節微風");
+    }
+    showToast("🍃 季節微風輕拂花園，落英繽紛，靈思暢達～🌸");
+  });
+
   function spawnSporeDust() {
     const container = elements.sporeDustContainer;
     if (!container) return;
@@ -6722,7 +6880,12 @@ function bindHerbarium() {
   }
 
   elements.focusGarden?.addEventListener("click", (e) => {
-    if (e.target.closest("#openHerbarium") || e.target.closest("#btnSprayGarden")) return;
+    if (
+      e.target.closest("#openHerbarium") ||
+      e.target.closest("#btnSprayGarden") ||
+      e.target.closest("#btnGardenBreeze")
+    )
+      return;
     if (e.target.closest("#gardenMushroom")) {
       companionSound.playMushroomBounceSound();
       spawnZenSpark("🍄 晨露小蘑菇", e.clientX, e.clientY);
@@ -7032,6 +7195,19 @@ async function startViewer() {
         ];
         const quote = musicBoxQuotes[Math.floor(Math.random() * musicBoxQuotes.length)];
         showCompanionBubble(quote, 3400);
+      } else if (emoteType === "typewriter") {
+        companionSound.playTypewriterClackSound(5);
+        setTimeout(() => {
+          companionSound.playTypewriterBellSound();
+        }, 2200);
+        spawnStarlightParticles();
+        const typewriterQuotes = [
+          "噠噠噠噠～復古機械打字機鍵盤起落！靈感敲擊成篇，叮！回車續寫！⌨️📜",
+          "金屬撞針歡快跳動～字字鏗鏘，思路暢達，聽這聲清脆回車鈴！🛎️✨",
+          "清脆敲鍵與機械回車鈴，是專注沉浸時最美妙的節拍！打好每一個字！⌨️💫",
+        ];
+        const quote = typewriterQuotes[Math.floor(Math.random() * typewriterQuotes.length)];
+        showCompanionBubble(quote, 3400);
       } else {
         companionSound.playAffirmativeNod();
         const nodQuotes = [
@@ -7189,6 +7365,13 @@ function init() {
   const initialElevationModel = store.get().elevationModel || "ear_level";
   ambientSound.setElevationModel(initialElevationModel);
   syncElevationModelUI(initialElevationModel);
+
+  const initialHeadTracking = Boolean(store.get().soundstageHeadTracking);
+  ambientSound.setHeadTrackingEnabled(initialHeadTracking);
+  if (elements.btnToggleSoundstageHeadTracking) {
+    elements.btnToggleSoundstageHeadTracking.classList.toggle("active", initialHeadTracking);
+    elements.btnToggleSoundstageHeadTracking.textContent = initialHeadTracking ? "🎧 頭部運動：開" : "🎧 頭部運動：關";
+  }
 
   const autoAtm = store.get().autoAtmosphereSync !== false;
   ambientSound.setAutoAtmosphereSync(autoAtm);

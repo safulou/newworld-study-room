@@ -205,6 +205,7 @@
             <div class="garden-rainbow" id="gardenRainbow" aria-hidden="true"></div>
             <div class="garden-mist-container" id="gardenMistContainer" aria-hidden="true"></div>
             <div class="garden-petal-container" id="gardenPetalContainer" aria-hidden="true"></div>
+            <div class="garden-seasonal-breeze" id="gardenSeasonalBreeze" aria-hidden="true"></div>
             <span class="garden-ground" id="gardenGround" aria-hidden="true"></span>
             <span class="garden-status" id="gardenStatus" aria-live="polite">玫瑰 · 種子</span>
             <div class="garden-action-btns">
@@ -217,6 +218,16 @@
               >
                 <i data-lucide="droplets"></i>
                 <span>滋潤</span>
+              </button>
+              <button
+                class="herbarium-btn breeze-garden-btn"
+                id="btnGardenBreeze"
+                type="button"
+                aria-label="迎風喚起季節微風"
+                title="迎風引來季節微風，欣賞落櫻吹雪/楓紅隨風舞動 (ASMR)"
+              >
+                <i data-lucide="wind"></i>
+                <span>微風</span>
               </button>
               <button
                 class="herbarium-btn"
@@ -921,6 +932,16 @@
               >
                 <i data-lucide="music-2"></i>
                 <span>八音盒</span>
+              </button>
+              <button
+                class="accessory-chip"
+                type="button"
+                data-accessory="typewriter"
+                aria-pressed="false"
+                title="復古機械打字機"
+              >
+                <i data-lucide="keyboard"></i>
+                <span>打字機</span>
               </button>
             </div>
             <div class="generation-card">
@@ -2050,6 +2071,14 @@
             title="啟用行動裝置陀螺儀動態頭部追蹤"
           >
             📱 陀螺儀：關
+          </button>
+          <button
+            type="button"
+            class="soundstage-rot-btn soundstage-head-tracking-btn"
+            id="btnToggleSoundstageHeadTracking"
+            title="啟用動態頭部運動自適應轉向追蹤 (動態耳廓時差與濾波微補償)"
+          >
+            🎧 頭部運動：關
           </button>
         </div>
         <div class="soundstage-distance-model-row" role="group" aria-label="空間衰減模式">

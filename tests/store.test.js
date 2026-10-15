@@ -78,6 +78,7 @@ describe("room-scoped store", () => {
       magnifier: false,
       quill: false,
       musicBox: false,
+      typewriter: false,
     });
   });
 
@@ -543,5 +544,12 @@ describe("room-scoped store", () => {
     expect(store.get().elevationModel).toBe("ground");
     store.update({ elevationModel: "invalid_elevation" });
     expect(store.get().elevationModel).toBe("ear_level");
+
+    // soundstageHeadTracking
+    expect(store.get().soundstageHeadTracking).toBe(false);
+    store.update({ soundstageHeadTracking: true });
+    expect(store.get().soundstageHeadTracking).toBe(true);
+    store.update({ soundstageHeadTracking: false });
+    expect(store.get().soundstageHeadTracking).toBe(false);
   });
 });
