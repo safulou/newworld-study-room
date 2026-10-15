@@ -443,6 +443,7 @@ export class AmbientSoundscapeManager {
     this.reverbDamping = "transparent";
     this.reverbDampingFilter = null;
     this.elevationModel = "ear_level";
+    this.proximityEffect = true;
     this.dynamicHeadYaw = 0;
     this.headTrackingEnabled = false;
     this.earlyReflectionNodes = null;
@@ -1164,6 +1165,18 @@ export class AmbientSoundscapeManager {
       }
     }
 
+    let proximityFilter = null;
+    if (ctx.createBiquadFilter) {
+      proximityFilter = ctx.createBiquadFilter();
+      proximityFilter.type = "lowshelf";
+      proximityFilter.frequency.setValueAtTime(140, ctx.currentTime);
+      const initialCoords = this.getTrackCoordinates(name);
+      const proxGain = this.calculateProximityGain(initialCoords.y);
+      if (proximityFilter.gain?.setValueAtTime) {
+        proximityFilter.gain.setValueAtTime(proxGain, ctx.currentTime);
+      }
+    }
+
     let panner = null;
     let lastNode = trackGain;
     if (distanceFilter) {
@@ -1173,6 +1186,10 @@ export class AmbientSoundscapeManager {
     if (elevationFilter) {
       lastNode.connect(elevationFilter);
       lastNode = elevationFilter;
+    }
+    if (proximityFilter) {
+      lastNode.connect(proximityFilter);
+      lastNode = proximityFilter;
     }
 
     if (ctx.createStereoPanner) {
@@ -1228,6 +1245,7 @@ export class AmbientSoundscapeManager {
         },
         distanceFilter,
         elevationFilter,
+        proximityFilter,
       );
       return true;
     }
@@ -1259,6 +1277,7 @@ export class AmbientSoundscapeManager {
         },
         distanceFilter,
         elevationFilter,
+        proximityFilter,
       );
       return true;
     }
@@ -1306,6 +1325,7 @@ export class AmbientSoundscapeManager {
         },
         distanceFilter,
         elevationFilter,
+        proximityFilter,
       );
       return true;
     }
@@ -1390,6 +1410,7 @@ export class AmbientSoundscapeManager {
         },
         distanceFilter,
         elevationFilter,
+        proximityFilter,
       );
       return true;
     }
@@ -1422,6 +1443,7 @@ export class AmbientSoundscapeManager {
         },
         distanceFilter,
         elevationFilter,
+        proximityFilter,
       );
       return true;
     }
@@ -1454,6 +1476,7 @@ export class AmbientSoundscapeManager {
         },
         distanceFilter,
         elevationFilter,
+        proximityFilter,
       );
       return true;
     }
@@ -1552,6 +1575,7 @@ export class AmbientSoundscapeManager {
         },
         distanceFilter,
         elevationFilter,
+        proximityFilter,
       );
       return true;
     }
@@ -1603,16 +1627,20 @@ export class AmbientSoundscapeManager {
       },
       distanceFilter,
       elevationFilter,
+      proximityFilter,
     );
     return true;
   }
 
-  _registerTrack(name, trackNode, distanceFilter = null, elevationFilter = null) {
+  _registerTrack(name, trackNode, distanceFilter = null, elevationFilter = null, proximityFilter = null) {
     if (distanceFilter) {
       trackNode.distanceFilter = distanceFilter;
     }
     if (elevationFilter) {
       trackNode.elevationFilter = elevationFilter;
+    }
+    if (proximityFilter) {
+      trackNode.proximityFilter = proximityFilter;
     }
     this.nodes.set(name, trackNode);
     if (this.orbitingBreeze) {
@@ -1710,6 +1738,7 @@ export class AmbientSoundscapeManager {
       if (track.filter) track.filter.disconnect();
       if (track.distanceFilter) track.distanceFilter.disconnect();
       if (track.elevationFilter) track.elevationFilter.disconnect();
+      if (track.proximityFilter) track.proximityFilter.disconnect();
       if (track.gain) track.gain.disconnect();
       if (track.panner) track.panner.disconnect();
     } catch {}
@@ -1951,6 +1980,37 @@ export class AmbientSoundscapeManager {
     }
   }
 
+  calculateProximityGain(distance) {
+    if (!this.proximityEffect) return 0;
+    const d = Math.max(0, Math.min(1, Number(distance) || 0));
+    // Acoustic proximity effect: steep warmth boost (0dB up to +4.5dB) when close to listener
+    if (d <= 0.45) return 0;
+    const t = (d - 0.45) / 0.55;
+    return Math.round(t * t * 4.5 * 10) / 10;
+  }
+
+  isProximityEffect() {
+    return Boolean(this.proximityEffect);
+  }
+
+  setProximityEffect(enabled) {
+    this.proximityEffect = Boolean(enabled);
+    this.updateTrackProximityFilters();
+    return this.proximityEffect;
+  }
+
+  updateTrackProximityFilters() {
+    if (!this.audioCtx) return;
+    const now = this.audioCtx.currentTime;
+    for (const [name, track] of this.nodes.entries()) {
+      if (track && track.proximityFilter && track.proximityFilter.gain?.setValueAtTime) {
+        const coords = this.getTrackCoordinates(name);
+        const gain = this.calculateProximityGain(coords.y);
+        track.proximityFilter.gain.setValueAtTime(gain, now);
+      }
+    }
+  }
+
   setDistanceDamping(enabled) {
     this.distanceDamping = Boolean(enabled);
     if (this.audioCtx) {
@@ -2062,6 +2122,10 @@ export class AmbientSoundscapeManager {
     if (track && track.distanceFilter && this.audioCtx && track.distanceFilter.frequency) {
       const cutoff = this.calculateEffectiveCutoff(name, clampedY);
       track.distanceFilter.frequency.setValueAtTime(cutoff, this.audioCtx.currentTime);
+    }
+    if (track && track.proximityFilter && this.audioCtx && track.proximityFilter.gain?.setValueAtTime) {
+      const proxGain = this.calculateProximityGain(clampedY);
+      track.proximityFilter.gain.setValueAtTime(proxGain, this.audioCtx.currentTime);
     }
 
     return { ...this.trackCoordinates[name] };

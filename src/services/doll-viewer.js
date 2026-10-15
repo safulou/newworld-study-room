@@ -1070,6 +1070,76 @@ export class DollViewer {
     );
     this.typewriterGroup.visible = false;
 
+    // 14. Vintage Gramophone Turntable ("gramophone")
+    this.gramophoneGroup = new THREE.Group();
+    this.gramophoneGroup.position.set(0.48, -0.96, 0.4);
+
+    const gramophoneWoodMat = new THREE.MeshStandardMaterial({
+      color: 0x4a2912,
+      roughness: 0.65,
+      metalness: 0.15,
+    });
+    const brassHornMat = new THREE.MeshStandardMaterial({
+      color: 0xf59e0b,
+      roughness: 0.28,
+      metalness: 0.82,
+    });
+    const vinylMat = new THREE.MeshStandardMaterial({
+      color: 0x141418,
+      roughness: 0.4,
+      metalness: 0.5,
+    });
+    const labelMat = new THREE.MeshStandardMaterial({
+      color: 0x991b1b,
+      roughness: 0.7,
+    });
+
+    const gpBase = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.065, 0.24), gramophoneWoodMat);
+    gpBase.position.set(0, 0.032, 0);
+
+    // Turntable Platter & Vinyl Disc
+    this.gramophoneDisc = new THREE.Group();
+    this.gramophoneDisc.position.set(-0.02, 0.068, 0.02);
+
+    const platter = new THREE.Mesh(new THREE.CylinderGeometry(0.096, 0.096, 0.006, 24), vinylMat);
+    const label = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.007, 16), labelMat);
+    const spindle = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.016, 8), brassHornMat);
+    spindle.position.set(0, 0.005, 0);
+    this.gramophoneDisc.add(platter, label, spindle);
+
+    // Tonearm & Stylus Needle Pivot
+    this.gramophoneArm = new THREE.Group();
+    this.gramophoneArm.position.set(0.075, 0.072, 0.075);
+    this.gramophoneArm.rotation.y = -0.45;
+
+    const armBase = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.02, 8), brassHornMat);
+    const armRod = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.11, 8), brassHornMat);
+    armRod.position.set(-0.045, 0.012, -0.02);
+    armRod.rotation.z = Math.PI / 2;
+    armRod.rotation.y = -0.3;
+
+    const stylusHead = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.012, 0.014), vinylMat);
+    stylusHead.position.set(-0.095, 0.006, -0.045);
+
+    this.gramophoneArm.add(armBase, armRod, stylusHead);
+
+    // Morning Glory Fluted Brass Horn
+    const hornGroup = new THREE.Group();
+    hornGroup.position.set(0.06, 0.07, -0.06);
+
+    const hornElbow = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.08, 8), brassHornMat);
+    hornElbow.position.set(0, 0.04, 0);
+
+    const hornFlare = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.025, 0.18, 16, 1, true), brassHornMat);
+    hornFlare.position.set(0.02, 0.14, 0.02);
+    hornFlare.rotation.z = -0.55;
+    hornFlare.rotation.x = 0.25;
+
+    hornGroup.add(hornElbow, hornFlare);
+
+    this.gramophoneGroup.add(gpBase, this.gramophoneDisc, this.gramophoneArm, hornGroup);
+    this.gramophoneGroup.visible = false;
+
     this.customAccessories.add(
       this.glassesGroup,
       this.crownGroup,
@@ -1084,6 +1154,7 @@ export class DollViewer {
       this.quillGroup,
       this.musicBoxGroup,
       this.typewriterGroup,
+      this.gramophoneGroup,
     );
     this.doll.add(this.customAccessories);
 
@@ -1321,6 +1392,7 @@ export class DollViewer {
                     "quill",
                     "musicbox",
                     "typewriter",
+                    "gramophone",
                   ];
             const emoteType = emoteChoices[Math.floor(Math.random() * emoteChoices.length)];
             if (emoteType === "wave") {
@@ -1349,6 +1421,8 @@ export class DollViewer {
               this.triggerMusicBoxWindup();
             } else if (emoteType === "typewriter") {
               this.triggerTypewriterTyping();
+            } else if (emoteType === "gramophone") {
+              this.triggerVinylRecord();
             } else {
               this.triggerStargaze();
             }
@@ -1617,6 +1691,20 @@ export class DollViewer {
     this.triggerBounce();
   }
 
+  triggerVinylRecord({ duration = 3000 } = {}) {
+    if (!this.gramophoneGroup?.visible) {
+      if (this.gramophoneGroup) this.gramophoneGroup.visible = true;
+      this.tempGramophoneVisible = true;
+    }
+    this.currentEmote = {
+      type: "gramophone",
+      startTime: performance.now(),
+      duration: Math.max(800, duration),
+    };
+    this.lastFaceMode = null;
+    this.triggerBounce();
+  }
+
   setTimerState(state) {
     this.timerState = state;
     if (this.studyBook) {
@@ -1835,6 +1923,7 @@ export class DollViewer {
     quill = false,
     musicBox = false,
     typewriter = false,
+    gramophone = false,
   } = {}) {
     this.accessories = {
       glasses,
@@ -1850,6 +1939,7 @@ export class DollViewer {
       quill,
       musicBox,
       typewriter,
+      gramophone,
     };
     if (this.glassesGroup) this.glassesGroup.visible = Boolean(glasses);
     if (this.crownGroup) this.crownGroup.visible = Boolean(crown);
@@ -1866,6 +1956,7 @@ export class DollViewer {
     if (this.quillGroup) this.quillGroup.visible = Boolean(quill);
     if (this.musicBoxGroup) this.musicBoxGroup.visible = Boolean(musicBox);
     if (this.typewriterGroup) this.typewriterGroup.visible = Boolean(typewriter);
+    if (this.gramophoneGroup) this.gramophoneGroup.visible = Boolean(gramophone);
   }
 
   setAffinityAura(auraType = "none") {
@@ -2536,6 +2627,57 @@ export class DollViewer {
             this.typewriterLever.rotation.z = 0;
           }
         }
+      } else if (emote.type === "gramophone") {
+        const progress = Math.min(1, elapsedEmote / (emote.duration / 1000));
+        if (progress < 0.45) {
+          // Phase 1: Reach right arm to pivot tonearm onto the spinning vinyl disc
+          const moveP = progress / 0.45;
+          const curve = Math.sin(moveP * Math.PI * 0.5);
+          if (this.arms && this.arms.length === 2) {
+            this.arms[0].rotation.set(0.65 * curve, -0.2 * curve, -0.22);
+            this.arms[1].rotation.set(0.25 * (1 - curve), 0, 0.45);
+          }
+          if (this.head) {
+            this.head.rotation.set(0.18 * curve, 0.22 * curve, 0.05);
+          }
+          if (this.gramophoneArm) {
+            this.gramophoneArm.rotation.y = -0.45 + (0.18 - -0.45) * curve;
+          }
+          if (this.gramophoneDisc) {
+            this.gramophoneDisc.rotation.y += 0.04;
+          }
+        } else if (progress < 0.9) {
+          // Phase 2: Vinyl record spinning smoothly, doll sways gently with vinyl groove music
+          const playP = (progress - 0.45) / 0.45;
+          const grooveSway = Math.sin(playP * Math.PI * 6) * 0.08;
+          if (this.arms && this.arms.length === 2) {
+            this.arms[0].rotation.set(0.35 + grooveSway * 0.5, 0.1, -0.35);
+            this.arms[1].rotation.set(0.35 - grooveSway * 0.5, -0.1, 0.35);
+          }
+          if (this.head) {
+            this.head.rotation.set(0.12, grooveSway, grooveSway * 0.6);
+          }
+          if (this.gramophoneArm) {
+            this.gramophoneArm.rotation.y = 0.18 + Math.sin(playP * Math.PI * 8) * 0.015;
+          }
+          if (this.gramophoneDisc) {
+            this.gramophoneDisc.rotation.y += 0.22;
+          }
+        } else {
+          // Phase 3: Ease back to calm posture
+          const endP = (progress - 0.9) / 0.1;
+          const easeBack = 1 - endP;
+          if (this.arms && this.arms.length === 2) {
+            this.arms[0].rotation.set(0.35 * easeBack, 0, -0.35 * easeBack - 0.48 * (1 - easeBack));
+            this.arms[1].rotation.set(0.35 * easeBack, 0, 0.35 * easeBack + 0.48 * (1 - easeBack));
+          }
+          if (this.head) {
+            this.head.rotation.set(0.1 * easeBack, 0, 0);
+          }
+          if (this.gramophoneDisc) {
+            this.gramophoneDisc.rotation.y += 0.12 * easeBack;
+          }
+        }
       }
     } else if (this.celebrationStartTime && performance.now() - this.celebrationStartTime < 6000) {
       const wave = Math.sin(elapsed * 9) * 0.38;
@@ -2740,6 +2882,21 @@ export class DollViewer {
       if (this.typewriterGroup && !this.accessories?.typewriter) {
         this.typewriterGroup.visible = false;
       }
+    }
+    if (this.tempGramophoneVisible && (!this.currentEmote || this.currentEmote.type !== "gramophone")) {
+      this.tempGramophoneVisible = false;
+      if (this.gramophoneGroup && !this.accessories?.gramophone) {
+        this.gramophoneGroup.visible = false;
+      }
+    }
+
+    if (
+      this.gramophoneDisc &&
+      this.gramophoneGroup?.visible &&
+      !this.reducedMotion &&
+      this.currentEmote?.type !== "gramophone"
+    ) {
+      this.gramophoneDisc.rotation.y += 0.008;
     }
 
     if (this.telescopeLens && this.telescopeGroup?.visible) {

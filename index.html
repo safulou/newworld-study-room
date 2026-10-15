@@ -230,6 +230,16 @@
                 <span>微風</span>
               </button>
               <button
+                class="herbarium-btn pressed-petal-btn"
+                id="btnGardenPressedPetals"
+                type="button"
+                aria-label="落英壓花集"
+                title="點擊飄落花瓣珍藏壓花；點擊檢視落英花押壓花集"
+              >
+                <i data-lucide="flower-2"></i>
+                <span id="pressedPetalLabel">壓花 <b id="pressedPetalCount">0</b></span>
+              </button>
+              <button
                 class="herbarium-btn"
                 id="openHerbarium"
                 type="button"
@@ -942,6 +952,16 @@
               >
                 <i data-lucide="keyboard"></i>
                 <span>打字機</span>
+              </button>
+              <button
+                class="accessory-chip"
+                type="button"
+                data-accessory="gramophone"
+                aria-pressed="false"
+                title="古典黑膠留聲機"
+              >
+                <i data-lucide="disc-3"></i>
+                <span>留聲機</span>
               </button>
             </div>
             <div class="generation-card">
@@ -2042,6 +2062,14 @@
             title="啟用室內第一波早期反射自然聲學模擬，模擬牆壁反彈微回響，豐富空間殘響層次"
           >
             🏛️ 早期反射：關
+          </button>
+          <button
+            type="button"
+            class="soundstage-preset-pill active"
+            id="btnToggleSoundstageProximity"
+            title="開啟/關閉近場物理鄰近低頻溫暖補償 (音軌靠近聽者時自動平滑注入 140Hz 溫暖低頻，最高 +4.5dB)"
+          >
+            🎙️ 近場溫暖：開
           </button>
         </div>
         <div class="soundstage-rotation-row" role="group" aria-label="聲學舞台羅盤方位">

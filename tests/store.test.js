@@ -79,6 +79,7 @@ describe("room-scoped store", () => {
       quill: false,
       musicBox: false,
       typewriter: false,
+      gramophone: false,
     });
   });
 
@@ -551,5 +552,13 @@ describe("room-scoped store", () => {
     expect(store.get().soundstageHeadTracking).toBe(true);
     store.update({ soundstageHeadTracking: false });
     expect(store.get().soundstageHeadTracking).toBe(false);
+
+    // soundstageProximity & pressedPetals
+    expect(store.get().soundstageProximity).toBe(true);
+    store.update({ soundstageProximity: false });
+    expect(store.get().soundstageProximity).toBe(false);
+    expect(store.get().pressedPetals).toBe(0);
+    store.update({ pressedPetals: 12 });
+    expect(store.get().pressedPetals).toBe(12);
   });
 });

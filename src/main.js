@@ -316,6 +316,7 @@ const elements = {
   btnToggleDistanceDamping: $("#btnToggleDistanceDamping"),
   btnToggleBinauralCrossfeed: $("#btnToggleBinauralCrossfeed"),
   btnToggleEarlyReflections: $("#btnToggleEarlyReflections"),
+  btnToggleSoundstageProximity: $("#btnToggleSoundstageProximity"),
   stereoWidthSlider: $("#stereoWidthSlider"),
   stereoWidthBadge: $("#stereoWidthBadge"),
   distanceModelChips: [...document.querySelectorAll(".distance-model-chip")],
@@ -332,6 +333,8 @@ const elements = {
   sporeDustContainer: $("#sporeDustContainer"),
   btnSprayGarden: $("#btnSprayGarden"),
   btnGardenBreeze: $("#btnGardenBreeze"),
+  btnGardenPressedPetals: $("#btnGardenPressedPetals"),
+  pressedPetalCount: $("#pressedPetalCount"),
   gardenSeasonalBreeze: $("#gardenSeasonalBreeze"),
   gardenRainbow: $("#gardenRainbow"),
   gardenMistContainer: $("#gardenMistContainer"),
@@ -2708,6 +2711,12 @@ function syncEarlyReflectionsUI(active) {
   elements.btnToggleEarlyReflections.textContent = active ? "🏛️ 早期反射：開" : "🏛️ 早期反射：關";
 }
 
+function syncProximityEffectUI(active) {
+  if (!elements.btnToggleSoundstageProximity) return;
+  elements.btnToggleSoundstageProximity.classList.toggle("active", Boolean(active));
+  elements.btnToggleSoundstageProximity.textContent = active ? "🎙️ 近場溫暖：開" : "🎙️ 近場溫暖：關";
+}
+
 function syncSurfaceMaterialUI(material) {
   const currentMaterial = material || "wood";
   elements.surfaceChips?.forEach((chip) => {
@@ -3299,6 +3308,31 @@ function bindSoundstageModal() {
       ctx.stroke();
     }
 
+    if (ambientSound.isProximityEffect?.()) {
+      const nearFieldRadius = 90;
+      const warmthGrad = ctx.createRadialGradient(centerX, listenerY, 8, centerX, listenerY, nearFieldRadius);
+      warmthGrad.addColorStop(0, "rgba(251, 146, 60, 0.22)");
+      warmthGrad.addColorStop(0.7, "rgba(251, 146, 60, 0.08)");
+      warmthGrad.addColorStop(1, "rgba(251, 146, 60, 0)");
+      ctx.fillStyle = warmthGrad;
+      ctx.beginPath();
+      ctx.arc(centerX, listenerY, nearFieldRadius, Math.PI, 0, false);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(251, 146, 60, 0.35)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 4]);
+      ctx.beginPath();
+      ctx.arc(centerX, listenerY, nearFieldRadius, Math.PI, 0, false);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.font = "9px ui-sans-serif, system-ui, sans-serif";
+      ctx.fillStyle = "rgba(251, 146, 60, 0.85)";
+      ctx.textAlign = "center";
+      ctx.fillText("🎙️ 近場溫暖區 (+4.5dB)", centerX, listenerY - nearFieldRadius - 4);
+    }
+
     // Rotating Compass Dial on Listener
     const stageRot = ambientSound.getStageRotation();
     ctx.save();
@@ -3445,6 +3479,17 @@ function bindSoundstageModal() {
       ctx.arc(emitterX, emitterY, 22, 0, Math.PI * 2);
       ctx.fill();
 
+      // Near-field Proximity Warmth Aura on track emitter
+      if (ambientSound.isProximityEffect?.() && coords.y > 0.45) {
+        ctx.strokeStyle = "rgba(251, 146, 60, 0.85)";
+        ctx.lineWidth = 1.6;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.arc(emitterX, emitterY, 24, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
       // Border circle
       ctx.strokeStyle = isDragged ? "#f1b65f" : "#69c8bd";
       ctx.lineWidth = isDragged ? 2.5 : 1.5;
@@ -3486,7 +3531,9 @@ function bindSoundstageModal() {
       const distPct = Math.round(coords.y * 100);
       const cutoffHz = Math.round(ambientSound.calculateEffectiveCutoff(draggingTrack, coords.y));
       const behindNote = Math.cos((coords.x * Math.PI) / 2.5 + stageRot) < 0 ? " · 背向遮蔽" : "";
-      const hudText = `方位 ${panText} · 距離 ${distPct}% · 截止 ${cutoffHz}Hz${behindNote}`;
+      const proxGain = ambientSound.isProximityEffect?.() ? ambientSound.calculateProximityGain(coords.y) : 0;
+      const proxNote = proxGain > 0.05 ? ` · 近場溫暖 +${proxGain.toFixed(1)}dB` : "";
+      const hudText = `方位 ${panText} · 距離 ${distPct}% · 截止 ${cutoffHz}Hz${behindNote}${proxNote}`;
 
       ctx.font = "bold 11px ui-sans-serif, system-ui, sans-serif";
       const textWidth = ctx.measureText(hudText).width;
@@ -3517,6 +3564,13 @@ function bindSoundstageModal() {
       ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
       ctx.textAlign = "right";
       ctx.fillText("🍃 空氣阻尼啟用中 (2.6k~20kHz)", width - 16, 24);
+    }
+
+    if (ambientSound.isProximityEffect?.()) {
+      ctx.fillStyle = "rgba(251, 146, 60, 0.85)";
+      ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText("🎙️ 近場低頻溫暖啟用 (+4.5dB max)", width - 16, 38);
     }
   }
 
@@ -3810,6 +3864,19 @@ function bindSoundstageModal() {
     renderSoundstage();
     showToast(
       newState ? "🏛️ 已開啟早期反射自然聲學模擬（牆壁回響層次，加深空間立體感）" : "🏛️ 已關閉早期反射自然聲學模擬",
+    );
+  });
+
+  elements.btnToggleSoundstageProximity?.addEventListener("click", () => {
+    const currentState = ambientSound.isProximityEffect();
+    const newState = ambientSound.setProximityEffect(!currentState);
+    store.update({ soundstageProximity: newState });
+    syncProximityEffectUI(newState);
+    renderSoundstage();
+    showToast(
+      newState
+        ? "🎙️ 已開啟近場物理鄰近低頻溫暖補償（靠近聽者時平滑注入 140Hz 溫暖低頻，最高 +4.5dB）"
+        : "🎙️ 已關閉近場物理鄰近低頻溫暖補償（標準物理頻率響應）",
     );
   });
 
@@ -4413,6 +4480,7 @@ function bindAccessories() {
         quill: "古風金屬羽毛筆",
         musicBox: "古典胡桃木八音盒",
         typewriter: "復古機械打字機",
+        gramophone: "古典黑膠留聲機",
       };
       showToast(`${next[acc] ? "已為玩偶佩戴" : "已卸下"}${labels[acc] || acc}。`);
     });
@@ -6469,7 +6537,33 @@ function checkNewBadges(silentOnInitial = false) {
 function renderHerbarium() {
   if (!elements.plantsView || !elements.badgesView) return;
   const plants = studyStats.getHerbarium();
+  const pressedPetals = store.get().pressedPetals || 0;
+  const floraTier =
+    pressedPetals >= 100
+      ? { title: "萬籟留芳", badge: "傳奇典藏" }
+      : pressedPetals >= 50
+        ? { title: "百花留痕", badge: "大師珍藏" }
+        : pressedPetals >= 25
+          ? { title: "落英書箋", badge: "雅緻進階" }
+          : pressedPetals >= 10
+            ? { title: "芳菲初凝", badge: "初露鋒芒" }
+            : { title: "初拾片影", badge: "手作啟蒙" };
+
   elements.plantsView.innerHTML = `
+    <div class="pressed-flora-scrapbook-card">
+      <div class="pressed-flora-stamp">🌸</div>
+      <div class="pressed-flora-info">
+        <div class="pressed-flora-title-row">
+          <span class="pressed-flora-title">落英花押 · 壓花手作集（${floraTier.title}）</span>
+          <span class="pressed-flora-badge">${floraTier.badge}</span>
+        </div>
+        <div class="pressed-flora-desc">輕觸花園中隨微風飄落的花瓣落葉，拾起專屬於你的四季心流時光印記。</div>
+      </div>
+      <div class="pressed-flora-count-pill">
+        <div class="pressed-flora-num">${pressedPetals}</div>
+        <span class="pressed-flora-unit">瓣壓花收藏</span>
+      </div>
+    </div>
     <div class="plant-grid">
       ${plants
         .map(
@@ -6722,11 +6816,19 @@ function bindHerbarium() {
       e.stopPropagation();
       petal.classList.add("collected");
       companionSound.playLeafFrictionSound();
-      spawnZenSpark("🍃 拾取草木落英", e.clientX, e.clientY);
+      const currentPetals = (store.get().pressedPetals || 0) + 1;
+      store.update({ pressedPetals: currentPetals });
+      if (elements.pressedPetalCount) {
+        elements.pressedPetalCount.textContent = String(currentPetals);
+      }
+      spawnZenSpark(`🌸 壓花拾藏 +1（累計 ${currentPetals} 瓣）`, e.clientX, e.clientY);
       const now = Date.now();
       if (now - lastAffinityInteractionTime.leaf > 2500) {
         lastAffinityInteractionTime.leaf = now;
         addAffinityExp(1, "拾取花園落英");
+      }
+      if (currentPetals === 10 || currentPetals === 25 || currentPetals === 50 || currentPetals === 100) {
+        showToast(`💮 達成落英壓花成就！已珍藏 ${currentPetals} 瓣四季落英花押！`);
       }
       setTimeout(() => petal.remove(), 450);
     });
@@ -6858,6 +6960,25 @@ function bindHerbarium() {
     showToast("🍃 季節微風輕拂花園，落英繽紛，靈思暢達～🌸");
   });
 
+  elements.btnGardenPressedPetals?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    companionSound.playLeafFrictionSound();
+    const count = store.get().pressedPetals || 0;
+    const tier =
+      count >= 100
+        ? "萬籟留芳"
+        : count >= 50
+          ? "百花留痕"
+          : count >= 25
+            ? "落英書箋"
+            : count >= 10
+              ? "芳菲初凝"
+              : "初拾片影";
+    showToast(`🌸 落英花押壓花集：已珍藏 ${count} 瓣季節壓花【銘牌：${tier}】`);
+    renderHerbarium();
+    elements.herbariumModal?.showModal();
+  });
+
   function spawnSporeDust() {
     const container = elements.sporeDustContainer;
     if (!container) return;
@@ -6883,7 +7004,8 @@ function bindHerbarium() {
     if (
       e.target.closest("#openHerbarium") ||
       e.target.closest("#btnSprayGarden") ||
-      e.target.closest("#btnGardenBreeze")
+      e.target.closest("#btnGardenBreeze") ||
+      e.target.closest("#btnGardenPressedPetals")
     )
       return;
     if (e.target.closest("#gardenMushroom")) {
@@ -7208,6 +7330,16 @@ async function startViewer() {
         ];
         const quote = typewriterQuotes[Math.floor(Math.random() * typewriterQuotes.length)];
         showCompanionBubble(quote, 3400);
+      } else if (emoteType === "gramophone") {
+        companionSound.playVinylNeedleDropSound(2.8);
+        spawnStarlightParticles();
+        const gramophoneQuotes = [
+          "落針微響，黑膠輕轉～低頻溫暖流淌，時光在古典旋律中沉澱！📻✨",
+          "晨光金喇叭迴盪著溫潤微爆音，那是專屬於黑膠時代的心流浪漫！🎶☕",
+          "唱針輕觸唱盤軌跡... 撫平一切浮躁，在古典氛圍中專注前行！🎙️💫",
+        ];
+        const quote = gramophoneQuotes[Math.floor(Math.random() * gramophoneQuotes.length)];
+        showCompanionBubble(quote, 3400);
       } else {
         companionSound.playAffirmativeNod();
         const nodQuotes = [
@@ -7371,6 +7503,15 @@ function init() {
   if (elements.btnToggleSoundstageHeadTracking) {
     elements.btnToggleSoundstageHeadTracking.classList.toggle("active", initialHeadTracking);
     elements.btnToggleSoundstageHeadTracking.textContent = initialHeadTracking ? "🎧 頭部運動：開" : "🎧 頭部運動：關";
+  }
+
+  const initialProximity = store.get().soundstageProximity !== false;
+  ambientSound.setProximityEffect(initialProximity);
+  syncProximityEffectUI(initialProximity);
+
+  const initialPressedPetals = store.get().pressedPetals || 0;
+  if (elements.pressedPetalCount) {
+    elements.pressedPetalCount.textContent = String(initialPressedPetals);
   }
 
   const autoAtm = store.get().autoAtmosphereSync !== false;

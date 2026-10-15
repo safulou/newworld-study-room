@@ -729,4 +729,53 @@ describe("drawDollFace", () => {
     expect(fakeViewer.typewriterGroup.visible).toBe(false);
     expect(fakeViewer.accessories.typewriter).toBe(false);
   });
+
+  it("triggers vinyl needle drop emote with bounce and duration", () => {
+    const fakeViewer = {
+      currentEmote: null,
+      lastFaceMode: "open",
+      triggerBounce: vi.fn(),
+      gramophoneGroup: { visible: false },
+    };
+    fakeViewer.triggerVinylRecord = DollViewer.prototype.triggerVinylRecord.bind(fakeViewer);
+
+    fakeViewer.triggerVinylRecord({ duration: 3000 });
+    expect(fakeViewer.currentEmote).toBeDefined();
+    expect(fakeViewer.currentEmote.type).toBe("gramophone");
+    expect(fakeViewer.currentEmote.duration).toBe(3000);
+    expect(fakeViewer.gramophoneGroup.visible).toBe(true);
+    expect(fakeViewer.tempGramophoneVisible).toBe(true);
+    expect(fakeViewer.lastFaceMode).toBeNull();
+    expect(fakeViewer.triggerBounce).toHaveBeenCalled();
+  });
+
+  it("updates gramophoneGroup visibility in setAccessories", () => {
+    const fakeViewer = {
+      glassesGroup: { visible: false },
+      crownGroup: { visible: false },
+      coffeeGroup: { visible: false },
+      catGroup: { visible: false },
+      telescopeGroup: { visible: false },
+      lanternGroup: { visible: false },
+      lanternLight: { intensity: 0 },
+      candlestickGroup: { visible: false },
+      candleLight: { intensity: 0 },
+      windchimeGroup: { visible: false },
+      hourglassGroup: { visible: false },
+      magnifierGroup: { visible: false },
+      quillGroup: { visible: false },
+      musicBoxGroup: { visible: false },
+      typewriterGroup: { visible: false },
+      gramophoneGroup: { visible: false },
+    };
+    fakeViewer.setAccessories = DollViewer.prototype.setAccessories.bind(fakeViewer);
+
+    fakeViewer.setAccessories({ gramophone: true });
+    expect(fakeViewer.gramophoneGroup.visible).toBe(true);
+    expect(fakeViewer.accessories.gramophone).toBe(true);
+
+    fakeViewer.setAccessories({ gramophone: false });
+    expect(fakeViewer.gramophoneGroup.visible).toBe(false);
+    expect(fakeViewer.accessories.gramophone).toBe(false);
+  });
 });

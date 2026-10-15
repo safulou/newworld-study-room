@@ -55,6 +55,7 @@ const profileDefaults = {
     quill: false,
     musicBox: false,
     typewriter: false,
+    gramophone: false,
   },
   ambientMode: "auto",
   desktopNotifications: false,
@@ -95,6 +96,8 @@ const profileDefaults = {
   gardenCircadian: true,
   elevationModel: "ear_level",
   soundstageHeadTracking: false,
+  soundstageProximity: true,
+  pressedPetals: 0,
 };
 
 export const AFFINITY_RANKS = [
@@ -233,6 +236,7 @@ function sanitizeProfile(value = {}) {
     quill: Boolean(value.accessories?.quill),
     musicBox: Boolean(value.accessories?.musicBox),
     typewriter: Boolean(value.accessories?.typewriter),
+    gramophone: Boolean(value.accessories?.gramophone),
   };
   const ambientMode = ["auto", "day", "dusk", "night"].includes(value.ambientMode) ? value.ambientMode : "auto";
   const heatmapTheme = ["emerald", "amber", "cyber", "ocean"].includes(value.heatmapTheme)
@@ -414,6 +418,11 @@ function sanitizeProfile(value = {}) {
       ? value.elevationModel
       : profileDefaults.elevationModel,
     soundstageHeadTracking: Boolean(value.soundstageHeadTracking),
+    soundstageProximity:
+      value.soundstageProximity !== undefined
+        ? Boolean(value.soundstageProximity)
+        : profileDefaults.soundstageProximity,
+    pressedPetals: Math.max(0, Number(value.pressedPetals || 0)),
   };
 }
 

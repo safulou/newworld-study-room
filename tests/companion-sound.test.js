@@ -963,4 +963,55 @@ describe("CompanionSoundManager", () => {
     expect(mockFilter.Q.value).toBe(2.2);
     expect(mockSource.start).toHaveBeenCalledWith(260);
   });
+
+  it("synthesizes stylus thud and vinyl groove crackle in playVinylNeedleDropSound", () => {
+    expect(() => manager.playVinylNeedleDropSound()).not.toThrow();
+
+    const mockOsc = {
+      type: "",
+      frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+    };
+    const mockSource = {
+      buffer: null,
+      connect: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+    };
+    const mockFilter = {
+      type: "",
+      frequency: { setValueAtTime: vi.fn() },
+      Q: { value: 0 },
+      connect: vi.fn(),
+    };
+    const mockGain = {
+      gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+    const channelData = new Float32Array(44100 * 2);
+    const mockBuffer = {
+      getChannelData: vi.fn(() => channelData),
+    };
+    const mockCtx = {
+      currentTime: 300,
+      sampleRate: 44100,
+      createOscillator: vi.fn(() => mockOsc),
+      createBuffer: vi.fn(() => mockBuffer),
+      createBufferSource: vi.fn(() => mockSource),
+      createBiquadFilter: vi.fn(() => mockFilter),
+      createGain: vi.fn(() => mockGain),
+      destination: {},
+    };
+    manager.ensureContext = () => mockCtx;
+
+    manager.playVinylNeedleDropSound(2.0);
+    expect(mockCtx.createOscillator).toHaveBeenCalled();
+    expect(mockOsc.frequency.setValueAtTime).toHaveBeenCalledWith(72, 300);
+    expect(mockCtx.createBufferSource).toHaveBeenCalled();
+    expect(mockFilter.type).toBe("bandpass");
+    expect(mockFilter.frequency.setValueAtTime).toHaveBeenCalledWith(950, 300);
+    expect(mockSource.start).toHaveBeenCalledWith(300);
+  });
 });

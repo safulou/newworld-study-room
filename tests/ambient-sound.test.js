@@ -1021,6 +1021,21 @@ describe("AmbientSoundscapeManager", () => {
       manager.setHeadTrackingEnabled(false);
       expect(manager.isHeadTrackingEnabled()).toBe(false);
       expect(manager.getDynamicHeadYaw()).toBe(0);
+
+      // Near-field Proximity Effect
+      expect(manager.isProximityEffect()).toBe(true);
+      expect(manager.calculateProximityGain(0.2)).toBe(0);
+      expect(manager.calculateProximityGain(0.45)).toBe(0);
+      expect(manager.calculateProximityGain(1.0)).toBe(4.5);
+      expect(manager.calculateProximityGain(0.8)).toBeGreaterThan(0);
+      expect(manager.calculateProximityGain(0.8)).toBeLessThan(4.5);
+
+      manager.setProximityEffect(false);
+      expect(manager.isProximityEffect()).toBe(false);
+      expect(manager.calculateProximityGain(1.0)).toBe(0);
+
+      manager.setProximityEffect(true);
+      expect(manager.isProximityEffect()).toBe(true);
     });
   });
 });

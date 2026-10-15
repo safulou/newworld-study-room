@@ -1682,4 +1682,73 @@ export class CompanionSoundManager {
     noiseSource.start(now);
     noiseSource.stop(now + dur + 0.05);
   }
+
+  /**
+   * Play vintage vinyl record needle drop & groove crackle ASMR
+   * Combines low-end stylus contact impulse + Poisson crackle dust pops & warm surface groove friction
+   */
+  playVinylNeedleDropSound(duration = 2.4) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const dur = Math.max(1.0, duration);
+
+    // 1. Stylus contact thud / micro-impulse
+    const thudOsc = ctx.createOscillator();
+    const thudGain = ctx.createGain();
+    thudOsc.type = "sine";
+    thudOsc.frequency.setValueAtTime(72, now);
+    thudOsc.frequency.exponentialRampToValueAtTime(36, now + 0.045);
+
+    const thudPeak = 0.16 * this.volume;
+    thudGain.gain.setValueAtTime(0.0001, now);
+    thudGain.gain.linearRampToValueAtTime(thudPeak, now + 0.004);
+    thudGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+
+    thudOsc.connect(thudGain);
+    thudGain.connect(ctx.destination);
+    thudOsc.start(now);
+    thudOsc.stop(now + 0.06);
+
+    // 2. Vinyl groove surface noise with scattered dust crackle pops
+    const bufferSize = Math.floor(ctx.sampleRate * dur);
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+
+    let lastNoise = 0.0;
+    for (let i = 0; i < bufferSize; i++) {
+      // Gentle warm pink-filtered noise baseline
+      const white = Math.random() * 2 - 1;
+      lastNoise = (lastNoise + 0.03 * white) / 1.03;
+      data[i] = lastNoise * 0.45;
+
+      // Occasional Poisson dust crackle impulse (approx 0.08% chance per sample)
+      if (Math.random() < 0.00085) {
+        const crackleAmp = (Math.random() * 0.7 + 0.3) * (Math.random() > 0.5 ? 1 : -1);
+        data[i] += crackleAmp * 2.2;
+      }
+    }
+
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+
+    const surfaceFilter = ctx.createBiquadFilter();
+    surfaceFilter.type = "bandpass";
+    surfaceFilter.frequency.setValueAtTime(950, now);
+    surfaceFilter.Q.value = 0.9;
+
+    const grooveGain = ctx.createGain();
+    const groovePeak = 0.12 * this.volume;
+    grooveGain.gain.setValueAtTime(0.0001, now);
+    grooveGain.gain.linearRampToValueAtTime(groovePeak, now + 0.04);
+    grooveGain.gain.setValueAtTime(groovePeak, now + dur - 0.15);
+    grooveGain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+    noiseSource.connect(surfaceFilter);
+    surfaceFilter.connect(grooveGain);
+    grooveGain.connect(ctx.destination);
+
+    noiseSource.start(now);
+    noiseSource.stop(now + dur + 0.05);
+  }
 }
