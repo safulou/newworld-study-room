@@ -120,7 +120,7 @@ npm install
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173/newworld-study-room/`.
+Open `http://127.0.0.1:5178/newworld-study-room/`.
 
 Production checks:
 
