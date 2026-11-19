@@ -365,3 +365,49 @@ describe("P2P protocol validation", () => {
     expect(hostRoom.broadcast).toHaveBeenCalledWith(statusMsg);
   });
 });
+
+describe("R7：收到的贈禮／回謝先清過才交給畫面和轉送", () => {
+  const XSS = '<img src=x onerror="alert(1)">';
+  it("bookmark-gift：長度限制、去控制字元、host 轉送清過的版本", () => {
+    const room = new P2PRoom({ role: "host", getSnapshot: () => ({ tips: [] }) });
+    room.broadcast = vi.fn();
+    const seen = [];
+    room.addEventListener("bookmark-gift", (e) => seen.push(e.detail));
+    room.handleMessage(
+      {
+        version: 2,
+        type: "bookmark-gift",
+        bookmark: {
+          plantKey: "rose",
+          senderNickname: `${XSS}‮${"n".repeat(50)}`,
+          personalInscription: "p".repeat(900),
+          extra: 1,
+        },
+      },
+      { peer: "peer-1" },
+    );
+    expect(seen).toHaveLength(1);
+    expect(Array.from(seen[0].senderNickname).length).toBe(24);
+    expect(seen[0].senderNickname).not.toContain("‮");
+    expect(seen[0].personalInscription).toHaveLength(200);
+    expect(seen[0]).not.toHaveProperty("extra");
+    expect(room.broadcast.mock.calls[0][0].bookmark).toEqual(seen[0]);
+  });
+
+  it("bookmark-gratitude：同樣清過", () => {
+    const room = new P2PRoom({ role: "host", getSnapshot: () => ({ tips: [] }) });
+    room.broadcast = vi.fn();
+    const seen = [];
+    room.addEventListener("bookmark-gratitude", (e) => seen.push(e.detail));
+    room.handleMessage(
+      {
+        version: 2,
+        type: "bookmark-gratitude",
+        gratitude: { senderNickname: "x".repeat(99), replyMessage: "r".repeat(999), plantKey: "../x" },
+      },
+      { peer: "peer-1" },
+    );
+    expect(seen[0]).toEqual({ senderNickname: "x".repeat(24), replyMessage: "r".repeat(120), plantKey: "" });
+    expect(room.broadcast.mock.calls[0][0].gratitude).toEqual(seen[0]);
+  });
+});

@@ -1,4 +1,5 @@
 import { Peer } from "peerjs";
+import { cleanText, GIFT_LIMITS, sanitizeGift } from "./gift-card.js";
 
 const MESSAGE_VERSION = 2;
 const MAX_TIPS_IN_SNAPSHOT = 40;
@@ -405,16 +406,24 @@ export class P2PRoom extends EventTarget {
       return;
     }
     if (message.type === "bookmark-gift" && isBookmarkGift(message)) {
-      this.dispatchEvent(new CustomEvent("bookmark-gift", { detail: message.bookmark }));
+      // R7：贈禮欄位來自對方，限長度、去控制字元才交給畫面（轉送給其他人也用清過的版本）
+      const bookmark = sanitizeGift(message.bookmark);
+      this.dispatchEvent(new CustomEvent("bookmark-gift", { detail: bookmark }));
       if (this.role === "host") {
-        this.broadcast(message, source.peer);
+        this.broadcast({ ...message, bookmark }, source.peer);
       }
       return;
     }
     if (message.type === "bookmark-gratitude" && isBookmarkGratitude(message)) {
-      this.dispatchEvent(new CustomEvent("bookmark-gratitude", { detail: message.gratitude }));
+      const g = message.gratitude;
+      const gratitude = {
+        senderNickname: cleanText(g.senderNickname, GIFT_LIMITS.senderNickname),
+        plantKey: /^[a-zA-Z0-9_-]{1,40}$/.test(String(g.plantKey || "")) ? g.plantKey : "",
+        replyMessage: cleanText(g.replyMessage, GIFT_LIMITS.quote),
+      };
+      this.dispatchEvent(new CustomEvent("bookmark-gratitude", { detail: gratitude }));
       if (this.role === "host") {
-        this.broadcast(message, source.peer);
+        this.broadcast({ ...message, gratitude }, source.peer);
       }
       return;
     }
