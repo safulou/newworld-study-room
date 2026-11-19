@@ -1,3 +1,4 @@
+import { buildGiftsGrid } from "./services/gift-card.js";
 import "./styles.css";
 import {
   Activity,
@@ -6663,63 +6664,8 @@ function renderHerbarium() {
         </div>
       `;
     } else {
-      elements.giftsView.innerHTML = `
-        <div class="gifts-grid">
-          ${gifts
-            .map((g) => {
-              const meta = PLANT_BOTANICAL_SPECIES[g.plantKey] || {};
-              const plantName = g.plantName || meta.name || "草木標本";
-              const plantIcon = g.plantIcon || meta.icon || "🌿";
-              const dateStr = g.receivedAt ? new Date(g.receivedAt).toLocaleDateString() : "";
-              const sender = g.senderNickname || "書伴";
-              const quote = g.quote || meta.flowerLanguage || "";
-              const note = g.personalInscription || g.inscription || "";
-
-              return `
-              <div class="gift-card">
-                <div class="gift-card-header">
-                  <span class="gift-sender-badge">💌 來自「${sender}」</span>
-                  <span class="gift-time">${dateStr}</span>
-                </div>
-                <div class="gift-card-body">
-                  <div class="gift-plant-icon">${plantIcon}</div>
-                  <div class="gift-plant-info">
-                    <div class="gift-plant-name">${plantName}</div>
-                    ${quote ? `<div class="gift-quote" title="${quote}">${quote}</div>` : ""}
-                  </div>
-                </div>
-                ${note ? `<p class="gift-inscription">${note}</p>` : ""}
-                <div class="gift-card-actions">
-                  <button
-                    type="button"
-                    class="btn-view-gift-bookmark"
-                    data-gift-id="${g.id || ""}"
-                    data-plant-key="${g.plantKey || ""}"
-                    title="展開檢視草木書籤拍立得卡片"
-                  >
-                    🔖 展閱書籤
-                  </button>
-                  ${
-                    g.gratitudeSent
-                      ? `<span class="gift-gratitude-sent-badge" title="已於空中向書伴致謝">已回謝 🕊️</span>`
-                      : `<button
-                          type="button"
-                          class="btn-gift-gratitude"
-                          data-gift-id="${g.id || ""}"
-                          data-sender-nickname="${sender}"
-                          data-plant-key="${g.plantKey || ""}"
-                          title="向贈禮書伴傳送空中銘謝訊息"
-                        >
-                          💌 空中回謝
-                        </button>`
-                  }
-                </div>
-              </div>
-            `;
-            })
-            .join("")}
-        </div>
-      `;
+      // R7：贈禮內容來自同房的 P2P 對方，用 DOM＋textContent 組，不拼 innerHTML（舊資料也安全）
+      elements.giftsView.replaceChildren(buildGiftsGrid(document, gifts, PLANT_BOTANICAL_SPECIES));
     }
   }
 }

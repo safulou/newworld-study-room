@@ -158,4 +158,6 @@ TURN_KEY_API_TOKEN=<server-side secret>
 
 `TURN_KEY_ID` and `TURN_KEY_API_TOKEN` are read only by `functions/api/turn-credentials.js`. For local Pages Function development, copy `.dev.vars.example` to `.dev.vars`; never commit `.dev.vars`.
 
+The TURN endpoint only answers requests whose `Origin` (or `Referer`) is the site itself, `localhost`/`127.0.0.1`, or a domain listed in `ALLOWED_ORIGINS` (comma-separated, e.g. a GitHub Pages front end calling the Cloudflare function); anything else gets `403`. It also allows at most 10 requests per IP per minute (`429` after that). Bind a KV namespace as `TURN_RATE_KV` to share the counter across Cloudflare machines; without it the limit is per isolate (best effort).
+
 Repository: https://github.com/safulou/newworld-study-room
